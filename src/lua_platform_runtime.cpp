@@ -178,6 +178,22 @@ enum class handle_lifecycle : int {
     discarded
 };
 
+const void *lua_object_metatable_key( const sol::object &value )
+{
+    lua_State *L = value.lua_state();
+    if( L == nullptr || !value.valid() ) {
+        return nullptr;
+    }
+    value.push( L );
+    const void *mt = nullptr;
+    if( lua_getmetatable( L, -1 ) != 0 ) {
+        mt = lua_topointer( L, -1 );
+        lua_pop( L, 1 );
+    }
+    lua_pop( L, 1 );
+    return mt;
+}
+
 std::size_t require_dense_array( const sol::table &values,
                                  const std::string_view description,
                                  const std::size_t minimum,
@@ -5181,394 +5197,285 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         registrations.push_back( { operation, handle.definition } );
     };
 
-    auto register_definition = [transaction, register_catalog]( const sol::object & value,
-    definition_operation operation ) {
+    auto mt_dispatch = std::make_shared <
+                       std::unordered_map < const void *,
+                       std::function<bool( const sol::object &, definition_operation )> >> ();
+    auto register_definition = [transaction, register_catalog, mt_dispatch](
+    const sol::object & value, definition_operation operation ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        if( value.is<terrain_transform_definition_handle>() ) {
-            register_catalog( value.as<terrain_transform_definition_handle>(),
-                              transaction->terrain_transforms, operation,
-                              "terrain transform" );
+        const void *const mt = lua_object_metatable_key( value );
+        if( mt != nullptr ) {
+            const auto cached = mt_dispatch->find( mt );
+            if( cached != mt_dispatch->end() && cached->second( value, operation ) ) {
+                return;
+            }
+        }
+        const auto cache_sub = [&]( auto & sub ) -> bool {
+            if( !sub.register_definition( value, static_cast<int>( operation ) ) ) {
+                return false;
+            }
+            if( mt != nullptr ) {
+                ( *mt_dispatch )[mt] = [&sub]( const sol::object & v,
+                const definition_operation op ) -> bool {
+                    return sub.register_definition( v, static_cast<int>( op ) );
+                };
+            }
+            return true;
+        };
+        if( cache_sub( transaction->item_content ) ||
+            cache_sub( transaction->presentation ) ||
+            cache_sub( transaction->creatures ) ||
+            cache_sub( transaction->character ) ||
+            cache_sub( transaction->worldgen ) ||
+            cache_sub( transaction->world ) ) {
             return;
         }
-        if( value.is<post_process_generator_definition_handle>() ) {
-            register_catalog( value.as<post_process_generator_definition_handle>(),
-                              transaction->post_process_generators, operation,
-                              "post-process generator" );
-            return;
-        }
-        if( value.is<scenario_definition_handle>() ) {
-            register_catalog( value.as<scenario_definition_handle>(),
-                              transaction->scenarios, operation,
-                              "scenario" );
-            return;
-        }
-        if( value.is<vehicle_color_palette_definition_handle>() ) {
-            register_catalog( value.as<vehicle_color_palette_definition_handle>(),
-                              transaction->vehicle_color_palettes, operation,
-                              "vehicle color palette" );
-            return;
-        }
-        if( value.is<monster_group_definition_handle>() ) {
-            register_catalog( value.as<monster_group_definition_handle>(),
-                              transaction->monster_groups, operation,
-                              "monster group" );
-            return;
-        }
-        if( value.is<overmap_connection_definition_handle>() ) {
-            register_catalog( value.as<overmap_connection_definition_handle>(),
-                              transaction->overmap_connections, operation,
-                              "overmap connection" );
-            return;
-        }
-        if( value.is<speed_description_definition_handle>() ) {
-            register_catalog( value.as<speed_description_definition_handle>(),
-                              transaction->speed_descriptions, operation,
-                              "speed description" );
-            return;
-        }
-        if( value.is<harvest_drop_type_definition_handle>() ) {
-            register_catalog( value.as<harvest_drop_type_definition_handle>(),
-                              transaction->harvest_drop_types, operation,
-                              "harvest drop type" );
-            return;
-        }
-        if( value.is<harvest_definition_handle>() ) {
-            register_catalog( value.as<harvest_definition_handle>(),
-                              transaction->harvests, operation, "harvest" );
-            return;
-        }
-        if( value.is<construction_category_definition_handle>() ) {
-            register_catalog( value.as<construction_category_definition_handle>(),
-                              transaction->construction_categories, operation,
-                              "construction category" );
-            return;
-        }
-        if( value.is<construction_group_definition_handle>() ) {
-            register_catalog( value.as<construction_group_definition_handle>(),
-                              transaction->construction_groups, operation,
-                              "construction group" );
-            return;
-        }
-        if( value.is<vehicle_part_location_definition_handle>() ) {
-            register_catalog( value.as<vehicle_part_location_definition_handle>(),
-                              transaction->vehicle_part_locations, operation,
-                              "vehicle part location" );
-            return;
-        }
-        if( value.is<mood_face_definition_handle>() ) {
-            register_catalog( value.as<mood_face_definition_handle>(),
-                              transaction->mood_faces, operation, "mood face" );
-            return;
-        }
-        if( value.is<damage_info_order_definition_handle>() ) {
-            register_catalog( value.as<damage_info_order_definition_handle>(),
-                              transaction->damage_info_orders, operation,
-                              "damage info order" );
-            return;
-        }
-        if( value.is<vehicle_part_category_definition_handle>() ) {
-            register_catalog( value.as<vehicle_part_category_definition_handle>(),
-                              transaction->vehicle_part_categories, operation,
-                              "vehicle part category" );
-            return;
-        }
-        if( value.is<named_color_definition_handle>() ) {
-            register_catalog( value.as<named_color_definition_handle>(),
-                              transaction->named_colors, operation, "named color" );
-            return;
-        }
-        if( value.is<rotatable_symbol_definition_handle>() ) {
-            register_catalog( value.as<rotatable_symbol_definition_handle>(),
-                              transaction->rotatable_symbols, operation,
-                              "rotatable symbol" );
-            return;
-        }
-        if( value.is<ascii_art_definition_handle>() ) {
-            register_catalog( value.as<ascii_art_definition_handle>(),
-                              transaction->ascii_arts, operation, "ASCII art" );
-            return;
-        }
-        if( value.is<limb_score_definition_handle>() ) {
-            register_catalog( value.as<limb_score_definition_handle>(),
-                              transaction->limb_scores, operation, "limb score" );
-            return;
-        }
-        if( value.is<hit_range_definition_handle>() ) {
-            register_catalog( value.as<hit_range_definition_handle>(),
-                              transaction->hit_ranges, operation, "hit range" );
-            return;
-        }
-        if( value.is<bash_damage_profile_definition_handle>() ) {
-            register_catalog( value.as<bash_damage_profile_definition_handle>(),
-                              transaction->bash_damage_profiles, operation,
-                              "bash damage profile" );
-            return;
-        }
-        if( value.is<clothing_mod_definition_handle>() ) {
-            register_catalog( value.as<clothing_mod_definition_handle>(),
-                              transaction->clothing_mods, operation,
-                              "clothing modification" );
-            return;
-        }
-        if( value.is<overmap_land_use_code_definition_handle>() ) {
-            register_catalog( value.as<overmap_land_use_code_definition_handle>(),
-                              transaction->overmap_land_use_codes, operation,
-                              "overmap land-use code" );
-            return;
-        }
-        if( value.is<overmap_vision_definition_handle>() ) {
-            register_catalog( value.as<overmap_vision_definition_handle>(),
-                              transaction->overmap_visions, operation,
-                              "overmap vision" );
-            return;
-        }
-        if( value.is<overmap_location_definition_handle>() ) {
-            register_catalog( value.as<overmap_location_definition_handle>(),
-                              transaction->overmap_locations, operation,
-                              "overmap location" );
-            return;
-        }
-        if( value.is<map_extra_collection_definition_handle>() ) {
-            register_catalog( value.as<map_extra_collection_definition_handle>(),
-                              transaction->map_extra_collections, operation,
-                              "map-extra collection" );
-            return;
-        }
-        if( value.is<vehicle_group_definition_handle>() ) {
-            register_catalog( value.as<vehicle_group_definition_handle>(),
-                              transaction->vehicle_groups, operation,
-                              "vehicle group" );
-            return;
-        }
-        if( value.is<vehicle_placement_definition_handle>() ) {
-            register_catalog( value.as<vehicle_placement_definition_handle>(),
-                              transaction->vehicle_placements, operation,
-                              "vehicle placement" );
-            return;
-        }
-        if( value.is<vehicle_spawn_definition_handle>() ) {
-            register_catalog( value.as<vehicle_spawn_definition_handle>(),
-                              transaction->vehicle_spawns, operation, "vehicle spawn" );
-            return;
-        }
-        if( value.is<fault_group_definition_handle>() ) {
-            register_catalog( value.as<fault_group_definition_handle>(),
-                              transaction->fault_groups, operation,
-                              "fault group" );
-            return;
-        }
-        if( value.is<explosion_light_definition_handle>() ) {
-            register_catalog( value.as<explosion_light_definition_handle>(),
-                              transaction->explosion_lights, operation,
-                              "explosion light" );
-            return;
-        }
-        if( value.is<addiction_type_definition_handle>() ) {
-            register_catalog( value.as<addiction_type_definition_handle>(),
-                              transaction->addiction_types, operation,
-                              "addiction type" );
-            return;
-        }
-        if( value.is<character_modifier_definition_handle>() ) {
-            register_catalog( value.as<character_modifier_definition_handle>(),
-                              transaction->character_modifiers, operation,
-                              "character modifier" );
-            return;
-        }
-        if( value.is<start_location_definition_handle>() ) {
-            register_catalog( value.as<start_location_definition_handle>(),
-                              transaction->start_locations, operation,
-                              "start location" );
-            return;
-        }
-        if( value.is<climbing_aid_definition_handle>() ) {
-            register_catalog( value.as<climbing_aid_definition_handle>(),
-                              transaction->climbing_aids, operation,
-                              "climbing aid" );
-            return;
-        }
-        if( value.is<weather_type_definition_handle>() ) {
-            register_catalog( value.as<weather_type_definition_handle>(),
-                              transaction->weather_types, operation,
-                              "weather type" );
-            return;
-        }
-        if( value.is<event_transformation_definition_handle>() ) {
-            register_catalog( value.as<event_transformation_definition_handle>(),
-                              transaction->event_transformations, operation,
-                              "event transformation" );
-            return;
-        }
-        if( value.is<event_statistic_definition_handle>() ) {
-            register_catalog( value.as<event_statistic_definition_handle>(),
-                              transaction->event_statistics, operation,
-                              "event statistic" );
-            return;
-        }
-        if( value.is<relic_procgen_definition_handle>() ) {
-            register_catalog( value.as<relic_procgen_definition_handle>(),
-                              transaction->relic_procgens, operation,
-                              "relic procgen" );
-            return;
-        }
-        if( value.is<attack_vector_definition_handle>() ) {
-            register_catalog( value.as<attack_vector_definition_handle>(),
-                              transaction->attack_vectors, operation,
-                              "attack vector" );
-            return;
-        }
-        if( value.is<trap_definition_handle>() ) {
-            register_catalog( value.as<trap_definition_handle>(),
-                              transaction->traps, operation, "trap" );
-            return;
-        }
-        if( value.is<construction_definition_handle>() ) {
-            register_catalog( value.as<construction_definition_handle>(),
-                              transaction->constructions, operation, "construction" );
-            return;
-        }
-        if( value.is<furniture_definition_handle>() ) {
-            register_catalog( value.as<furniture_definition_handle>(),
-                              transaction->furniture, operation, "furniture" );
-            return;
-        }
-        if( value.is<terrain_definition_handle>() ) {
-            register_catalog( value.as<terrain_definition_handle>(),
-                              transaction->terrain, operation, "terrain" );
-            return;
-        }
-        if( value.is<gate_definition_handle>() ) {
-            register_catalog( value.as<gate_definition_handle>(),
-                              transaction->gates, operation, "gate" );
-            return;
-        }
-        if( value.is<fault_definition_handle>() ) {
-            register_catalog( value.as<fault_definition_handle>(),
-                              transaction->faults, operation, "fault" );
-            return;
-        }
-        if( value.is<fault_fix_definition_handle>() ) {
-            register_catalog( value.as<fault_fix_definition_handle>(),
-                              transaction->fault_fixes, operation, "fault fix" );
+        const auto try_top_catalog = [&]( const auto &tag, auto &registrations,
+        const char *kind ) -> bool {
+            using handle_type = std::decay_t<decltype( tag )>;
+            if( !value.is<handle_type>() ) {
+                return false;
+            }
+            auto dispatch = [register_catalog, &registrations, kind](
+            const sol::object & v, const definition_operation op ) -> bool {
+                if( !v.is<handle_type>() ) {
+                    return false;
+                }
+                register_catalog( v.as<handle_type>(), registrations, op, kind );
+                return true;
+            };
+            if( mt != nullptr ) {
+                ( *mt_dispatch )[mt] = dispatch;
+            }
+            dispatch( value, operation );
+            return true;
+        };
+        if( try_top_catalog( construction_group_definition_handle{},
+                             transaction->construction_groups, "construction group" ) ||
+            try_top_catalog( monster_group_definition_handle{},
+                             transaction->monster_groups, "monster group" ) ||
+            try_top_catalog( character_modifier_definition_handle{},
+                             transaction->character_modifiers, "character modifier" ) ||
+            try_top_catalog( terrain_definition_handle{},
+                             transaction->terrain, "terrain" ) ||
+            try_top_catalog( furniture_definition_handle{},
+                             transaction->furniture, "furniture" ) ||
+            try_top_catalog( construction_definition_handle{},
+                             transaction->constructions, "construction" ) ||
+            try_top_catalog( trap_definition_handle{},
+                             transaction->traps, "trap" ) ||
+            try_top_catalog( gate_definition_handle{},
+                             transaction->gates, "gate" ) ||
+            try_top_catalog( fault_definition_handle{},
+                             transaction->faults, "fault" ) ||
+            try_top_catalog( fault_fix_definition_handle{},
+                             transaction->fault_fixes, "fault fix" ) ||
+            try_top_catalog( terrain_transform_definition_handle{},
+                             transaction->terrain_transforms, "terrain transform" ) ||
+            try_top_catalog( post_process_generator_definition_handle{},
+                             transaction->post_process_generators, "post-process generator" ) ||
+            try_top_catalog( scenario_definition_handle{},
+                             transaction->scenarios, "scenario" ) ||
+            try_top_catalog( vehicle_color_palette_definition_handle{},
+                             transaction->vehicle_color_palettes, "vehicle color palette" ) ||
+            try_top_catalog( overmap_connection_definition_handle{},
+                             transaction->overmap_connections, "overmap connection" ) ||
+            try_top_catalog( speed_description_definition_handle{},
+                             transaction->speed_descriptions, "speed description" ) ||
+            try_top_catalog( harvest_drop_type_definition_handle{},
+                             transaction->harvest_drop_types, "harvest drop type" ) ||
+            try_top_catalog( harvest_definition_handle{},
+                             transaction->harvests, "harvest" ) ||
+            try_top_catalog( construction_category_definition_handle{},
+                             transaction->construction_categories, "construction category" ) ||
+            try_top_catalog( vehicle_part_location_definition_handle{},
+                             transaction->vehicle_part_locations, "vehicle part location" ) ||
+            try_top_catalog( mood_face_definition_handle{},
+                             transaction->mood_faces, "mood face" ) ||
+            try_top_catalog( damage_info_order_definition_handle{},
+                             transaction->damage_info_orders, "damage info order" ) ||
+            try_top_catalog( vehicle_part_category_definition_handle{},
+                             transaction->vehicle_part_categories, "vehicle part category" ) ||
+            try_top_catalog( named_color_definition_handle{},
+                             transaction->named_colors, "named color" ) ||
+            try_top_catalog( rotatable_symbol_definition_handle{},
+                             transaction->rotatable_symbols, "rotatable symbol" ) ||
+            try_top_catalog( ascii_art_definition_handle{},
+                             transaction->ascii_arts, "ASCII art" ) ||
+            try_top_catalog( limb_score_definition_handle{},
+                             transaction->limb_scores, "limb score" ) ||
+            try_top_catalog( hit_range_definition_handle{},
+                             transaction->hit_ranges, "hit range" ) ||
+            try_top_catalog( bash_damage_profile_definition_handle{},
+                             transaction->bash_damage_profiles, "bash damage profile" ) ||
+            try_top_catalog( clothing_mod_definition_handle{},
+                             transaction->clothing_mods, "clothing modification" ) ||
+            try_top_catalog( overmap_land_use_code_definition_handle{},
+                             transaction->overmap_land_use_codes, "overmap land-use code" ) ||
+            try_top_catalog( overmap_vision_definition_handle{},
+                             transaction->overmap_visions, "overmap vision" ) ||
+            try_top_catalog( overmap_location_definition_handle{},
+                             transaction->overmap_locations, "overmap location" ) ||
+            try_top_catalog( map_extra_collection_definition_handle{},
+                             transaction->map_extra_collections, "map-extra collection" ) ||
+            try_top_catalog( vehicle_group_definition_handle{},
+                             transaction->vehicle_groups, "vehicle group" ) ||
+            try_top_catalog( vehicle_placement_definition_handle{},
+                             transaction->vehicle_placements, "vehicle placement" ) ||
+            try_top_catalog( vehicle_spawn_definition_handle{},
+                             transaction->vehicle_spawns, "vehicle spawn" ) ||
+            try_top_catalog( fault_group_definition_handle{},
+                             transaction->fault_groups, "fault group" ) ||
+            try_top_catalog( explosion_light_definition_handle{},
+                             transaction->explosion_lights, "explosion light" ) ||
+            try_top_catalog( addiction_type_definition_handle{},
+                             transaction->addiction_types, "addiction type" ) ||
+            try_top_catalog( start_location_definition_handle{},
+                             transaction->start_locations, "start location" ) ||
+            try_top_catalog( climbing_aid_definition_handle{},
+                             transaction->climbing_aids, "climbing aid" ) ||
+            try_top_catalog( weather_type_definition_handle{},
+                             transaction->weather_types, "weather type" ) ||
+            try_top_catalog( event_transformation_definition_handle{},
+                             transaction->event_transformations, "event transformation" ) ||
+            try_top_catalog( event_statistic_definition_handle{},
+                             transaction->event_statistics, "event statistic" ) ||
+            try_top_catalog( relic_procgen_definition_handle{},
+                             transaction->relic_procgens, "relic procgen" ) ||
+            try_top_catalog( attack_vector_definition_handle{},
+                             transaction->attack_vectors, "attack vector" ) ||
+            try_top_catalog( map_extra_definition_handle{},
+                             transaction->map_extras, "map extra" ) ||
+            try_top_catalog( weather_generator_definition_handle{},
+                             transaction->weather_generators, "weather generator" ) ||
+            try_top_catalog( shopkeeper_definition_handle{},
+                             transaction->shopkeeper_rules, "shopkeeper rule" ) ||
+            try_top_catalog( trait_group_definition_handle{},
+                             transaction->trait_groups, "trait group" ) ) {
             return;
         }
         if( value.is<dream_definition_handle>() ) {
-            dream_definition_handle handle = value.as<dream_definition_handle>();
-            if( handle.token != transaction->token ) {
-                throw std::runtime_error( "cannot register a dream definition owned by another Mod" );
+            auto dispatch = [transaction]( const sol::object & v,
+            const definition_operation op ) -> bool {
+                if( !v.is<dream_definition_handle>() ) {
+                    return false;
+                }
+                dream_definition_handle handle = v.as<dream_definition_handle>();
+                if( handle.token != transaction->token ) {
+                    throw std::runtime_error( "cannot register a dream definition owned by another Mod" );
+                }
+                require_building_handle( handle.token, *handle.definition, "dream" );
+                handle.definition->registered = true;
+                if( op == definition_operation::edit ) {
+                    throw std::runtime_error( "dreams cannot be edited" );
+                }
+                transaction->dreams.push_back( { op, handle.definition } );
+                return true;
+            };
+            if( mt != nullptr ) {
+                ( *mt_dispatch )[mt] = dispatch;
             }
-            require_building_handle( handle.token, *handle.definition, "dream" );
-            handle.definition->registered = true;
-            if( operation == definition_operation::edit ) {
-                throw std::runtime_error( "dreams cannot be edited" );
-            }
-            transaction->dreams.push_back( { operation, handle.definition } );
+            dispatch( value, operation );
             return;
         }
         if( value.is<achievement_definition_handle>() ) {
-            achievement_definition_handle handle =
-                value.as<achievement_definition_handle>();
-            if( handle.token != transaction->token ) {
-                throw std::runtime_error( "cannot register an achievement definition owned by another Mod" );
+            auto dispatch = [transaction]( const sol::object & v,
+            const definition_operation op ) -> bool {
+                if( !v.is<achievement_definition_handle>() ) {
+                    return false;
+                }
+                achievement_definition_handle handle = v.as<achievement_definition_handle>();
+                if( handle.token != transaction->token ) {
+                    throw std::runtime_error( "cannot register an achievement definition owned by another Mod" );
+                }
+                require_building_handle( handle.token, *handle.definition, "achievement" );
+                if( op != definition_operation::add ) {
+                    throw std::runtime_error( "achievements cannot be edited or replaced" );
+                }
+                handle.definition->registered = true;
+                transaction->achievements.push_back( { op, handle.definition } );
+                return true;
+            };
+            if( mt != nullptr ) {
+                ( *mt_dispatch )[mt] = dispatch;
             }
-            require_building_handle( handle.token, *handle.definition, "achievement" );
-            if( operation != definition_operation::add ) {
-                throw std::runtime_error( "achievements cannot be edited or replaced" );
-            }
-            handle.definition->registered = true;
-            transaction->achievements.push_back( { operation, handle.definition } );
+            dispatch( value, operation );
             return;
         }
         if( value.is<blacklist_definition_handle>() ) {
-            blacklist_definition_handle handle =
-                value.as<blacklist_definition_handle>();
-            if( handle.token != transaction->token ) {
-                throw std::runtime_error( "cannot register a blacklist definition owned by another Mod" );
+            auto dispatch = [transaction]( const sol::object & v,
+            const definition_operation op ) -> bool {
+                if( !v.is<blacklist_definition_handle>() ) {
+                    return false;
+                }
+                blacklist_definition_handle handle = v.as<blacklist_definition_handle>();
+                if( handle.token != transaction->token ) {
+                    throw std::runtime_error( "cannot register a blacklist definition owned by another Mod" );
+                }
+                require_building_handle( handle.token, *handle.definition, "blacklist" );
+                if( op != definition_operation::add &&
+                    ( op != definition_operation::replace || handle.definition->kind != "scenario" ) ) {
+                    throw std::runtime_error( "only scenario blacklists support replacement" );
+                }
+                handle.definition->registered = true;
+                transaction->blacklists.push_back( { op, handle.definition } );
+                return true;
+            };
+            if( mt != nullptr ) {
+                ( *mt_dispatch )[mt] = dispatch;
             }
-            require_building_handle( handle.token, *handle.definition, "blacklist" );
-            if( operation != definition_operation::add &&
-                ( operation != definition_operation::replace || handle.definition->kind != "scenario" ) ) {
-                throw std::runtime_error( "only scenario blacklists support replacement" );
-            }
-            handle.definition->registered = true;
-            transaction->blacklists.push_back( { operation, handle.definition } );
-            return;
-        }
-        if( value.is<map_extra_definition_handle>() ) {
-            register_catalog( value.as<map_extra_definition_handle>(),
-                              transaction->map_extras, operation, "map extra" );
-            return;
-        }
-        if( value.is<weather_generator_definition_handle>() ) {
-            register_catalog( value.as<weather_generator_definition_handle>(),
-                              transaction->weather_generators, operation,
-                              "weather generator" );
-            return;
-        }
-        if( value.is<shopkeeper_definition_handle>() ) {
-            register_catalog( value.as<shopkeeper_definition_handle>(),
-                              transaction->shopkeeper_rules, operation,
-                              "shopkeeper rule" );
-            return;
-        }
-        if( value.is<trait_group_definition_handle>() ) {
-            register_catalog( value.as<trait_group_definition_handle>(),
-                              transaction->trait_groups, operation,
-                              "trait group" );
+            dispatch( value, operation );
             return;
         }
         if( value.is<monster_adjustment_definition_handle>() ) {
-            monster_adjustment_definition_handle handle =
-                value.as<monster_adjustment_definition_handle>();
-            if( handle.token != transaction->token ) {
-                throw std::runtime_error( "cannot register a monster adjustment owned by another Mod" );
+            auto dispatch = [transaction]( const sol::object & v,
+            const definition_operation op ) -> bool {
+                if( !v.is<monster_adjustment_definition_handle>() ) {
+                    return false;
+                }
+                monster_adjustment_definition_handle handle =
+                    v.as<monster_adjustment_definition_handle>();
+                if( handle.token != transaction->token ) {
+                    throw std::runtime_error( "cannot register a monster adjustment owned by another Mod" );
+                }
+                require_building_handle( handle.token, *handle.definition, "monster adjustment" );
+                if( op != definition_operation::add ) {
+                    throw std::runtime_error( "monster adjustments cannot be edited or replaced" );
+                }
+                handle.definition->registered = true;
+                transaction->monster_adjustments.push_back( { op, handle.definition } );
+                return true;
+            };
+            if( mt != nullptr ) {
+                ( *mt_dispatch )[mt] = dispatch;
             }
-            require_building_handle( handle.token, *handle.definition, "monster adjustment" );
-            if( operation != definition_operation::add ) {
-                throw std::runtime_error( "monster adjustments cannot be edited or replaced" );
-            }
-            handle.definition->registered = true;
-            transaction->monster_adjustments.push_back( { operation, handle.definition } );
+            dispatch( value, operation );
             return;
         }
         if( value.is<migration_definition_handle>() ) {
-            migration_definition_handle handle =
-                value.as<migration_definition_handle>();
-            if( handle.token != transaction->token ) {
-                throw std::runtime_error( "cannot register a migration definition owned by another Mod" );
+            auto dispatch = [transaction]( const sol::object & v,
+            const definition_operation op ) -> bool {
+                if( !v.is<migration_definition_handle>() ) {
+                    return false;
+                }
+                migration_definition_handle handle = v.as<migration_definition_handle>();
+                if( handle.token != transaction->token ) {
+                    throw std::runtime_error( "cannot register a migration definition owned by another Mod" );
+                }
+                require_building_handle( handle.token, *handle.definition, "migration" );
+                if( op != definition_operation::add ) {
+                    throw std::runtime_error( "migrations cannot be edited or replaced" );
+                }
+                handle.definition->registered = true;
+                transaction->migrations.push_back( { op, handle.definition } );
+                return true;
+            };
+            if( mt != nullptr ) {
+                ( *mt_dispatch )[mt] = dispatch;
             }
-            require_building_handle( handle.token, *handle.definition, "migration" );
-            if( operation != definition_operation::add ) {
-                throw std::runtime_error( "migrations cannot be edited or replaced" );
-            }
-            handle.definition->registered = true;
-            transaction->migrations.push_back( { operation, handle.definition } );
-            return;
-        }
-        if( transaction->item_content.register_definition(
-                value, static_cast<int>( operation ) ) ) {
-            return;
-        }
-        if( transaction->creatures.register_definition(
-                value, static_cast<int>( operation ) ) ) {
-            return;
-        }
-        if( transaction->character.register_definition(
-                value, static_cast<int>( operation ) ) ) {
-            return;
-        }
-        if( transaction->presentation.register_definition(
-                value, static_cast<int>( operation ) ) ) {
-            return;
-        }
-        if( transaction->worldgen.register_definition(
-                value, static_cast<int>( operation ) ) ) {
-            return;
-        }
-        if( transaction->world.register_definition(
-                value, static_cast<int>( operation ) ) ) {
+            dispatch( value, operation );
             return;
         }
         throw std::runtime_error(

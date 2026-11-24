@@ -117,6 +117,22 @@ authored_text read_text_option( const sol::table &options, const char *key,
 enum class definition_operation : int { add, replace, edit, extend, upsert };
 enum class handle_lifecycle : int { building, committed, discarded };
 
+const void *lua_object_metatable_key( const sol::object &value )
+{
+    lua_State *L = value.lua_state();
+    if( L == nullptr || !value.valid() ) {
+        return nullptr;
+    }
+    value.push( L );
+    const void *mt = nullptr;
+    if( lua_getmetatable( L, -1 ) != 0 ) {
+        mt = lua_topointer( L, -1 );
+        lua_pop( L, 1 );
+    }
+    lua_pop( L, 1 );
+    return mt;
+}
+
 std::size_t require_dense_array( const sol::table &values,
                                  const std::string_view description,
                                  const std::size_t minimum,
@@ -4642,6 +4658,9 @@ struct items_content_transaction::impl {
     std::vector<std::pair<recipe_id, std::optional<recipe>>> uncraft_undo;
     std::vector<std::pair<requirement_id, std::optional<requirement_data>>> recipe_requirement_undo;
 
+    std::unordered_map<const void *, std::function<bool( const sol::object &, definition_operation )>>
+    mt_dispatch;
+
     mutable bool finalization_validated = false;
     items_content_apply_phase next_apply_phase = items_content_apply_phase::foundations;
     // A phase is considered applied only after all of its native writes have
@@ -5889,15 +5908,22 @@ bool items_content_transaction::register_definition( const sol::object &value,
     if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
         throw std::runtime_error( "content transaction is no longer building" );
     }
-    const auto register_catalog = [this, operation]( auto handle, auto & registrations,
-    const char *kind ) {
-        if( handle.token != pimpl_->token ) {
+    const void *const mt = lua_object_metatable_key( value );
+    if( mt != nullptr ) {
+        const auto cached = pimpl_->mt_dispatch.find( mt );
+        if( cached != pimpl_->mt_dispatch.end() && cached->second( value, operation ) ) {
+            return true;
+        }
+    }
+    const auto apply_catalog = []( impl *self, const auto &handle, auto &registrations,
+    const definition_operation op, const char *kind ) {
+        if( handle.token != self->token ) {
             throw std::runtime_error( std::string( "cannot register a " ) + kind +
                                       " definition owned by another Mod" );
         }
         require_building_handle( handle.token, *handle.definition, kind );
         handle.definition->registered = true;
-        if( operation == definition_operation::edit ) {
+        if( op == definition_operation::edit ) {
             const auto target = std::find_if( registrations.rbegin(), registrations.rend(),
             [&handle]( const auto & entry ) {
                 return entry.definition->id == handle.definition->id;
@@ -5910,135 +5936,90 @@ bool items_content_transaction::register_definition( const sol::object &value,
             target->definition = handle.definition;
             return;
         }
-        registrations.push_back( { operation, handle.definition } );
+        registrations.push_back( { op, handle.definition } );
     };
+    const auto try_catalog = [&]( const auto &tag, auto &registrations,
+    const char *kind, const bool add_only = false ) -> bool {
+        using handle_type = std::decay_t<decltype( tag )>;
+        if( !value.is<handle_type>() ) {
+            return false;
+        }
+        impl *const self = pimpl_.get();
+        auto dispatch = [self, apply_catalog, &registrations, kind, add_only](
+        const sol::object & v, const definition_operation op ) -> bool {
+            if( !v.is<handle_type>() ) {
+                return false;
+            }
+            if( add_only && op != definition_operation::add ) {
+                throw std::runtime_error( "plant lifecycle definitions can only be added" );
+            }
+            apply_catalog( self, v.as<handle_type>(), registrations, op, kind );
+            return true;
+        };
+        if( mt != nullptr ) {
+            self->mt_dispatch[mt] = dispatch;
+        }
+        dispatch( value, operation );
+        return true;
+    };
+    if( try_catalog( item_group_definition_handle{}, pimpl_->item_groups, "item group" ) ||
+        try_catalog( recipe_definition_handle{}, pimpl_->recipes, "recipe" ) ||
+        try_catalog( item_definition_handle{}, pimpl_->items, "item" ) ||
+        try_catalog( json_flag_definition_handle{}, pimpl_->json_flags, "JSON flag" ) ) {
+        return true;
+    }
     if( value.is<item_migration_definition_handle>() ) {
-        const auto handle = value.as<item_migration_definition_handle>();
-        if( handle.token != pimpl_->token || operation != definition_operation::add ) {
-            throw std::runtime_error( "item migrations must be added by their owning Mod" );
+        impl *const self = pimpl_.get();
+        auto dispatch = [self]( const sol::object & v, const definition_operation op ) -> bool {
+            if( !v.is<item_migration_definition_handle>() ) {
+                return false;
+            }
+            const auto handle = v.as<item_migration_definition_handle>();
+            if( handle.token != self->token || op != definition_operation::add ) {
+                throw std::runtime_error( "item migrations must be added by their owning Mod" );
+            }
+            require_building_handle( handle.token, *handle.definition, "item migration" );
+            handle.definition->registered = true;
+            self->item_migrations.push_back( handle.definition );
+            return true;
+        };
+        if( mt != nullptr ) {
+            self->mt_dispatch[mt] = dispatch;
         }
-        require_building_handle( handle.token, *handle.definition, "item migration" );
-        handle.definition->registered = true;
-        pimpl_->item_migrations.push_back( handle.definition );
+        dispatch( value, operation );
         return true;
     }
-    if( value.is<item_definition_handle>() ) {
-        const item_definition_handle &handle = value.as<item_definition_handle>();
-        register_catalog( handle, pimpl_->items, "item" );
-        return true;
-    }
-    if( value.is<tool_quality_definition_handle>() ) {
-        register_catalog( value.as<tool_quality_definition_handle>(), pimpl_->tool_qualities,
-                          "tool quality" );
-        return true;
-    }
-    if( value.is<skill_display_definition_handle>() ) {
-        register_catalog( value.as<skill_display_definition_handle>(), pimpl_->skill_displays,
-                          "skill display category" );
-        return true;
-    }
-    if( value.is<skill_definition_handle>() ) {
-        register_catalog( value.as<skill_definition_handle>(), pimpl_->skills, "skill" );
-        return true;
-    }
-    if( value.is<vitamin_definition_handle>() ) {
-        register_catalog( value.as<vitamin_definition_handle>(), pimpl_->vitamins, "vitamin" );
-        return true;
-    }
-    if( value.is<json_flag_definition_handle>() ) {
-        register_catalog( value.as<json_flag_definition_handle>(), pimpl_->json_flags, "JSON flag" );
-        return true;
-    }
-    if( value.is<math_function_definition_handle>() ) {
-        register_catalog( value.as<math_function_definition_handle>(), pimpl_->math_functions,
-                          "math function" );
-        return true;
-    }
-    if( value.is<damage_type_definition_handle>() ) {
-        register_catalog( value.as<damage_type_definition_handle>(), pimpl_->damage_types, "damage type" );
-        return true;
-    }
-    if( value.is<material_definition_handle>() ) {
-        register_catalog( value.as<material_definition_handle>(), pimpl_->materials, "material" );
-        return true;
-    }
-    if( value.is<ammunition_type_definition_handle>() ) {
-        register_catalog( value.as<ammunition_type_definition_handle>(), pimpl_->ammunition_types,
-                          "ammunition type" );
-        return true;
-    }
-    if( value.is<item_category_definition_handle>() ) {
-        register_catalog( value.as<item_category_definition_handle>(), pimpl_->item_categories,
-                          "item category" );
-        return true;
-    }
-    if( value.is<crafting_category_definition_handle>() ) {
-        register_catalog( value.as<crafting_category_definition_handle>(), pimpl_->crafting_categories,
-                          "recipe category" );
-        return true;
-    }
-    if( value.is<proficiency_category_definition_handle>() ) {
-        register_catalog( value.as<proficiency_category_definition_handle>(),
-                          pimpl_->proficiency_categories, "proficiency category" );
-        return true;
-    }
-    if( value.is<proficiency_definition_handle>() ) {
-        register_catalog( value.as<proficiency_definition_handle>(), pimpl_->proficiencies, "proficiency" );
-        return true;
-    }
-    if( value.is<weapon_category_definition_handle>() ) {
-        register_catalog( value.as<weapon_category_definition_handle>(), pimpl_->weapon_categories,
-                          "weapon category" );
-        return true;
-    }
-    if( value.is<requirement_definition_handle>() ) {
-        register_catalog( value.as<requirement_definition_handle>(), pimpl_->requirements, "requirement" );
-        return true;
-    }
-    if( value.is<recipe_group_definition_handle>() ) {
-        register_catalog( value.as<recipe_group_definition_handle>(), pimpl_->recipe_groups,
-                          "recipe group" );
-        return true;
-    }
-    if( value.is<scent_type_definition_handle>() ) {
-        register_catalog( value.as<scent_type_definition_handle>(), pimpl_->scent_types, "scent type" );
-        return true;
-    }
-    if( value.is<butchery_requirement_definition_handle>() ) {
-        register_catalog( value.as<butchery_requirement_definition_handle>(),
-                          pimpl_->butchery_requirement_entries, "butchery requirement" );
-        return true;
-    }
-    if( value.is<item_action_definition_handle>() ) {
-        register_catalog( value.as<item_action_definition_handle>(), pimpl_->item_actions, "item action" );
-        return true;
-    }
-    if( value.is<item_group_definition_handle>() ) {
-        register_catalog( value.as<item_group_definition_handle>(), pimpl_->item_groups, "item group" );
-        return true;
-    }
-    if( value.is<ammo_effect_definition_handle>() ) {
-        register_catalog( value.as<ammo_effect_definition_handle>(), pimpl_->ammo_effects, "ammo effect" );
-        return true;
-    }
-    if( value.is<nested_recipe_category_definition_handle>() ) {
-        register_catalog( value.as<nested_recipe_category_definition_handle>(),
-                          pimpl_->recipes, "nested recipe category" );
-        return true;
-    }
-    if( value.is<recipe_definition_handle>() ) {
-        register_catalog( value.as<recipe_definition_handle>(), pimpl_->recipes, "recipe" );
-        return true;
-    }
-    if( value.is<plant_lifecycle_definition_handle>() ) {
-        if( operation != definition_operation::add ) {
-            throw std::runtime_error( "plant lifecycle definitions can only be added" );
-        }
-        register_catalog( value.as<plant_lifecycle_definition_handle>(),
-                          pimpl_->plant_lifecycles, "plant lifecycle" );
-        return true;
-    }
-    return false;
+    return try_catalog( requirement_definition_handle{}, pimpl_->requirements, "requirement" ) ||
+           try_catalog( nested_recipe_category_definition_handle{}, pimpl_->recipes,
+                        "nested recipe category" ) ||
+           try_catalog( tool_quality_definition_handle{}, pimpl_->tool_qualities, "tool quality" ) ||
+           try_catalog( skill_display_definition_handle{}, pimpl_->skill_displays,
+                        "skill display category" ) ||
+           try_catalog( skill_definition_handle{}, pimpl_->skills, "skill" ) ||
+           try_catalog( vitamin_definition_handle{}, pimpl_->vitamins, "vitamin" ) ||
+           try_catalog( math_function_definition_handle{}, pimpl_->math_functions,
+                        "math function" ) ||
+           try_catalog( damage_type_definition_handle{}, pimpl_->damage_types, "damage type" ) ||
+           try_catalog( material_definition_handle{}, pimpl_->materials, "material" ) ||
+           try_catalog( ammunition_type_definition_handle{}, pimpl_->ammunition_types,
+                        "ammunition type" ) ||
+           try_catalog( item_category_definition_handle{}, pimpl_->item_categories,
+                        "item category" ) ||
+           try_catalog( crafting_category_definition_handle{}, pimpl_->crafting_categories,
+                        "recipe category" ) ||
+           try_catalog( proficiency_category_definition_handle{}, pimpl_->proficiency_categories,
+                        "proficiency category" ) ||
+           try_catalog( proficiency_definition_handle{}, pimpl_->proficiencies, "proficiency" ) ||
+           try_catalog( weapon_category_definition_handle{}, pimpl_->weapon_categories,
+                        "weapon category" ) ||
+           try_catalog( recipe_group_definition_handle{}, pimpl_->recipe_groups, "recipe group" ) ||
+           try_catalog( scent_type_definition_handle{}, pimpl_->scent_types, "scent type" ) ||
+           try_catalog( butchery_requirement_definition_handle{},
+                        pimpl_->butchery_requirement_entries, "butchery requirement" ) ||
+           try_catalog( item_action_definition_handle{}, pimpl_->item_actions, "item action" ) ||
+           try_catalog( ammo_effect_definition_handle{}, pimpl_->ammo_effects, "ammo effect" ) ||
+           try_catalog( plant_lifecycle_definition_handle{}, pimpl_->plant_lifecycles,
+                        "plant lifecycle", true );
 }
 
 // NOLINTNEXTLINE(readability-function-size)

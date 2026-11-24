@@ -382,11 +382,11 @@ struct snippet_category_definition_handle {
             throw std::runtime_error(
                 "named snippet entries require non-empty id and text" );
         }
-        value.id = id;
-        value.text = text;
-        value.name = name;
+        value.id = std::move( id );
+        value.text = std::move( text );
+        value.name = std::move( name );
         value.weight = weight;
-        value.examine_handler = examine_handler;
+        value.examine_handler = std::move( examine_handler );
         definition->entries.push_back( std::move( value ) );
         return *this;
     }

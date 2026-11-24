@@ -29,16 +29,16 @@ struct localized_text {
     }
 };
 
-inline localized_text make_localized_text( const std::string &singular,
-        const std::optional<std::string> &plural,
-        const sol::optional<std::string> &context )
+inline localized_text make_localized_text( std::string singular,
+        std::optional<std::string> plural,
+        std::optional<std::string> context )
 {
     if( singular.empty() || singular.find( '\0' ) != std::string::npos ||
         ( plural && ( plural->empty() || plural->find( '\0' ) != std::string::npos ) ) ||
         ( context && context->find( '\0' ) != std::string::npos ) ) {
         throw std::runtime_error( "localized content text requires nonempty source forms without NUL" );
     }
-    return { singular, plural, context ? std::optional<std::string>( *context ) : std::nullopt };
+    return { std::move( singular ), std::move( plural ), std::move( context ) };
 }
 
 struct authored_text {
