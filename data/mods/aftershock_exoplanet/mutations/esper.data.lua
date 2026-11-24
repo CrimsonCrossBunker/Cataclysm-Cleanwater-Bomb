@@ -1,5 +1,9 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation_type {
+    id = "ESPER",
+}
+
 ccb.content.define_mutation {
     id = "CANNOT_GAIN_PSIONICS",
     name = ccb.content.text_without_extraction("Can't Become An Esper"),

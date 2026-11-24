@@ -1,6 +1,115 @@
 local ccb = require("ccb")
 
 ccb.content.define_mutation {
+    id = "PrepNet",
+    name = ccb.content.text_without_extraction("PrepNet Tag"),
+    points = 0,
+    valid = false,
+    description = ccb.content.text_without_extraction("NPC trait that makes monsters see it as a PrepNet.  It is a bug if you have it."),
+    player_display = false,
+    threshold = true,
+}
+
+ccb.content.define_mutation {
+    id = "PROF_SYSTEM_SECURITY",
+    name = ccb.content.text("Local System Security"),
+    points = 0,
+    description = ccb.content.text("You are a duly sworn law enforcement officer, with jurisdiction that technically extends to the Salus System.  Whether you can find anyone who that matters to is questionable."),
+    valid = false,
+    purifiable = false,
+    profession = true,
+}
+
+ccb.content.define_mutation {
+    id = "PROF_PINKERTON",
+    name = ccb.content.text("Pinkerton"),
+    points = 0,
+    description = ccb.content.text("You are an UICA affiliated private-security professional, with jurisdiction that technically extends to the Salus System.  Whether you can find anyone who that matters to is questionable."),
+    valid = false,
+    purifiable = false,
+    profession = true,
+}
+
+ccb.content.define_mutation {
+    id = "PROF_TRAVELING_DOCTOR",
+    name = ccb.content.text("MD"),
+    points = 0,
+    description = ccb.content.text("You're a doctor who went out to space and has somehow ended up out on the frontier in the Salus System.  At least out here you get a lot more hands on life or death work compared to the core UICA worlds."),
+    valid = false,
+    purifiable = false,
+    profession = true,
+}
+
+ccb.content.define_mutation {
+    id = "PROF_UICA_INSPECTOR",
+    name = ccb.content.text("UICA Inspector"),
+    points = 0,
+    description = ccb.content.text("You are a UICA Inspector from a civilized part of space.  You have the authority to investigate under a variety of different legal frameworks, UICA, planetary, corporate, system, pre-Discontinuity legal systems for worlds that have only recently been re-discovered.  All of this means that you are nearly a law unto yourself, though you wonder how much that matters in a place like Salus IV outside of maybe Port Augustmoon."),
+    valid = false,
+    purifiable = false,
+    profession = true,
+}
+
+ccb.content.define_mutation {
+    id = "PROF_UICA_SECRET_POLICE",
+    name = ccb.content.text("UICA Astrographic and Gatepoint Agent"),
+    points = 0,
+    description = ccb.content.text("As a member of the Astrographic and Gatepoint Division you are responsible for spreading the boundaries of the Frontiers and protecting interstellar travel.  This gives you wide ranging latitude when it comes to addressing threats to interstellar travel.  Does this technically make you a member of UICA's very own secret police?  Yes, yes it does."),
+    cancels = { "PROF_HUB01_ANCILLIARY" },
+    valid = false,
+    purifiable = false,
+    profession = true,
+}
+
+ccb.content.define_mutation {
+    id = "THRESH_MASTODON",
+    name = ccb.content.text("Killophant"),
+    points = 1,
+    description = ccb.content.text("Your species was created as the ultimate shock troop.  Inherit the earth, pedigree your ancestors, crush the foe."),
+    valid = false,
+    profession = true,
+    purifiable = false,
+    threshold = true,
+}
+
+ccb.content.define_mutation {
+    id = "MIGO_HEAT_RESIST",
+    name = ccb.content.text("Mi-go acclimatization"),
+    points = 4,
+    body_temperature = { -2500, -6500 },
+    description = ccb.content.text("Fleshy fronds grown from your scalp function like organic heat sinks.  They allow you to live comfortably within the mi-go atmosphere."),
+    player_display = true,
+    threshold_requirements = { "THRESH_YUGGOTH" },
+    starting_trait = false,
+    types = { "METABOLISM" },
+    active = true,
+    categories = { "MIGO" },
+    prerequisites = { "WARM_NATURED" },
+}
+
+ccb.content.define_mutation {
+    id = "MIGO_RAD_ADAPTION",
+    name = ccb.content.text("Radioactive Environment Adaptation"),
+    points = 2,
+    description = ccb.content.text("You think you know how to instruct your body to process radioactive particles out of itself faster than normal."),
+    categories = { "MIGO" },
+    active = true,
+    on_activate = "activate_migo_rad_adaption",
+}
+
+ccb.content.define_mutation {
+    id = "MIGO_THRESH_RAD_FLUSH",
+    name = ccb.content.text("Radiation Flush"),
+    points = 5,
+    description = ccb.content.text("You can instruct your immune system to flush out radioactive particles at an enviable speed."),
+    prerequisites = { "MIGO_RAD_ADAPTION" },
+    categories = { "MIGO" },
+    threshold_requirements = { "THRESH_YUGGOTH" },
+    active = true,
+    on_activate = "activate_migo_thresh_rad_flush",
+}
+
+ccb.content.define_mutation {
     id = "FACIAL_TENTACLES",
     name = ccb.content.text("Facial Tentacles"),
     points = 1,

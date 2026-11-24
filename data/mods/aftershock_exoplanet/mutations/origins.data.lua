@@ -1,5 +1,9 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation_type {
+    id = "ORIGIN_HOBBY",
+}
+
 ccb.content.define_mutation {
     id = "AFS_BKGR_ABSTRACT",
     name = ccb.content.text("Unknown background"),
