@@ -9401,6 +9401,7 @@ function CcbHordesApi.update_legacy_group(token, options) end
 function CcbHordesApi.remove_legacy_group(token) end
 
 ---@class CcbPlatformServices
+---@field space CcbSpaceApi
 ---@field lore CcbPlatformLoreApi
 ---@field native_events CcbPlatformNativeEventsApi
 ---@field snippets CcbPlatformSnippetsApi
@@ -12781,3 +12782,143 @@ local CcbMonstersApi = {}
 ---@param friendly boolean True sets permanent friendliness (-1); false sets 0.
 ---@return CcbResult result
 function CcbMonstersApi.set_friendly(monster, friendly) end
+
+---@alias CcbSpaceBody 'earth'|'moon'
+
+---@class CcbSpaceVector
+---@field x number
+---@field y number
+---@field z number
+
+---@class CcbSpaceOrbit
+---@field center CcbSpaceBody
+---@field periapsis_altitude_km number Altitude above the spherical reference body. Must be positive.
+---@field apoapsis_altitude_km number Radius limited to 450000 km from Earth or 66100 km from Moon.
+---@field inclination_deg? number 0 through 180. Defaults to zero.
+---@field ascending_node_deg? number 0 through 360. Defaults to zero.
+---@field argument_of_periapsis_deg? number 0 through 360. Defaults to zero.
+---@field mean_anomaly_deg? number 0 through 360. Defaults to zero.
+---@field epoch_s? number Shared simulation seconds. Defaults to zero.
+
+---Parallel inertial axes for both centers. At simulation t=0 the Earth prime meridian lies on +X and north is +Z. This is not J2000 or UTC.
+---@class CcbSpaceState
+---@field center CcbSpaceBody
+---@field frame 'simulation_inertial'
+---@field time_s number Shared simulation seconds; must be within +/- 1e11.
+---@field position_km CcbSpaceVector
+---@field velocity_km_s CcbSpaceVector
+
+---@class CcbSpaceOrbitalState : CcbSpaceState
+---@field altitude_km number
+---@field period_s number
+
+---@class CcbSpaceObserver
+---@field latitude_deg number Spherical Earth latitude (-90 through 90).
+---@field longitude_deg number East-positive longitude (-180 through 180).
+---@field altitude_km? number 0 through 100 km above the spherical model. Defaults to zero.
+
+---@class CcbSpaceObservation
+---@field azimuth_deg number Clockwise from north. Indeterminate at zenith or nadir.
+---@field elevation_deg number Above the local horizontal.
+---@field distance_km number
+---@field range_rate_km_s number Positive when the distance is increasing.
+---@field visible boolean Above the requested geometric elevation mask; not radio reception.
+
+---@class CcbSpacePass
+---@field rise_s number
+---@field peak_s number
+---@field set_s number
+---@field peak_elevation_deg number
+---@field clipped_at_start boolean Pass is already underway at the start of the query.
+---@field clipped_at_end boolean Pass is still underway at the end of the query.
+
+---@class CcbSpaceSightline
+---@field earth_blocked boolean
+---@field moon_blocked boolean
+---@field visible boolean Neither spherical body blocks the segment.
+---@field distance_km number
+---@field light_time_s number One-way geometric light time, even if blocked.
+
+---@class CcbSpaceLunarTransfer
+---@field earth_leg CcbSpaceOrbit Valid as a transfer trajectory only from departure_s to lunar_entry_s.
+---@field departure_s number
+---@field lunar_entry_s number Time of entry into the simplified lunar sphere of influence.
+---@field lunar_encounter_s number Nominal Moon center intercept used for targeting; not a flight endpoint.
+---@field departure_delta_v_km_s number From the required circular, coplanar parking state.
+---@field capture_delta_v_km_s number Estimated tangential circularization cost, not a solved lunar approach.
+---@field total_delta_v_km_s number Sum of modeled burns; excludes phasing and plane changes.
+---@field required_parking_state CcbSpaceState
+---@field lunar_entry CcbSpaceState Moon-centered position and velocity at the end of the modeled trajectory.
+
+---@class CcbSpaceRadiationOptions
+---@field shield_g_cm2? number Effective areal density, 0 through 10000. Defaults to zero.
+---@field solar_event_strength? number Game intensity scale, 0 through 100. Defaults to zero.
+---@field duration_s? number Exposure at the sampled point, 0 through 1e9 seconds. Defaults to zero.
+
+---@class CcbSpaceRadiationSample
+---@field galactic_msv_h number
+---@field trapped_msv_h number
+---@field solar_msv_h number
+---@field total_msv_h number
+---@field dose_msv number Sample rate times duration. No along-track integration.
+
+---@class CcbSpaceApi
+local CcbSpaceApi = {}
+
+---Propagate a bound two-body orbit about Earth or Moon, without perturbations.
+---@param elements CcbSpaceOrbit
+---@param time_s number
+---@return CcbSpaceOrbitalState
+function CcbSpaceApi.propagate(elements, time_s) end
+
+---Return the geocentric Moon state from a fixed, offline gameplay ephemeris.
+---@param time_s number
+---@return CcbSpaceState
+function CcbSpaceApi.moon_ephemeris(time_s) end
+
+---Translate the origin of both position and velocity without rotating the axes.
+---@param target CcbSpaceState
+---@param center CcbSpaceBody
+---@return CcbSpaceState
+function CcbSpaceApi.recenter(target, center) end
+
+---Plan a coplanar, Hohmann-like coast to lunar influence and estimate capture cost.
+---@param departure_s number
+---@param earth_parking_altitude_km number 160 through 100000.
+---@param lunar_parking_altitude_km number 20 through 20000.
+---@return CcbSpaceLunarTransfer
+function CcbSpaceApi.plan_lunar_transfer(departure_s, earth_parking_altitude_km, lunar_parking_altitude_km) end
+
+---Compute topocentric geometry at a rotating spherical Earth station.
+---@param target CcbSpaceState
+---@param site CcbSpaceObserver
+---@param minimum_elevation_deg? number 0 inclusive through 90 exclusive. Defaults to zero.
+---@return CcbSpaceObservation
+function CcbSpaceApi.observe(target, site, minimum_elevation_deg) end
+
+---Find the first sampled above-mask window. Very short grazing passes can be missed; long searches may require smaller intervals.
+---@param elements CcbSpaceOrbit
+---@param site CcbSpaceObserver
+---@param begin_s number
+---@param end_s number
+---@param minimum_elevation_deg? number 0 inclusive through 90 exclusive. Defaults to zero.
+---@return CcbSpacePass?
+function CcbSpaceApi.next_pass(elements, site, begin_s, end_s, minimum_elevation_deg) end
+
+---Test a simultaneous line segment against Earth and Moon.
+---@param from CcbSpaceState
+---@param to CcbSpaceState
+---@return CcbSpaceSightline
+function CcbSpaceApi.line_of_sight(from, to) end
+
+---Test simplified Earth and Moon shadows using a caller-supplied inertial direction toward the Sun. No penumbra.
+---@param target CcbSpaceState
+---@param direction_to_sun CcbSpaceVector
+---@return boolean
+function CcbSpaceApi.sunlit(target, direction_to_sun) end
+
+---Estimate gameplay ionizing radiation. The tunable dose rates are not suitable for real exposure assessment.
+---@param target CcbSpaceState
+---@param options? CcbSpaceRadiationOptions
+---@return CcbSpaceRadiationSample
+function CcbSpaceApi.radiation(target, options) end
