@@ -1,8 +1,85 @@
 local ccb = require("ccb")
-local actions = ccb.content.dialogue_actions
 local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
 
+ccb.content.define_dialogue_topic {
+    id = "TALK_NPC_LUMBERMILL_LOGGER",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_talked_to_logger" } }),
+        yes = ccb.content.text("Hello there.  Nice to see you, <name_g>."),
+        no = ccb.content.text("A stranger out here?  Who are you?"),
+    },
+    on_enter = {
+        {
+            actions = {
+                actions.set_actor_value("interlocutor", "dialogue_first_meeting_talked_to_logger", "yes"),
+            },
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Nice to meet you."),
+            next_topic = "TALK_NPC_LUMBERMILL_LOGGER_INTRO",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_talked_to_logger" } })),
+        },
+        {
+            text = ccb.content.text("Hands up, <name_b>!"),
+            trial = { kind = "intimidate", difficulty = 30 },
+            success = {
+                next_topic = "TALK_WEAPON_DROPPED",
+                actions = { "drop_weapon" },
+                opinion = { trust = -4, fear = 3 },
+            },
+            failure = { next_topic = "TALK_DONE", actions = { "hostile" } },
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_talked_to_logger" } })),
+        },
+        {
+            text = ccb.content.text("Pleasure to see you again."),
+            next_topic = "TALK_NPC_LUMBERMILL_LOGGER_INTRO",
+            when = predicates.any_equal({ "yes", { scope = "interlocutor", key = "dialogue_first_meeting_talked_to_logger" } }),
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_bye>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
+ccb.content.define_dialogue_topic {
+    id = "TALK_NPC_LUMBERMILL_LOGGER_MISSION_WAREHOUSE",
+    line = {
+        joined = {
+            ccb.content.text("&You describe the warehouse to the best of your ability.  The logger considers for a moment"),
+            {
+            when = predicates.any_equal({ "no", { scope = "interlocutor", key = "exodii_mission_wh_correct" } }),
+            yes = ccb.content.gendered_line(", then frowns.  \"I think I'd remember something like that, no.  Sorry.\"", { "interlocutor" }),
+            no = ccb.content.gendered_line(", looking thoughtful.  \"You know, around the time things really went bad, I remember a really awful portal storm.  A while later, I saw something like that in the distance.  Could be what you're talking about.\"", { "interlocutor" }),
+        },
+        },
+    },
+    on_enter = {
+        { actions = { actions.set_actor_value("interlocutor", "asked_about_exodii_warehouse_mission", "yes") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Oh well.  Thanks anyway.  I'll go ask around."),
+            next_topic = "TALK_DONE",
+            when = predicates.any_equal({ "no", { scope = "interlocutor", key = "exodii_mission_wh_correct" } }),
+            actions = { actions.handler("dlg_a_dda_399f0cdb5f50") },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_NPC_LUMBERMILL_LOGGER_TALK_TO_MANAGER",
+    line = {
+        choices = {
+            ccb.content.text("You mean you're still looking for wood?  Crazy… but we had a suspicion folks might show up in an emergency.  Talk to the manager if you want to make an order."),
+            ccb.content.text("Well, the machinery works just fine.  We were always self-sufficient and <the_cataclysm> only really made that more apparent.  So if you want to place an order and help keep the operation running, talk to the manager.  We'll trade you for our wood."),
+        },
+    },
+    replies = { { text = ccb.content.text("Sounds good, thanks."), next_topic = "TALK_NONE" } },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_NPC_LUMBERMILL_LOGGER_STORY",
