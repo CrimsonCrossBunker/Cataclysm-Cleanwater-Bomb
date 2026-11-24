@@ -1,4 +1,83 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+-- A member of the Gray Moose Militia, trying to safe in their isolated location
+ccb.content.define_npc {
+    id = "MILITIA_MERCHANT",
+    unique_name = ccb.content.text("Darby Sutton"),
+    class = "MILITIA_MERCHANT",
+    attitude = 0,
+    suffix = ccb.content.text("Survivor"),
+    mission = "SHOPKEEP",
+    chat = "TALK_MILITIA_MAIN",
+    faction = "GM_militia_faction",
+}
+
+ccb.content.define_npc_class {
+    id = "MILITIA_MERCHANT",
+    name = ccb.content.text("Merchant"),
+    job_description = ccb.content.text("I'm a local shopkeeper."),
+    traits = { { group = "NPC_starting_traits" }, { group = "Appearance_demographics" } },
+    common = false,
+    intelligence = { one_in = 4 },
+    perception = { one_in = 4 },
+    shop_groups = "MILITIA_MERCHANT_misc",
+    carry = "MILITIA_MERCHANT_misc",
+    skills = {
+        {
+            skill = "ALL",
+            level = {
+                mul = { { one_in = 3 }, { sum = { { dice = { 2, 2 } }, { constant = -2 }, { one_in = 4 } } } },
+            },
+        },
+        { skill = "mechanics", bonus = { one_in = 2 } },
+        { skill = "electronics", bonus = { rng = { 0, 2 } } },
+        { skill = "speech", bonus = { rng = { 3, 5 } } },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_MILITIA_MAIN",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_MILITIAMAIN" } }),
+        yes = ccb.content.text("Hello again."),
+        no = ccb.content.text("Welcome to our camp.  Behave yourself while you are here.  What can I do for you?"),
+    },
+    on_enter = {
+        {
+            actions = {
+                actions.set_actor_value("speaker", "dialogue_first_meeting_talked_to_MILITIAMAIN", "yes"),
+            },
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("What do you do here?"),
+            next_topic = "TALK_MILITIA_INTRODUCTION",
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_MILITIAMAIN" } })),
+        },
+        {
+            text = ccb.content.text("What's the story behind this place?"),
+            next_topic = "TALK_MILITIA_BACKGROUND",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_MILITIAMAIN" } }),
+        },
+        {
+            text = ccb.content.text("Is there something I can do for you?"),
+            next_topic = "TALK_MILITIA_HELP",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_MILITIAMAIN" } }),
+        },
+        {
+            text = ccb.content.text("Do you have anything to trade?"),
+            next_topic = "TALK_MILITIA_TRADE",
+        },
+        {
+            text = ccb.content.text("Time for me to leave."),
+            next_topic = "TALK_MILITIA_BYE",
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_first_meeting_talked_to_MILITIAMAIN" } }),
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_MILITIA_INTRODUCTION",
