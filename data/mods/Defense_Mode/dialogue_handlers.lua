@@ -1,47 +1,6 @@
 local ccb = require("ccb")
 local services = ccb.services
-local H = {}
-
-H.char_has_trait = function(actor, trait_id)
-    if not actor then return 0 end
-    local r = services.mutations.has_id_text(actor, trait_id)
-    if not r.ok or not r.value then return 0 end
-    return 1
-end
-
-H.char_skill = function(actor, skill_id)
-    if not actor then return 0 end
-    local r = services.skills.level(actor, skill_id)
-    if not r.ok then return 0 end
-    return r.value or 0
-end
-
-H.global_var_num = function(key)
-    local r = services.variables.get_global_number(key)
-    if not r.ok or not r.value or not r.value.exists or r.value.value == nil then return 0 end
-    return r.value.value
-end
-
-H.npc = function(ctx)
-    return ctx:interlocutor()
-end
-
-H.set_var = function(scope, actor, ctx, key, val)
-    if scope == "context" then
-        if val == nil then ctx:remove(key) else ctx:set(key, val) end
-        return
-    end
-    if scope == "global" then
-        if val == nil then services.variables.remove_global(key) else services.variables.set_global(key, val) end
-        return
-    end
-    if not actor then return end
-    if val == nil then services.variables.remove(actor, key) else services.variables.set(actor, key, val) end
-end
-
-H.u = function(ctx)
-    return ctx:speaker()
-end
+local H = require("ccb_runtime_helpers").create()
 
 ccb.runtime.handler("dlg_p_defense_mode_010eff7a1ea0", function(ctx)
     return (H.global_var_num("regular_zombies_allowed") == 0)
