@@ -1,5 +1,21 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation_type {
+    id = "MANA_ADD",
+}
+
+ccb.content.define_mutation_type {
+    id = "MANA_MULT",
+}
+
+ccb.content.define_mutation_type {
+    id = "MANA_REGEN",
+}
+
+ccb.content.define_mutation_type {
+    id = "MANA_SIPHON",
+}
+
 -- Catch-all dummy trait for Magiclysm mutations.
 ccb.content.define_mutation {
     id = "HUMAN_MAGIC",
