@@ -739,16 +739,16 @@ void update_split_hvac( map &here, const vpart_reference &indoor, double outside
         // PKA-A12/PUZ-A12 rating points, with the low/high outdoor limits of the standard unit.
         // Cooling's latent component removes moisture rather than lowering the room temperature.
         static const std::vector<std::pair<float, float>> heating_output{
-            { -11, 2'400 }, { -8, 2'670 }, { 8, 4'100 }
+            { -11.0f, 2'400.0f }, { -8.0f, 2'670.0f }, { 8.0f, 4'100.0f }
         };
         static const std::vector<std::pair<float, float>> heating_input{
-            { -11, 1'140 }, { -8, 1'120 }, { 8, 1'030 }, { 21, 950 }
+            { -11.0f, 1'140.0f }, { -8.0f, 1'120.0f }, { 8.0f, 1'030.0f }, { 21.0f, 950.0f }
         };
         static const std::vector<std::pair<float, float>> cooling_output{
-            { 20, 3'800 }, { 35, 3'520 }, { 46, 3'200 }
+            { 20.0f, 3'800.0f }, { 35.0f, 3'520.0f }, { 46.0f, 3'200.0f }
         };
         static const std::vector<std::pair<float, float>> cooling_input{
-            { 20, 760 }, { 35, 900 }, { 46, 1'100 }
+            { 20.0f, 760.0f }, { 35.0f, 900.0f }, { 46.0f, 1'100.0f }
         };
         const float outdoor_c = static_cast<float>( outside_c );
         const double capacity = heat ? multi_lerp( heating_output, outdoor_c ) :
