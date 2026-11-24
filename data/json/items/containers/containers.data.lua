@@ -1,6 +1,473 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "2lcanteen",
+    category = "clothing",
+    name = ccb.content.text("2.5 L canteen"),
+    looks_like = "bottle_plastic",
+    description = ccb.content.text("A large plastic water canteen, with a 2.5 liter capacity and carrying strap."),
+    ascii_picture = "2lcanteen",
+    mass = "155 g",
+    volume = "2625 ml",
+    price = "10 USD",
+    survival_price = "50 cent",
+    materials = { "plastic" },
+    symbol = ")",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            watertight = true,
+            rigid = true,
+            capacity = "2500 ml",
+            max_item_volume = "32 ml",
+            mass_limit = "5 kg",
+        },
+    },
+    flags = { "BELTED", "OVERSIZE", "WATER_FRIENDLY", "COLLAPSE_CONTENTS" },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "plastic", coverage = 100, thickness = 2.0 } },
+                encumbrance = 4,
+                coverage = 10,
+                covers = { "torso" },
+                subparts = { "torso_hanging_front" },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "camelbak",
+    category = "container",
+    name = ccb.content.text("hydration pack"),
+    looks_like = "runner_bag",
+    description = ccb.content.text("A slim and lightweight insulated plastic bladder worn on the back or within a hydration pouch in a backpack.  It has a large pocket and a capped mouth for filling with liquid, with a hose that allows the wearer to drink hands-free."),
+    ascii_picture = "camelbak",
+    mass = "185 g",
+    volume = "250 ml",
+    price = "100 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "cotton", "plastic" },
+    symbol = ")",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            watertight = true,
+            transparent = true,
+            capacity = "3000 ml",
+            max_item_volume = "32 ml",
+            mass_limit = "20 kg",
+        },
+    },
+    flags = { "BELTED", "COLLAPSE_CONTENTS" },
+    armor = {
+        portions = {
+            {
+                materials = {
+                    { id = "cotton", coverage = 100, thickness = 1.0 },
+                    { id = "plastic", coverage = 100, thickness = 1.0 },
+                },
+                coverage = 30,
+                covers = { "torso" },
+                subparts = { "torso_hanging_back" },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "canteen",
+    category = "clothing",
+    name = ccb.content.text("plastic canteen"),
+    looks_like = "2lcanteen",
+    description = ccb.content.text("A military-style water canteen with a 1.5 liter capacity.  Commonly worn at the hip."),
+    ascii_picture = "canteen",
+    mass = "155 g",
+    volume = "1575 ml",
+    length = "20 cm",
+    price = "8 USD",
+    survival_price = "50 cent",
+    materials = { "plastic" },
+    symbol = ")",
+    color = "green",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            rigid = true,
+            watertight = true,
+            capacity = "1500 ml",
+            max_item_volume = "32 ml",
+            mass_limit = "3 kg",
+        },
+    },
+    flags = { "BELTED", "OVERSIZE", "WATER_FRIENDLY", "COLLAPSE_CONTENTS" },
+    armor = {
+        sided = true,
+        portions = {
+            {
+                encumbrance = 2,
+                coverage = 5,
+                covers = { "leg_l", "leg_r" },
+                subparts = { "leg_hip_r", "leg_hip_l" },
+                materials = { { id = "plastic", coverage = 100, thickness = 2.0 } },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "flask_hip",
+    category = "clothing",
+    name = ccb.content.plural_text("hip flask", "hip flasks"),
+    looks_like = "2lcanteen",
+    description = ccb.content.text("A 250 mL metal flask with a hinged screw-on lid, commonly used to discreetly transport alcohol."),
+    ascii_picture = "flask_hip",
+    mass = "270 g",
+    volume = "650 ml",
+    length = "13 cm",
+    price = "40 USD",
+    survival_price = "10 cent",
+    accuracy = { grip = "none", length = "hand", surface = "any", balance = "neutral" },
+    materials = { "steel" },
+    symbol = ")",
+    color = "light_gray",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            rigid = true,
+            watertight = true,
+            capacity = "250 ml",
+            max_item_volume = "17 ml",
+            mass_limit = "1 kg",
+        },
+    },
+    qualities = { { id = "BOIL", level = 1 } },
+    flags = { "BELTED", "OVERSIZE", "WATER_FRIENDLY", "COLLAPSE_CONTENTS" },
+    melee_damage = { bash = 3 },
+    armor = {
+        sided = true,
+        portions = {
+            {
+                materials = { { id = "iron", coverage = 100, thickness = 1.0 } },
+                coverage = 2,
+                covers = { "leg_l", "leg_r" },
+                subparts = { "leg_hip_r", "leg_hip_l" },
+            },
+        },
+    },
+    use_actions = { "HEAT_LIQUID_ITEMS" },
+}
+
+ccb.content.define_item {
+    id = "canteen_wood",
+    category = "clothing",
+    name = ccb.content.text("wooden canteen"),
+    looks_like = "canteen",
+    description = ccb.content.text("A water canteen made from wood, secured by metal bands and sealed with wax or pitch.  Holds 1.5 liters and has a simple carry strap."),
+    ascii_picture = "canteen_wood",
+    mass = "232 g",
+    volume = "1750 ml",
+    price = "8 USD",
+    survival_price = "10 cent",
+    materials = { "wood" },
+    symbol = ")",
+    color = "brown",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            rigid = true,
+            watertight = true,
+            capacity = "1500 ml",
+            max_item_volume = "17 ml",
+            mass_limit = "3 kg",
+        },
+    },
+    flags = { "BELTED", "WATER_FRIENDLY" },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "wood", coverage = 100, thickness = 2.0 } },
+                encumbrance = 5,
+                coverage = 5,
+                covers = { "torso" },
+                subparts = { "torso_hanging_front" },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "waterskin",
+    category = "clothing",
+    name = ccb.content.text("small waterskin"),
+    looks_like = "canvas_bag",
+    description = ccb.content.text("A small watertight leather bag with a carrying strap, can hold 1.5 liters of water."),
+    ascii_picture = "waterskin",
+    mass = "453 g",
+    volume = "250 ml",
+    price = "20 USD",
+    survival_price = "50 cent",
+    materials = { "leather" },
+    symbol = ")",
+    color = "brown",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            watertight = true,
+            capacity = "1500 ml",
+            max_item_volume = "17 ml",
+            mass_limit = "3 kg",
+        },
+    },
+    flags = { "BELTED", "WATER_FRIENDLY" },
+    armor = {
+        sided = true,
+        portions = {
+            {
+                materials = { { id = "leather", coverage = 100, thickness = 2.0 } },
+                coverage = 5,
+                covers = { "leg_l", "leg_r" },
+                subparts = { "leg_hip_r", "leg_hip_l" },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "waterskin2",
+    category = "clothing",
+    name = ccb.content.text("waterskin"),
+    looks_like = "waterskin",
+    description = ccb.content.text("A watertight leather bag with a carrying strap, can hold 3 liters of water."),
+    ascii_picture = "waterskin2",
+    mass = "783 g",
+    volume = "500 ml",
+    price = "40 USD",
+    survival_price = "50 cent",
+    materials = { "leather" },
+    symbol = ")",
+    color = "brown",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            watertight = true,
+            capacity = "3 L",
+            max_item_volume = "17 ml",
+            mass_limit = "6 kg",
+        },
+    },
+    flags = { "BELTED", "WATER_FRIENDLY" },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "leather", coverage = 100, thickness = 2.0 } },
+                coverage = 10,
+                covers = { "torso" },
+                subparts = { "torso_hanging_front" },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "waterskin3",
+    category = "clothing",
+    name = ccb.content.text("large waterskin"),
+    looks_like = "waterskin2",
+    description = ccb.content.text("A large watertight leather bag with a carrying strap, can hold 5 liters of water."),
+    ascii_picture = "waterskin3",
+    mass = "990 g",
+    volume = "750 ml",
+    price = "60 USD",
+    survival_price = "1 USD",
+    materials = { "leather" },
+    symbol = ")",
+    color = "brown",
+    pockets = {
+        {
+            kind = "CONTAINER",
+            watertight = true,
+            capacity = "5 L",
+            max_item_volume = "17 ml",
+            mass_limit = "10 kg",
+        },
+    },
+    flags = { "BELTED", "WATER_FRIENDLY" },
+    armor = {
+        portions = {
+            {
+                materials = { { id = "leather", coverage = 100, thickness = 2.0 } },
+                coverage = 40,
+                covers = { "torso" },
+                subparts = { "torso_hanging_front" },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "condom",
+    name = "condom",
+    description = "A gentleman's balloon.  A single-use life preventer.  A thumbless latex mitten.  This could be used as a makeshift water container, but otherwise it's anyone's guess what it's for.",
+    symbol = ")",
+    color = "white",
+    category = "container",
+    ascii_picture = "condom",
+    variant_kind = "generic",
+    mass = "5 g",
+    volume = "15 ml",
+    price = "0 cent",
+    survival_price = "25 cent",
+    flags = { "BANK_NOTE_SHAPED" },
+    materials = { "plastic" },
+    properties = { burst_when_filled = "75" },
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "3750 ml",
+            mass_limit = "7 kg",
+            max_item_length = "26 cm",
+            transparent = true,
+            watertight = true,
+        },
+    },
+    variants = {
+        {
+            id = "condom_plain",
+            name = "condom",
+            description = "This one is plain, no coloring or flavoring.",
+            ascii_picture = "condom_plain",
+            append = true,
+            weight = 200,
+        },
+        {
+            id = "condom_blue",
+            name = "blue condom",
+            description = "This one is colored blue.",
+            ascii_picture = "condom_blue",
+            append = true,
+            weight = 80,
+        },
+        {
+            id = "condom_red",
+            name = "red condom",
+            description = "This one is colored red.",
+            ascii_picture = "condom_red",
+            append = true,
+            weight = 80,
+        },
+        {
+            id = "condom_green",
+            name = "green condom",
+            description = "This one is colored green.",
+            ascii_picture = "condom_green",
+            append = true,
+            weight = 80,
+        },
+        {
+            id = "condom_yellow",
+            name = "yellow condom",
+            description = "This one is colored yellow.",
+            ascii_picture = "condom_yellow",
+            append = true,
+            weight = 80,
+        },
+        {
+            id = "condom_pink",
+            name = "pink condom",
+            description = "This one is colored pink.",
+            ascii_picture = "condom_pink",
+            append = true,
+            weight = 80,
+        },
+        {
+            id = "condom_ribbed",
+            name = "ribbed condom",
+            description = "This one is ribbed for pleasure!",
+            ascii_picture = "condom_ribbed",
+            append = true,
+            weight = 100,
+        },
+        {
+            id = "condom_flavored_cherry",
+            name = "cherry flavored condom",
+            description = "A condom with cherry flavored lube, in red packaging to match.",
+            ascii_picture = "condom_flavored_cherry",
+            append = true,
+            weight = 40,
+        },
+        {
+            id = "condom_flavored_banana",
+            name = "banana flavored condom",
+            description = "A condom with banana flavored lube, in yellow packaging to match.",
+            ascii_picture = "condom_flavored_banana",
+            append = true,
+            weight = 40,
+        },
+        {
+            id = "condom_flavored_strawberry",
+            name = "strawberry flavored condom",
+            description = "A condom with strawberry flavored lube, in red packaging to match.",
+            ascii_picture = "condom_flavored_strawberry",
+            append = true,
+            weight = 40,
+        },
+        {
+            id = "condom_flavored_orange",
+            name = "orange flavored condom",
+            description = "A condom with orange flavored lube, in orange packaging to match.",
+            ascii_picture = "condom_flavored_orange",
+            append = true,
+            weight = 40,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "bottle_gourd",
+    name = "bottle gourd",
+    description = "A hard, watertight container made from a dried bottle gourd.  Can be used similar to a canteen or just for storing liquids.",
+    symbol = "6",
+    color = "brown",
+    category = "clothing",
+    looks_like = "clay_canister",
+    ascii_picture = "bottle_gourd",
+    mass = "300 g",
+    volume = "2500 ml",
+    price = "3 USD",
+    survival_price = "60 cent",
+    flags = { "BELTED", "OVERSIZE", "WATER_FRIENDLY" },
+    materials = { "wood" },
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "2250 ml",
+            mass_limit = "2501 g",
+            max_item_volume = "2501 ml",
+            rigid = true,
+            watertight = true,
+            sealed_data = { spoil_multiplier = 0.9 },
+        },
+    },
+    armor = {
+        portions = {
+            {
+                covers = { "torso" },
+                subparts = { "torso_hanging_front" },
+                coverage = 8,
+                encumbrance = 3,
+                materials = {
+                    { id = "wood", thickness = 2.0, coverage = 100 },
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
     id = "can_food",
     name = "small tin can",
     description = "A small tin can, like what tuna comes in.",
