@@ -203,6 +203,7 @@ These special attacks are defined in [JSON](/data/json/monster_special_attacks),
 | `range`       		      | Integer, range of the attack in tiles (Default 1, this equals melee range). Melee attacks require unobstructed straight paths.
 | `grab`                      | Boolean, default false. Denotes this attack as a grabbing one. See `grabs` for further information
 | `grab_data`                 | Array, grab data of the attack. Read only if `grab: true`, see `grabs` for the possible variables.
+| `grab_sequence`             | Boolean, default false. Set on both attacks: the grabbing attack records its successful `grabbed` hold, and the non-grabbing attack can follow up on the same hold starting on the next turn.
 | `hitsize_min`               | Integer, lower bound of limb size this attack can target (if no bodypart targets are explicitly defined)
 | `hitsize_max`               | Integer, upper bound of limb size this attack can target.
 | `no_adjacent`			      | Boolean, default false. The attack can't target adjacent creatures.
