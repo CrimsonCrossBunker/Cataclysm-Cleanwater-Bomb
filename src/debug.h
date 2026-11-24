@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_DEBUG_H
 #define CATA_SRC_DEBUG_H
 
+#include <cstdint>
 #include <cstdlib>
 #include <string>
 #include <unordered_set>
@@ -247,6 +248,12 @@ std::string capture_debugmsg_during( const std::function<void()> &func );
  * If catacurses::stdscr is available, shows all buffered debugmsg prompts.
  */
 void replay_buffered_debugmsg_prompts();
+
+/** Returns total realDebugmsg calls observed in this process. */
+std::uint64_t debugmsg_count();
+
+/** Replays debug messages queued from pool worker threads on the main thread. */
+void flush_worker_debugmsgs();
 
 // Debug Only                                                       {{{1
 // ---------------------------------------------------------------------

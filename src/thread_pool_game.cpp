@@ -1,5 +1,6 @@
 #include "thread_pool.h"
 
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -33,6 +34,10 @@ void initialize_game_worker()
 
 unsigned compute_workers()
 {
+    const unsigned hardware = std::thread::hardware_concurrency();
+    if( hardware <= 1 ) {
+        return 0;
+    }
     // The safe value-only domains have independent enable/admission options.
     // The legacy switch still controls only generic parallel_for callers.
     if( has_option( "MULTITHREADING_ENABLED" ) && get_option<bool>( "MULTITHREADING_ENABLED" ) ) {
@@ -40,10 +45,9 @@ unsigned compute_workers()
         if( requested > 0 ) {
             return static_cast<unsigned>( requested );
         }
-        const unsigned hardware = std::thread::hardware_concurrency();
-        return hardware > 1 ? hardware - 1 : 0;
+        return hardware - 1;
     }
-    return 4;
+    return std::min( hardware - 1, 7U );
 }
 } // namespace
 

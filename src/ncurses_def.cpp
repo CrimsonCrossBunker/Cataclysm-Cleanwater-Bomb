@@ -25,6 +25,7 @@
     #include <curses.h>
 #endif
 
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <iosfwd>
@@ -402,6 +403,14 @@ void input_manager::pump_events()
     if( test_mode ) {
         return;
     }
+
+    static std::chrono::steady_clock::time_point last_pump{};
+    const auto now = std::chrono::steady_clock::now();
+    if( last_pump.time_since_epoch().count() != 0 &&
+        now - last_pump < std::chrono::milliseconds( 16 ) ) {
+        return;
+    }
+    last_pump = now;
 
     // Handle all events, but ignore any keypress
     int key = ERR;

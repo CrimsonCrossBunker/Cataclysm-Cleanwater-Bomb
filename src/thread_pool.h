@@ -236,6 +236,85 @@ void parallel_for( int begin, int end, F &&f )
 }
 
 /**
+ * Execute an integer range in parallel across the shared compute pool and
+ * calling thread, independent of the legacy MULTITHREADING_ENABLED option.
+ * Falls back to direct serial execution on single-core devices or nested calls.
+ */
+template<typename F>
+void parallel_for_compute( int begin, int end, F &&f )
+{
+    const int n = end - begin;
+    if( n <= 0 ) {
+        return;
+    }
+    if( n == 1 || is_pool_worker_thread() ) {
+        for( int i = begin; i < end; ++i ) {
+            f( i );
+        }
+        return;
+    }
+
+    const std::shared_ptr<cata_thread_pool> pool = get_compute_pool();
+    const int nw = pool ? static_cast<int>( pool->num_workers() ) : 0;
+    if( nw <= 0 ) {
+        for( int i = begin; i < end; ++i ) {
+            f( i );
+        }
+        return;
+    }
+
+    const int chunks = std::min( n, nw + 1 );
+    simple_latch latch( chunks - 1 );
+    std::exception_ptr first_ex;
+    std::mutex ex_mutex;
+
+    int submitted = 1;
+    try {
+        for( ; submitted < chunks; ++submitted ) {
+            const int c = submitted;
+            const int chunk_begin = begin + ( n * c / chunks );
+            const int chunk_end = begin + ( n * ( c + 1 ) / chunks );
+            pool->submit( [&latch, &f, &first_ex, &ex_mutex, chunk_begin, chunk_end]() {
+                try {
+                    for( int i = chunk_begin; i < chunk_end; ++i ) {
+                        f( i );
+                    }
+                } catch( ... ) {
+                    std::scoped_lock lock( ex_mutex );
+                    if( !first_ex ) {
+                        first_ex = std::current_exception();
+                    }
+                }
+                latch.count_down();
+            } );
+        }
+    } catch( ... ) {
+        for( int c = submitted; c < chunks; ++c ) {
+            latch.count_down();
+        }
+        latch.wait();
+        throw;
+    }
+
+    const int main_end = begin + ( n / chunks );
+    try {
+        for( int i = begin; i < main_end; ++i ) {
+            f( i );
+        }
+    } catch( ... ) {
+        std::scoped_lock lock( ex_mutex );
+        if( !first_ex ) {
+            first_ex = std::current_exception();
+        }
+    }
+
+    latch.wait();
+    if( first_ex ) {
+        std::rethrow_exception( first_ex );
+    }
+}
+
+/**
  * Like parallel_for, but dispatches one task per chunk_size indices rather
  * than dividing the range evenly by number of workers.  Useful when the
  * natural work unit has a known, fixed size.

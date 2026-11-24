@@ -6,6 +6,7 @@
 // IWYU pragma: no_include <sys/unistd.h>
 #include <clocale>
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -16,6 +17,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <optional>
 #include <regex>
@@ -42,6 +44,7 @@
 #include "output.h"
 #include "path_info.h"
 #include "point.h"
+#include "thread_pool.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -559,13 +562,61 @@ std::string add_debug_error_source( const std::string &text )
     return text + "\n\n" + debug_error_sources.back();
 }
 
+static std::atomic<std::uint64_t> total_debugmsg_count{ 0 };
+
+namespace
+{
+struct worker_debugmsg_entry {
+    const char *filename;
+    const char *line;
+    const char *funcname;
+    std::string text;
+};
+
+std::mutex &worker_debugmsg_mutex()
+{
+    static std::mutex mutex;
+    return mutex;
+}
+
+std::vector<worker_debugmsg_entry> &worker_debugmsg_queue()
+{
+    static std::vector<worker_debugmsg_entry> entries;
+    return entries;
+}
+} // namespace
+
+std::uint64_t debugmsg_count()
+{
+    return total_debugmsg_count.load( std::memory_order_acquire );
+}
+
+void flush_worker_debugmsgs()
+{
+    std::vector<worker_debugmsg_entry> pending;
+    {
+        std::scoped_lock<std::mutex> lock( worker_debugmsg_mutex() );
+        pending.swap( worker_debugmsg_queue() );
+    }
+    for( const worker_debugmsg_entry &entry : pending ) {
+        realDebugmsg( entry.filename, entry.line, entry.funcname, entry.text );
+    }
+}
+
 void realDebugmsg( const char *filename, const char *line, const char *funcname,
                    const std::string &text )
 {
     cata_assert( filename != nullptr );
     cata_assert( line != nullptr );
     cata_assert( funcname != nullptr );
+    total_debugmsg_count.fetch_add( 1, std::memory_order_relaxed );
     const std::string contextual_text = add_debug_error_source( text );
+
+    if( is_pool_worker_thread() ) {
+        std::scoped_lock<std::mutex> lock( worker_debugmsg_mutex() );
+        worker_debugmsg_queue().push_back( { filename, line, funcname, contextual_text } );
+        return;
+    }
 
     if( capturing ) {
         captured += contextual_text;
