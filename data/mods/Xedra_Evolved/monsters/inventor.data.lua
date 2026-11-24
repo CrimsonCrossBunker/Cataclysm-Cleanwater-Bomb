@@ -1,6 +1,96 @@
 local ccb = require("ccb")
 
 ccb.content.define_monster {
+    id = "mon_sniperbot",
+    name = ccb.content.plural_text("sniper bot", "sniper bots"),
+    description = ccb.content.text("A doglike robot with a rifle barrel mounted on its back.  The quadrupedal platform appears to grant a high level of stability in order to strike targets at long range."),
+    default_faction = "player",
+    species = { "ROBOT" },
+    categories = { "XE_CLASSIC" },
+    difficulty_adjustment = 0,
+    volume = "150 L",
+    mass = "40750 g",
+    hp = 80,
+    speed = 100,
+    materials = { "aluminum" },
+    symbol = "R",
+    color = "dark_gray",
+    aggression = 100,
+    morale = 100,
+    armor = { bash = 14, cut = 14, bullet = 11 },
+    vision_day = 50,
+    tracking_distance = 16,
+    revert_item = "bot_sniperbot",
+    starting_ammo = { ["308"] = 150 },
+    attacks = {
+        {
+            cooldown = 1,
+            move_cost = 450,
+            kind = "gun",
+            gun = {
+                weapon = "inventor_sniper",
+                ammo = "308",
+                skills = { { id = "gun", level = 8 }, { id = "rifle", level = 8 } },
+                dexterity = 12,
+                ranges = { { minimum = 0, maximum = 60, mode = "DEFAULT" } },
+                lock_npc = true,
+                lock_monster = true,
+                laser_lock = false,
+                targeting_cost = 300,
+                targeting_extension = -10,
+                targeting_sound = ccb.content.text("\"Steady, steady.\""),
+                targeting_volume = 4,
+                empty_sound = ccb.content.text("chk-chk pop!"),
+            },
+        },
+    },
+    flags = {
+        "SEES", "HEARS", "ELECTRONIC", "COLDPROOF", "NO_BREATHE", "PATH_AVOID_DANGER",
+        "PRIORITIZE_TARGETS", "LOUDMOVES", "DROPS_AMMO", "STUN_IMMUNE",
+    },
+    pathing = { avoid_traps = true, avoid_dangerous_fields = true },
+    death = { drops = {}, outcome = { corpse = "BROKEN" } },
+}
+
+ccb.content.define_monster {
+    id = "mon_sniperbot_science",
+    copy_from = "mon_sniperbot",
+    default_faction = "science",
+    revert_item = "bot_sniperbot",
+    broken_item = "broken_sniperbot",
+    death = { outcome = { corpse = "BROKEN" } },
+}
+
+ccb.content.define_monster {
+    id = "mon_shotgunbot",
+    name = ccb.content.plural_text("shotgun bot", "shotgun bots"),
+    description = ccb.content.text("A heavy, but quick two-legged drone that holds a massive shotgun system above himself.  Effectively a machinegun with legs."),
+    copy_from = "mon_sniperbot",
+    species = { "ROBOT" },
+    categories = { "XE_CLASSIC" },
+    tracking_distance = 4,
+    revert_item = "bot_shotgunbot",
+    starting_ammo = { shot_00 = 240 },
+    attacks = {
+        {
+            cooldown = 1,
+            move_cost = 50,
+            kind = "gun",
+            gun = {
+                weapon = "inventor_shotgun",
+                ammo = "shot_00",
+                skills = { { id = "gun", level = 8 }, { id = "shotgun", level = 8 } },
+                lock_npc = false,
+                lock_monster = false,
+                dexterity = 12,
+                ranges = { { minimum = 0, maximum = 10, mode = "DEFAULT" } },
+                empty_sound = ccb.content.text("chk-chk!"),
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
     id = "mon_shotgunbot_science",
     copy_from = "mon_shotgunbot",
     default_faction = "science",
