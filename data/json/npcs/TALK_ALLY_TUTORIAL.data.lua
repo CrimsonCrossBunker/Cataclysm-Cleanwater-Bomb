@@ -1,4 +1,207 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL",
+    line = ccb.content.text("I'm my own person, but I'm mostly willing to follow your lead.  I can do a lot of things for you: I can fight, I can train you or you can train me, I can carry stuff, I can bandage your wounds, I can build faction camps, I can do some other activities, I can ride horses, I can go places, I can guard things, I can use some bionics, I can even chit-chat with you or give you tips or talk about my background.  You can give me instructions in conversation or by radio or shout commands at me.\n  What do you want to know more about?"),
+    replies = {
+        {
+            text = ccb.content.text("<end_talking_nevermind>"),
+            next_topic = "TALK_FRIEND",
+        },
+        {
+            text = ccb.content.text("Skip it.  <lets_go>"),
+            next_topic = "TALK_DONE",
+        },
+        {
+            text = ccb.content.text("Any hints about the world we now live in?"),
+            trial = { kind = "condition", when = predicates.handler("dlg_p_dda_2019ca9934b5") },
+            success = { next_topic = "TALK_SHELTER_DENY_ADVICE" },
+            failure = { next_topic = "TALK_SHELTER_ADVICE", actions = { actions.add_effect("interlocutor", "asked_to_hint", { turns = 300 }) } },
+        },
+        {
+            text = ccb.content.text("Let's talk about faction camps."),
+            next_topic = "TALK_CAMP_GENERAL",
+        },
+        {
+            text = ccb.content.text("What do you mean, \"mostly\" willing to follow my lead?"),
+            next_topic = "TALK_ALLY_TUTORIAL_MUTINY",
+        },
+        {
+            text = ccb.content.text("What's that about giving instructions?"),
+            next_topic = "TALK_ALLY_TUTORIAL_TALK",
+        },
+        {
+            text = ccb.content.text("We can talk with radios?"),
+            next_topic = "TALK_ALLY_TUTORIAL_RADIO",
+        },
+        {
+            text = ccb.content.text("How do shouted commands work?"),
+            next_topic = "TALK_ALLY_TUTORIAL_SHOUTS",
+        },
+        {
+            text = ccb.content.text("How does fighting work?"),
+            next_topic = "TALK_ALLY_TUTORIAL_COMBAT",
+        },
+        {
+            text = ccb.content.text("What's that about training?"),
+            next_topic = "TALK_ALLY_TUTORIAL_TRAINING",
+        },
+        {
+            text = ccb.content.text("Tell me about you carrying stuff."),
+            next_topic = "TALK_ALLY_TUTORIAL_MULE",
+        },
+        {
+            text = ccb.content.text("You can perform first aid?"),
+            next_topic = "TALK_ALLY_TUTORIAL_MEDIC",
+        },
+        {
+            text = ccb.content.text("Tell me about faction camps."),
+            next_topic = "TALK_CAMP_TUTORIAL_INTRO",
+        },
+        {
+            text = ccb.content.text("What's that about activities?  Like what, you can farm for me?"),
+            next_topic = "TALK_ALLY_TUTORIAL_ACTIVITIES",
+        },
+        {
+            text = ccb.content.text("You can ride horses?"),
+            next_topic = "TALK_ALLY_TUTORIAL_HORSES",
+        },
+        {
+            text = ccb.content.text("What do you mean, you can go places?"),
+            next_topic = "TALK_ALLY_TUTORIAL_MOVEMENT",
+        },
+        {
+            text = ccb.content.text("What do you do as a guard?"),
+            next_topic = "TALK_ALLY_TUTORIAL_GUARD",
+        },
+        {
+            text = ccb.content.text("You can use bionics?  How does that work?"),
+            next_topic = "TALK_ALLY_TUTORIAL_CBMS",
+        },
+        {
+            text = ccb.content.text("What about chit-chatting and your background?"),
+            next_topic = "TALK_ALLY_TUTORIAL_SOCIAL",
+        },
+        {
+            text = ccb.content.text("Anything else I should know, like making you pulp zombies or assigning you a seat in my vehicle?"),
+            next_topic = "TALK_ALLY_TUTORIAL_MISC",
+        },
+        {
+            text = ccb.content.text("Any new abilities recently?"),
+            next_topic = "TALK_ALLY_TUTORIAL_CHANGES",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL_MUTINY",
+    line = ccb.content.text("You and me, we better stick together to survive, right?  But that doesn't mean I'll tolerate infinite abuse.  Mistreat me too much, or especially fail to keep me fed, and I'll like you less and less.  If it gets bad enough, I'll mutiny - and if you have anyone else following you, I may convince some of them to join my mutiny and we'll form our own little band.\n  Obviously, if I quit in a huff, there's going to be bad blood between us, and you're probably going to want to kill me for betrayal and I may need to kill you to get my fair share of the loot.  So keep me fed and satisfied so it doesn't come to that."),
+    replies = {
+        {
+            text = ccb.content.text("Sure.  Is there any easy way to keep you fed?"),
+            next_topic = "TALK_CAMP_TUTORIAL_INTRO",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL_TALK",
+    line = ccb.content.text("If we're next to each other, you can just bump into me and we'll start talking, right?  But if I'm farther away, you're going to have to shout a bit (use the 'C'hat command) for me to hear you.  You'll need to see me for us to have a conversation.  Or we can talk by radios if we both have them.\n  When we talk, you can give me instructions about how to fight or when to sleep or whatever.  I'll mostly do them, and you can ask me what my current instructions are.  Sometimes you'll give me two sets of instructions: a normal set, and an override for a specific situation.  I'll tell you which instructions are overridden.  You can set and clear overrides with shouted commands."),
+    replies = {
+        {
+            text = ccb.content.text("We can talk with radios?"),
+            next_topic = "TALK_ALLY_TUTORIAL_RADIO",
+        },
+        {
+            text = ccb.content.text("How do shouted commands work?"),
+            next_topic = "TALK_ALLY_TUTORIAL_SHOUTS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL_RADIO",
+    line = {
+        joined = {
+            { when = predicates.conversation_state("radio"), yes = ccb.content.text("Are you making a joke?  We're using two-way radios to talk right now.\n  Whatever, I'll go over it again in case you forgot.\n") },
+            ccb.content.text("If you have a two-way radio and I have a two-way radio, you can use the faction interface (keybind '#') key to contact me.  I'll respond as long as I'm not too far away and the signal isn't blocked by the ground.  We can converse normally via a radio, but obviously we can't trade items and I can't train you.\n  You can tell me to come to you or go to any of your faction camps, or if I'm at a faction camp, you can tell me to perform actions at the camp."),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Sorry, I don't know what I was thinking.  Tell me about you coming here."),
+            false_text = ccb.content.text("Tell me about you coming here."),
+            text_when = predicates.conversation_state("radio"),
+            next_topic = "TALK_ALLY_TUTORIAL_MOVEMENT",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL_SHOUTS",
+    line = ccb.content.text("Sometimes you need to give orders in a hurry.  You can use the 'C'hat command to shout a single specific order.  If I hear you, I'll do what you say, as will anyone else following you that hears it.\n  Some orders will override other instructions you've given me.  If you change my instructions when I've got an override command, I'll tell you which ones are overridden.  You can shout an order to clear any overrides, or talk to me and tell me to clear them."),
+    replies = {
+        {
+            text = ccb.content.text("Good to know.  What orders can I give?"),
+            next_topic = "TALK_ALLY_TUTORIAL_COMMANDS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL_COMBAT",
+    line = ccb.content.text("It's a dangerous world out there, right?  So we fight to survive.  I'm on your side, and I'll stick with you, but if I think the situation is too dangerous, I'll be honest, I'm going to run.\n  You can't tell me not to run, because I'm going to flee if things are bad, but you can tell me a safe place to retreat by using the zones manager (keybind 'Y').  I'll run toward the closest place you've designated - and you can set zones on vehicles, so if you've got a car, you could tell me to retreat there.\n  If I see you running but I think it's safe, I'll stay and fight, but you can tell me run with you and I'll stick by you as best I can.\n  You can give me some instructions on when I should attack, but I'll make my own decisions about who - I'll try to defend myself and you, but if you tell me to stay in one place I'll stay there.\n  I'll use guns and grenades if I have them, but you can tell me to not use grenades or not use loud weapons or to not use ranged weapons at all.  If I'm shooting, you can tell me how much to aim and whether to try to avoid shooting you or not.  I'm not so good at recognizing safe shots, so stay out of my line of fire no matter what.\n  I'll respect your rules for what types of weapons to use, but I'll choose what to use from my stuff.\n  You can also tell me to hold the line and fight at chokepoints, but I'm not great at recognizing them so I may go off to fight something elsewhere anyway."),
+    replies = {
+        {
+            text = ccb.content.text("Can I give you orders quickly in combat?"),
+            next_topic = "TALK_ALLY_TUTORIAL_SHOUTS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL_TRAINING",
+    line = ccb.content.text("If I'm better at a skill than you, I can help you improve.  But it's boring to teach a lot, so I'm not going to do it very often.  And I'm not going to do it when we're in danger or if I'm hungry or tired or if you're driving.\n  If we're someplace safe and you're reading a book that improves skills, I'll listen if I don't have that skill.  You can even read me books for skills that you already have.\n  If you give me a book that teaches a skill and that's accessible to someone with my current skill, you can ask me about my current activity and tell me to read it, and I'll learn from the book.  But while I'm reading, I won't be following you around, so make sure I'm in a safe place.\n  And don't bother asking me about learning or teaching martial arts styles.  My brain just doesn't work that way, so I don't know any to teach you and it's pointless trying to get me to learn any."),
+    replies = {
+        {
+            text = ccb.content.text("Instead of reading to you, can we just talk?"),
+            next_topic = "TALK_ALLY_TUTORIAL_SOCIAL",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL_MULE",
+    line = ccb.content.text("You give me something to carry, I'll carry it.  But I only have so many pockets and I'm only so strong, so I'll drop stuff that's too big to carry.\n  I'll also wear stuff - I'll decide what I want to wear, but you can take stuff from me.  If I'm wearing something I shouldn't, you can bump into me and sort my armor to get me to take if off.\n  I don't like wearing a lot of gear, so if you give me a lot of bulky stuff and things that don't fit, I'm going to take them off and probably drop them.\n  Also, since we're friends, I'll give you anything I'm carrying, no questions asked.\n  Oh, yeah, if I'm hungry or thirsty and I'm carrying food, I'll eat it.  Same if I need to recharge my bionics and I have some fuel.  So you might want to watch what you give me, y'know?"),
+    replies = {
+        {
+            text = ccb.content.text("You can use bionics?  How does that work?"),
+            next_topic = "TALK_ALLY_TUTORIAL_CBMS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ALLY_TUTORIAL_MEDIC",
+    line = {
+        joined = {
+            {
+                when = predicates.has_trait("interlocutor", "PROF_MED"),
+                yes = ccb.content.text("Hey, I'm a doctor!  I know how to treat trauma.  You give me some bandages or a bottle of antiseptic, I'm get you fixed when I see you hurting."),
+                no = ccb.content.text("Yeah, I can perform first aid.  You give me some bandages or a bottle of antiseptic, I'll treat your wounds as best I can."),
+            },
+            ccb.content.text("  But remember, I like you, but I like me more - so I'm going to use those items on myself first, then you, then any of your other friends."),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Tell me how I give you medical supplies."),
+            next_topic = "TALK_ALLY_TUTORIAL_MULE",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_ALLY_TUTORIAL_ACTIVITIES",
