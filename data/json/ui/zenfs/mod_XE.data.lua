@@ -3,6 +3,21 @@ local predicate = ccb.content.dialogue_predicates
 local reading = ccb.content.widget_conditions
 
 ccb.content.define_widget {
+    id = "zenfs_blood",
+    style = "layout",
+    arrange = "minimum_columns",
+    widgets = { "zenfs_blood_label", "zenfs_blood_level" },
+}
+
+ccb.content.define_widget {
+    id = "zenfs_blood_B",
+    style = "layout",
+    arrange = "minimum_columns",
+    widgets = { "zenfs_blood_label_B", "zenfs_blood_level" },
+    padding = 0,
+}
+
+ccb.content.define_widget {
     id = "zenfs_blood_label",
     style = "text",
     width = 5,

@@ -3,6 +3,13 @@ local predicate = ccb.content.dialogue_predicates
 local reading = ccb.content.widget_conditions
 
 ccb.content.define_widget {
+    id = "zenfs_health_label",
+    style = "text",
+    text = ccb.content.text("  <color_dark_gray>Health</color>"),
+    flags = { "W_LABEL_NONE" },
+}
+
+ccb.content.define_widget {
     id = "zenfs_health_desc",
     style = "text",
     clauses = {
