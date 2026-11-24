@@ -18,7 +18,6 @@
 #include <map>
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <utility>
 
 #include "action.h"
@@ -31,7 +30,6 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "bodygraph.h"
-#include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "catacharset.h"
@@ -53,7 +51,6 @@
 #include "event_bus.h"
 #include "faction.h"
 #include "flag.h"
-#include "game_constants.h"
 #include "game_inventory.h"
 #include "gamemode.h"
 #include "grab.h"
@@ -75,10 +72,10 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "mapdata.h"
-#include "melee.h"
 #include "mapsharing.h"
 #include "math_parser_diag_value.h"
 #include "mdarray.h"
+#include "melee.h"
 #include "messages.h"
 #include "monster.h"
 #include "move_mode.h"
@@ -92,10 +89,13 @@
 #include "panels.h"
 #include "pathfinding.h"
 #include "player_activity.h"
-#include "ret_val.h"
 #include "point.h"
 #include "popup.h"
 #include "profiling.h"
+#include "ret_val.h"
+#if defined(TILES)
+    #include "render3d.h"
+#endif
 #include "radio_car_control.h"
 #include "ranged.h"
 #include "rng.h"
@@ -108,7 +108,6 @@
 #endif
 #include "sleep.h"
 #include "sling.h"
-#include "sounds.h"
 #include "string_formatter.h"
 #include "timed_event.h"
 #include "translation.h"
@@ -1886,6 +1885,27 @@ static void manage_android_buttons()
 }
 #endif
 
+static bool handle_render3d_zoom_action( const action_id act )
+{
+#if defined(TILES)
+    if( !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) || !render3d::available() ) {
+        return false;
+    }
+    if( act == ACTION_ZOOM_IN ) {
+        render3d::toggle_same_level_only();
+    } else if( act == ACTION_ZOOM_OUT ) {
+        render3d::toggle_cursor_dither();
+    } else {
+        return false;
+    }
+    g->invalidate_main_ui_adaptor();
+    return true;
+#else
+    static_cast<void>( act );
+    return false;
+#endif
+}
+
 // NOLINTNEXTLINE(readability-function-size)
 bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
@@ -1916,11 +1936,15 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         // Pure display/UI actions — always free, work even while locked.
         if( act == ACTION_ZOOM_IN ) {
-            zoom_in();
+            if( !handle_render3d_zoom_action( act ) ) {
+                zoom_in();
+            }
             return false;
         }
         if( act == ACTION_ZOOM_OUT ) {
-            zoom_out();
+            if( !handle_render3d_zoom_action( act ) ) {
+                zoom_out();
+            }
             return false;
         }
         if( act == ACTION_LIST_ITEMS ) {
@@ -3254,13 +3278,17 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_ZOOM_IN:
-            zoom_in();
-            mark_main_ui_adaptor_resize();
+            if( !handle_render3d_zoom_action( act ) ) {
+                zoom_in();
+                mark_main_ui_adaptor_resize();
+            }
             break;
 
         case ACTION_ZOOM_OUT:
-            zoom_out();
-            mark_main_ui_adaptor_resize();
+            if( !handle_render3d_zoom_action( act ) ) {
+                zoom_out();
+                mark_main_ui_adaptor_resize();
+            }
             break;
 
         case ACTION_ITEMACTION:

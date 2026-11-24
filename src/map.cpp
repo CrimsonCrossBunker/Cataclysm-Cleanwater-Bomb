@@ -16,6 +16,7 @@
 #include <ostream>
 #include <queue>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -705,6 +706,8 @@ void map::update_map_memory( avatar &you )
     CATA_PROFILE_SCOPE();
     map &here = *this;
     const int z = you.posz();
+    const bool cross_level_memory = is_draw_tiles_mode() &&
+                                    get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && here.supports_zlevels();
 
     // Map memory must use visibility from the avatar's current position.  The
     // final step of ordinary movement and activity-driven vehicle movement can
@@ -724,7 +727,12 @@ void map::update_map_memory( avatar &you )
     const point min_visible( you_pos.x() % SEEX, you_pos.y() % SEEY );
     const point max_visible( ( you_pos.x() % SEEX ) + ( MAPSIZE - 1 ) * SEEX,
                              ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
-    const level_cache &ch = here.access_cache( z );
+    // update_visibility_cache refreshes the requested level and the observer's
+    // downward range. Lower stale caches must never become new memories.
+    const int lowest_vis_z = cross_level_memory ?
+                             std::max( std::min( z, here.observer_position( you ).z() -
+                                       here.observer_z_range( you ) ), here.min_z() ) : z;
+    const int highest_mem_z = cross_level_memory ? here.max_z() : z;
 
     // Ensure the player's map-memory cache covers the window this pass is about
     // to memorize. The render paths (map::draw for curses, cata_tiles for tiles)
@@ -734,30 +742,65 @@ void map::update_map_memory( avatar &you )
     // (region edge / freshly entered area), and the dirty flag is still cleared
     // afterwards — so non-connecting terrain such as grass, which is memorized
     // exactly once and never re-dirtied, is lost permanently and renders black.
+    // Anchoring at the loaded Z origin covers every level rendered by 3D.
+    // Other modes retain their existing single-level preparation window.
+    const int memory_region_z = cross_level_memory ? here.z_origin() : z;
     you.prepare_map_memory_region(
-        here.get_abs( tripoint_bub_ms( min_visible.x, min_visible.y, z ) ),
-        here.get_abs( tripoint_bub_ms( max_visible.x, max_visible.y, z ) ) );
+        here.get_abs( tripoint_bub_ms( min_visible.x, min_visible.y, memory_region_z ) ),
+        here.get_abs( tripoint_bub_ms( max_visible.x, max_visible.y, memory_region_z ) ) );
 
-    // Mirrors cata_tiles::apply_visible: a neighbour is "invisible" for
-    // orientation purposes if it falls outside the view window or fails the
-    // visibility test (anything other than a CLEAR view).
-    const auto neighbour_invisible = [&]( const tripoint_bub_ms & np ) -> bool {
-        return np.y() < min_visible.y || np.y() > max_visible.y ||
-        np.x() < min_visible.x || np.x() > max_visible.x ||
-        here.get_visibility( ch.visibility_cache[np.x()][np.y()], cache ) !=
-        visibility_type::CLEAR;
+    const auto any_visibility = []( const auto & values ) {
+        for( int x = 0; x < MAPSIZE_X; ++x ) {
+            for( int y = 0; y < MAPSIZE_Y; ++y ) {
+                if( values[x][y] > 0.0f ) {
+                    return true;
+                }
+            }
+        }
+        return false;
     };
 
     // Memorize everything the character can currently see, even if it was not
-    // displayed this frame.
-    for( int mem_y = min_visible.y; mem_y <= max_visible.y; mem_y++ ) {
-        for( int mem_x = min_visible.x; mem_x <= max_visible.x; mem_x++ ) {
-            const tripoint_bub_ms p( mem_x, mem_y, z );
-            const lit_level lighting = ch.visibility_cache[p.x()][p.y()];
+    // displayed this frame. Experimental 3D also records the other visible
+    // levels; its renderer remains a pure reader of this simulation-side pass.
+    for( int mem_z = lowest_vis_z; mem_z <= highest_mem_z; mem_z++ ) {
+        const level_cache &ch = here.access_cache( mem_z );
+        // A level with no direct or camera sight coverage cannot contain a new
+        // visible memory. Clairvoyance remains a per-tile decision below.
+        if( cross_level_memory && mem_z != z && cache.u_clairvoyance <= 0 &&
+            !cache.clairvoyance_field && !any_visibility( ch.seen_cache ) &&
+            !any_visibility( ch.camera_cache ) ) {
+            continue;
+        }
+        const auto lighting_at = [&]( const tripoint_bub_ms & p ) -> lit_level {
+            if( mem_z <= z )
+            {
+                return ch.visibility_cache[p.x()][p.y()];
+            }
+            // Upper levels have no freshly rebuilt visibility_cache. Match the
+            // 3D renderer: cheap sight rejection, then apparent light on demand.
+            if( ch.seen_cache[p.x()][p.y()] <= 0.0f &&
+                ch.camera_cache[p.x()][p.y()] <= 0.0f &&
+                cache.u_clairvoyance <= 0 && !cache.clairvoyance_field )
+            {
+                return lit_level::BLANK;
+            }
+            return here.apparent_light_at( p, cache );
+        };
+        // Mirrors cata_tiles::apply_visible: a neighbour is "invisible" for
+        // orientation purposes if it falls outside the view window or fails the
+        // visibility test (anything other than a CLEAR view).
+        const auto neighbour_invisible = [&]( const tripoint_bub_ms & np ) -> bool {
+            return np.y() < min_visible.y || np.y() > max_visible.y ||
+            np.x() < min_visible.x || np.x() > max_visible.x ||
+            here.get_visibility( lighting_at( np ), cache ) != visibility_type::CLEAR;
+        };
+        const auto memorize_visible_tile = [&]( const tripoint_bub_ms & p ) {
+            const lit_level lighting = lighting_at( p );
             // Skip tiles that would have vision effects applied (i.e. not a
             // CLEAR view); those are never memorized.
             if( here.get_visibility( lighting, cache ) != visibility_type::CLEAR ) {
-                continue;
+                return;
             }
             std::array<bool, 5> invisible;
             invisible[0] = false;
@@ -792,6 +835,11 @@ void map::update_map_memory( avatar &you )
                 const const_maptile tile = here.maptile_at_internal( p );
                 here.draw_maptile( catacurses::window(), p, tile,
                                    drawsq_params().memorize( true ).output( false ).show_items( false ) );
+            }
+        };
+        for( int mem_y = min_visible.y; mem_y <= max_visible.y; mem_y++ ) {
+            for( int mem_x = min_visible.x; mem_x <= max_visible.x; mem_x++ ) {
+                memorize_visible_tile( tripoint_bub_ms( mem_x, mem_y, mem_z ) );
             }
         }
     }
@@ -3068,9 +3116,81 @@ void map::clear_terrain_growth( const tripoint_bub_ms &p )
     }
 }
 
+bool map::has_wall_surface( const tripoint_bub_ms &p ) const
+{
+    const ter_id id = ter( p );
+    if( !id ) {
+        return false;
+    }
+    const ter_t &t = id.obj();
+    if( t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
+        t.has_flag( "TREE" ) || t.has_flag( "SHRUB" ) ) {
+        return false;
+    }
+    const auto door_or_window = [&t] {
+        if( t.has_flag( ter_furn_flag::TFLAG_DOOR ) ||
+            t.has_flag( ter_furn_flag::TFLAG_WINDOW ) || !t.open.is_null() ||
+            t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR ) ||
+            t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_DAMAGED ) ||
+            t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_REINFORCED ) ||
+            ( t.has_flag( ter_furn_flag::TFLAG_LOCKED ) &&
+              !t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) ) )
+        {
+            return true;
+        }
+        static const std::string broken_reinforced( "BARRICADABLE_DOOR_REINFORCED_DAMAGED" );
+        return t.has_flag( broken_reinforced );
+    };
+    static const int wall_group = get_connect_group( "WALL" ).index;
+    const bool joins_wall_line = t.connect_to_groups.test( wall_group );
+    const auto wall_opening = [&] {
+        if( t.has_flag( ter_furn_flag::TFLAG_WINDOW ) ||
+            t.has_flag( ter_furn_flag::TFLAG_DOOR ) || t.movecost <= 0 ||
+            t.has_flag( ter_furn_flag::TFLAG_WALL ) ||
+            t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) || !joins_wall_line )
+        {
+            return false;
+        }
+        return !t.close.is_null() ||
+        ( t.has_flag( ter_furn_flag::TFLAG_FLAT ) &&
+          t.has_flag( ter_furn_flag::TFLAG_SUPPORTS_ROOF ) );
+    };
+    const bool panel = door_or_window() || wall_opening();
+    if( panel ) {
+        return true;
+    }
+    if( t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) ) {
+        static constexpr std::array<std::string_view, 7> ground_ids = {{
+                "t_sewage_pipe", "t_nl_sewage_pipe", "t_nl_sewage_pipe_border",
+                "t_LIXA_tube", "t_LIXA_unfolded_tube", "t_LIXA_unfolded_tube_broken",
+                "t_gutter"
+            }
+        };
+        static constexpr std::array<std::string_view, 4> roof_ids = {{
+                "t_gutter_drop", "t_gutter_downspout",
+                "t_vitrified_gutter_drop", "t_vitrified_downspout"
+            }
+        };
+        const std::string_view terrain_id( t.id.str() );
+        const bool flat = std::find( ground_ids.begin(), ground_ids.end(),
+                                     terrain_id ) != ground_ids.end() ||
+                          ( p.z() > 0 && std::find( roof_ids.begin(), roof_ids.end(),
+                                  terrain_id ) != roof_ids.end() );
+        return !flat;
+    }
+    static constexpr std::array<std::string_view, 2> upright_equipment = {{
+            "t_monkey_bars", "t_slide"
+        }
+    };
+    const std::string_view terrain_id( t.id.str() );
+    return std::find( upright_equipment.begin(), upright_equipment.end(),
+                      terrain_id ) == upright_equipment.end() && t.movecost == 0;
+}
+
 uint8_t map::get_known_connections( const tripoint_bub_ms &p,
                                     const std::bitset<NUM_TERCONN> &connect_group,
-                                    const std::map<tripoint_bub_ms, ter_id> &override ) const
+                                    const std::map<tripoint_bub_ms, ter_id> &override,
+                                    const bool include_wall_surfaces ) const
 {
     if( connect_group.none() ) {
         return 0;
@@ -3111,6 +3231,9 @@ uint8_t map::get_known_connections( const tripoint_bub_ms &p,
         const bool may_connect = neighbour_overridden ||
                                  get_visibility( ch.visibility_cache[neighbour.x()][neighbour.y()],
                                          get_visibility_variables_cache() ) == visibility_type::CLEAR ||
+                                 ( include_wall_surfaces &&
+                                   ch.floor_blocked_seen_cache[neighbour.x()][neighbour.y()] > 0.0f &&
+                                   has_wall_surface( neighbour ) ) ||
                                  // or if an actual center tile is transparent or next to a memorized tile
                                  ( !overridden && ( is_transparent || is_memorized( neighbour ) ) );
         if( may_connect ) {
@@ -3453,10 +3576,12 @@ int map::get_rotation_unconnected( const char rot_to )
 void map::get_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
                               const std::bitset<NUM_TERCONN> &connect_group,
                               const std::bitset<NUM_TERCONN> &rotate_to_group,
-                              const std::map<tripoint_bub_ms, ter_id> &ter_override )
+                              const std::map<tripoint_bub_ms, ter_id> &ter_override,
+                              const bool include_wall_surfaces )
 {
     map &here = get_map();
-    uint8_t connections = here.get_known_connections( p, connect_group, ter_override );
+    uint8_t connections = here.get_known_connections( p, connect_group, ter_override,
+                          include_wall_surfaces );
     uint8_t rotation_targets = here.get_known_rotates_to( p, rotate_to_group, ter_override );
     get_rotation_and_subtile( connections, rotation_targets, rotation, subtile );
 }
