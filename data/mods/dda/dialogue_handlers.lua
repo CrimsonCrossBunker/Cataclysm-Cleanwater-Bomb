@@ -1,29 +1,6 @@
 local ccb = require("ccb")
 local services = ccb.services
-local H = {}
-
-H.safe_id = function(kind, name)
-    local ok, gid = pcall(services.types.id, kind, name)
-    if not ok or not gid or not gid:is_valid() then return nil end
-    return gid
-end
-
-H.add_bionic = function(actor, bid)
-    if not actor then return end
-    local gid = H.safe_id("bionic", bid)
-    if not gid then return end
-    services.bionics.grant(actor, gid)
-end
-
-H.add_morale = function(actor, mid, bonus, max_bonus, dur_turns, decay_turns)
-    if not actor then return end
-    local gid = H.safe_id("morale", mid)
-    if not gid then return end
-    local opts = {}
-    if dur_turns then opts.duration = services.time.duration_from_turns(math.floor(dur_turns)) end
-    if decay_turns then opts.decay_start = services.time.duration_from_turns(math.floor(decay_turns)) end
-    services.morale.add(actor, gid, math.floor(bonus), math.floor(max_bonus), opts)
-end
+local H = require("ccb_runtime_helpers").create()
 
 H.add_trait = function(actor, trait_id)
     if not actor then return end
@@ -32,36 +9,10 @@ H.add_trait = function(actor, trait_id)
     services.mutations.replace(actor, gid)
 end
 
-H.assign_activity = function(actor, act_id, turns)
-    if not actor then return end
-    local gid = H.safe_id("activity", act_id)
-    if not gid then return end
-    services.activities.assign_timed(actor, gid, services.time.duration_from_turns(math.floor(turns)))
-end
-
-H.char_snap = function(actor)
-    if not actor then return nil end
-    local r = services.characters.snapshot(actor)
-    if not r.ok then return nil end
-    return r.value
-end
-
 H.char_age = function(actor)
     local s = H.char_snap(actor)
     if not s or not s.demographics then return 0 end
     return s.demographics.age or 0
-end
-
-H.char_at_om_location = function(actor, loc_id)
-    local s = H.char_snap(actor)
-    if not s or not s.creature then return false end
-    return services.overmap.matches_location(s.creature.position:project_to("omt"), loc_id)
-end
-
-H.char_cash = function(actor)
-    local s = H.char_snap(actor)
-    if not s then return 0 end
-    return s.cash or 0
 end
 
 H.char_dodge = function(actor)
@@ -70,63 +21,12 @@ H.char_dodge = function(actor)
     return s.combat.dodge or 0
 end
 
-H.char_has_trait = function(actor, trait_id)
-    if not actor then return 0 end
-    local r = services.mutations.has_id_text(actor, trait_id)
-    if not r.ok or not r.value then return 0 end
-    return 1
-end
-
-H.char_has_any_trait = function(actor, ids)
-    if not actor then return false end
-    for _, id in ipairs(ids) do
-        if H.char_has_trait(actor, id) == 1 then return true end
-    end
-    return false
-end
-
-H.char_has_bionic = function(actor, bionic_id)
-    if not actor then return false end
-    if bionic_id == "ANY" then
-        local s = services.bionics.summary(actor)
-        return s.ok and s.value and (s.value.installed_count or 0) > 0
-    end
-    local gid = H.safe_id("bionic", bionic_id)
-    if not gid then return false end
-    local r = services.bionics.has(actor, gid)
-    return r.ok and r.value == true
-end
-
-H.char_has_flag = function(actor, flag_id)
-    if not actor then return false end
-    local gid = H.safe_id("json_flag", flag_id)
-    if not gid then return false end
-    local r = services.characters.has_flag(actor, gid)
-    return r.ok and r.value == true
-end
-
-H.char_has_item = function(actor, item_id)
-    if not actor then return false end
-    local gid = H.safe_id("item", item_id)
-    if not gid then return false end
-    local r = services.inventory.has_type(actor, gid)
-    return r.ok and r.value == true
-end
-
 H.char_has_item_cat = function(actor, cat_id, count)
     if not actor then return false end
     local gid = H.safe_id("item_category", cat_id)
     if not gid then return false end
     local r = services.inventory.category_count(actor, gid)
     return r.ok and (r.value or 0) >= count
-end
-
-H.char_has_items = function(actor, item_id, count, charges)
-    if not actor then return false end
-    local gid = H.safe_id("item", item_id)
-    if not gid then return false end
-    local r = services.inventory.has_items(actor, gid, count, charges)
-    return r.ok and r.value == true
 end
 
 H.char_has_items_sum = function(actor, spec)
@@ -143,14 +43,6 @@ H.char_has_items_sum = function(actor, spec)
     return r.ok and r.value == true
 end
 
-H.char_has_mission = function(actor, mission_id)
-    if not actor then return false end
-    local gid = H.safe_id("mission", mission_id)
-    if not gid then return false end
-    local r = services.missions.has_active(actor, gid)
-    return r.ok and r.value == true
-end
-
 H.char_has_wielded_cat = function(actor, cat_id)
     if not actor then return false end
     local gid = H.safe_id("weapon_category", cat_id)
@@ -159,61 +51,10 @@ H.char_has_wielded_cat = function(actor, cat_id)
     return r.ok and r.value == true
 end
 
-H.char_is_wearing = function(actor, item_id)
-    if not actor then return false end
-    local gid = H.safe_id("item", item_id)
-    if not gid then return false end
-    local r = services.inventory.is_wearing(actor, gid)
-    return r.ok and r.value == true
-end
-
 H.char_near_om_location = function(actor, loc_id, radius)
     local s = H.char_snap(actor)
     if not s or not s.creature then return false end
     return services.overmap.matches_location_near(s.creature.position:project_to("omt"), loc_id, radius)
-end
-
-H.char_need = function(actor, field)
-    local s = H.char_snap(actor)
-    if not s or not s.needs then return 0 end
-    return s.needs[field] or 0
-end
-
-H.char_proficiency = function(actor, prof_id, fmt)
-    if not actor then return 0 end
-    local gid = H.safe_id("proficiency", prof_id)
-    if not gid then return 0 end
-    if fmt == "total_time_required" then
-        local def = services.proficiencies.definition(gid)
-        if def and def.time_to_learn then return def.time_to_learn.turns or 0 end
-        return 0
-    end
-    local r = services.proficiencies.get(actor, gid)
-    if not r.ok or not r.value then return 0 end
-    if fmt == "percent" then return (r.value.practice or 0) * 100 end
-    if fmt == "permille" then return math.floor((r.value.practice or 0) * 1000) end
-    if fmt == "time_left" then return r.value.remaining and r.value.remaining.turns or 0 end
-    return r.value.practiced and r.value.practiced.turns or 0
-end
-
-H.char_skill = function(actor, skill_id)
-    if not actor then return 0 end
-    local r = services.skills.level(actor, skill_id)
-    if not r.ok then return 0 end
-    return r.value or 0
-end
-
-H.char_stat = function(actor, field)
-    local s = H.char_snap(actor)
-    if not s then return 0 end
-    return s.stats[field] or 0
-end
-
-H.consume_item = function(actor, item_id, count, charges)
-    if not actor then return end
-    local gid = H.safe_id("item", item_id)
-    if not gid then return end
-    services.inventory.consume_by_type(actor, gid, math.floor(count or 0), math.floor(charges or 0))
 end
 
 H.consume_item_sum = function(u, npc, spec)
@@ -228,43 +69,6 @@ H.consume_item_sum = function(u, npc, spec)
     services.inventory.consume_dialogue_sum(u, npc, "alpha", entries)
 end
 
-H.creature_has_effect = function(actor, effect_id, body_part, intensity)
-    if not actor then return false end
-    local gid = H.safe_id("effect", effect_id)
-    if not gid then return false end
-    local bp_gid = nil
-    if body_part and body_part ~= "" then
-        bp_gid = H.safe_id("body_part", body_part)
-        if not bp_gid then return false end
-    end
-    local r = services.effects.has(actor, gid, bp_gid, intensity)
-    return r.ok and r.value == true
-end
-
-H.faction_food = function(fac_id, vit_id)
-    local gid = H.safe_id("faction", fac_id)
-    if not gid then return 0 end
-    if not vit_id or vit_id == "" then
-        local r = services.factions.food(gid, { offset = 0, limit = 1 })
-        if not r.ok or not r.value then return 0 end
-        return r.value.kcal or 0
-    end
-    local offset = 0
-    while true do
-        local r = services.factions.food(gid, { offset = offset, limit = 128 })
-        if not r.ok or not r.value or not r.value.vitamins then return 0 end
-        local page = r.value.vitamins
-        for _, item in ipairs(page.items or {}) do
-            if item.id and item.id.value == vit_id then
-                return item.amount or 0
-            end
-        end
-        if not page.has_more then break end
-        offset = offset + (page.returned or 128)
-    end
-    return 0
-end
-
 H.faction_trust = function(fac_id)
     local gid = H.safe_id("faction", fac_id)
     if not gid then return 0 end
@@ -273,127 +77,10 @@ H.faction_trust = function(fac_id)
     return r.value.reputation.trusts or 0
 end
 
-H.set_var = function(scope, actor, ctx, key, val)
-    if scope == "context" then
-        if val == nil then ctx:remove(key) else ctx:set(key, val) end
-        return
-    end
-    if scope == "global" then
-        if val == nil then services.variables.remove_global(key) else services.variables.set_global(key, val) end
-        return
-    end
-    if not actor then return end
-    if val == nil then services.variables.remove(actor, key) else services.variables.set(actor, key, val) end
-end
-
-H.find_and_store_loc = function(actor, ctx, dst_scope, dst_key, om_sel, om_opts, world_sel, world_opts)
-    local s = H.char_snap(actor)
-    if not s or not s.creature then return end
-    local origin_ms = s.creature.position
-    if om_sel then
-        local omt = origin_ms:project_to("omt")
-        local resolved_opts = {}
-        if om_opts then
-            for k, v in pairs(om_opts) do resolved_opts[k] = v end
-            if om_opts.special_id then
-                resolved_opts.special = H.safe_id("overmap_special", om_opts.special_id)
-                resolved_opts.special_id = nil
-            end
-        end
-        local target_omt = services.overmap.find_target(omt, om_sel, resolved_opts)
-        if not target_omt then return end
-        origin_ms = target_omt:project_to("ms")
-    end
-    if world_sel or world_opts then
-        local res = services.world.find_location(origin_ms, world_sel, world_opts)
-        if res and res.found and res.position then
-            H.set_var(dst_scope, actor, ctx, dst_key, res.position)
-        end
-    else
-        H.set_var(dst_scope, actor, ctx, dst_key, origin_ms)
-    end
-end
-
-H.npc_snap = function(npc)
-    if not npc then return nil end
-    local r = services.npcs.get(npc)
-    if not r.ok then return nil end
-    return r.value
-end
-
-H.rl_dist = function(a, b)
-    if not a or not b or a.z ~= b.z then return 999999 end
-    return math.max(math.abs(a.x - b.x), math.abs(a.y - b.y))
-end
-
-H.follower_present = function(npc, class_id)
-    local nsnap = H.npc_snap(npc)
-    if not nsnap then return false end
-    local fl = services.followers.list()
-    if not fl.ok or not fl.value or not fl.value.items then return false end
-    for _, entry in ipairs(fl.value.items) do
-        if entry.available and entry.handle then
-            local esnap = H.npc_snap(entry.handle)
-            if esnap and esnap.class and esnap.class.value == class_id and esnap.following then
-                if H.rl_dist(entry.position, nsnap.position) < 5 then
-                    local los = services.creatures.has_line_of_sight(entry.handle, npc)
-                    if los.ok and los.value == true then
-                        return true
-                    end
-                end
-            end
-        end
-    end
-    return false
-end
-
-H.get_tripoint_var = function(scope, actor, ctx, key)
-    if scope == "context" then
-        local v = ctx:get(key)
-        return v
-    end
-    if scope == "global" then
-        local r = services.variables.get_global_tripoint(key)
-        if r.ok and r.value and r.value.exists then return r.value.value end
-        return nil
-    end
-    if not actor then return nil end
-    local r = services.variables.get_tripoint(actor, key)
-    if r.ok and r.value and r.value.exists then return r.value.value end
-    return nil
-end
-
-H.global_var_num = function(key)
-    local r = services.variables.get_global_number(key)
-    if not r.ok or not r.value or not r.value.exists or r.value.value == nil then return 0 end
-    return r.value.value
-end
-
 H.global_var_num_opt = function(key)
     local r = services.variables.get_global_number(key)
     if not r.ok or not r.value or not r.value.exists or r.value.value == nil then return nil end
     return r.value.value
-end
-
-H.learn_recipe = function(actor, rid)
-    if not actor then return end
-    local gid = H.safe_id("recipe", rid)
-    if not gid then return end
-    services.recipes.learn(actor, gid)
-end
-
-H.lose_bionic = function(actor, bid)
-    if not actor then return end
-    local gid = H.safe_id("bionic", bid)
-    if not gid then return end
-    services.bionics.remove_type(actor, gid)
-end
-
-H.lose_trait = function(actor, trait_id)
-    if not actor then return end
-    local gid = H.safe_id("mutation", trait_id)
-    if not gid then return end
-    services.mutations.erase(actor, gid)
 end
 
 H.mapgen_update = function(actor, upd_id, om_terrain, origin_npc, dx, dy, reveal_radius)
@@ -460,18 +147,6 @@ H.mapgen_update_list = function(actor, upd_ids, om_terrain, origin_npc, dx, dy, 
     end
 end
 
-H.npc = function(ctx)
-    return ctx:interlocutor()
-end
-
-H.npc_faction_trust = function(npc)
-    local s = H.npc_snap(npc)
-    if not s or not s.faction then return 0 end
-    local r = services.factions.get(s.faction)
-    if not r.ok or not r.value or not r.value.reputation then return 0 end
-    return r.value.reputation.trusts or 0
-end
-
 H.npc_has_class = function(npc, cls)
     local s = H.npc_snap(npc)
     if not s or not s.class then return false end
@@ -498,12 +173,6 @@ H.npc_has_visible_trait = function(observed, observer, trait_id)
     return r.ok and r.value == true
 end
 
-H.npc_opinion = function(npc, field)
-    local s = H.npc_snap(npc)
-    if not s or not s.opinion then return 0 end
-    return s.opinion[field] or 0
-end
-
 H.npc_role_nearby = function(actor, role)
     if not actor then return false end
     local r = services.npcs.has_role_nearby(actor, role, 48)
@@ -518,108 +187,6 @@ H.receive_group = function(actor, group_id, count)
     for _ = 1, n do
         services.inventory.receive_group(actor, gid)
     end
-end
-
-H.receive_item = function(actor, item_id, count, container_id, flags)
-    if not actor then return end
-    local gid = H.safe_id("item", item_id)
-    if not gid then return end
-    local opts = nil
-    if container_id and container_id ~= "" then
-        local cgid = H.safe_id("item", container_id)
-        if cgid then opts = { container = cgid } end
-    end
-    services.inventory.receive_item(actor, gid, math.floor(count or 1), opts)
-end
-
-H.round_half_away = function(v)
-    if v >= 0 then return math.floor(v + 0.5) end
-    return math.ceil(v - 0.5)
-end
-
-H.spawn_npc = function(actor, tpl_id, opts, msg)
-    local s = H.char_snap(actor)
-    if not s or not s.creature then return end
-    local gid = H.safe_id("npc_template", tpl_id)
-    if not gid then return end
-    local r = services.spawns.npc(gid, s.creature.position, opts)
-    if r.ok and msg and msg ~= "" then
-        services.messages.add(msg, "neutral")
-    end
-end
-
-H.time_since = function(point_turns, unit_div)
-    if point_turns == nil then return -1 end
-    local diff = services.turn() - point_turns
-    if unit_div and unit_div ~= 1 then return diff / unit_div end
-    return diff
-end
-
-H.transfer_item = function(u, npc, item_id, count)
-    if not u or not npc then return end
-    local gid = H.safe_id("item", item_id)
-    if not gid then return end
-    services.inventory.transfer_by_type(u, npc, gid, math.floor(count or 1))
-end
-
-H.transform_radius = function(actor, radius, tr_id)
-    local s = H.char_snap(actor)
-    if not s or not s.creature then return end
-    local gid = H.safe_id("terrain_furniture_transform", tr_id)
-    if not gid then return end
-    services.world.transform_radius(s.creature.position, math.floor(radius), gid)
-end
-
-H.truthy = function(v)
-    return v ~= false and v ~= nil and v ~= 0
-end
-
-H.u = function(ctx)
-    return ctx:speaker()
-end
-
-H.var_exists = function(scope, actor, ctx, key)
-    if scope == "context" then return ctx:get(key) ~= nil end
-    if scope == "global" then
-        local r = services.variables.get_global(key)
-        return r.ok and r.value and r.value.exists == true
-    end
-    if not actor then return false end
-    local r = services.variables.get(actor, key)
-    return r.ok and r.value and r.value.exists == true
-end
-
-H.var_num = function(actor, key)
-    if not actor then return 0 end
-    local r = services.variables.get_number(actor, key)
-    if not r.ok or not r.value or not r.value.exists or r.value.value == nil then return 0 end
-    return r.value.value
-end
-
-H.var_num_opt = function(actor, key)
-    if not actor then return nil end
-    local r = services.variables.get_number(actor, key)
-    if not r.ok or not r.value or not r.value.exists or r.value.value == nil then return nil end
-    return r.value.value
-end
-
-H.var_str = function(scope, actor, ctx, key, default_val)
-    if scope == "context" then
-        local v = ctx:get_string(key)
-        if v ~= nil and v ~= "" then return v end
-        local gv = ctx:get(key)
-        if gv ~= nil then return tostring(gv) end
-        return default_val or ""
-    end
-    if scope == "global" then
-        local r = services.variables.get_global_string(key)
-        if r.ok and r.value and r.value.exists and r.value.value ~= nil then return r.value.value end
-        return default_val or ""
-    end
-    if not actor then return default_val or "" end
-    local r = services.variables.get_string(actor, key)
-    if r.ok and r.value and r.value.exists and r.value.value ~= nil then return r.value.value end
-    return default_val or ""
 end
 
 ccb.runtime.handler("dlg_p_dda_2019ca9934b5", function(ctx)
