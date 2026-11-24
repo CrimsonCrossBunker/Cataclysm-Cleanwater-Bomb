@@ -1,5 +1,117 @@
 local ccb = require("ccb")
 
+-- Mostly copied from Huge with some Tough mixed in.  Strength bonus includes improvements from STR_UP mutation that's normally required for LARGE
+ccb.content.define_mutation {
+    id = "GOBLIN_FRUIT_GIANT_GROWTH",
+    name = ccb.content.text("Giant-sized"),
+    points = 2,
+    visibility = 10,
+    ugliness = 8,
+    mixed_effect = true,
+    description = ccb.content.text("Eating that goblin fruit has made you grow to enormous size!"),
+    flags = { "TEMPORARY_SHAPESHIFT", "SHAPESHIFT_SIZE_HUGE" },
+    restricts_gear = { "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" },
+    social_modifiers = { intimidate = 15 },
+    enchantments = { "ench_giant_growth_size_bonuses", "INLINE_ENCH_GOBLIN_FRUIT_GIANT_GROWTH_1" },
+}
+
+-- Until the day EOCs can spawn equiped items, the fruit will give a mutation that holds the music player.
+ccb.content.define_mutation {
+    id = "GOBLIN_FRUIT_MUSIC",
+    name = ccb.content.text_without_extraction("The fruit's song"),
+    valid = false,
+    starting_trait = false,
+    purifiable = false,
+    player_display = false,
+    points = 2,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text_without_extraction("Gives the integrated music player.  Should not be player-visible."),
+    integrated_armor = { "internal_mp3_fruit" },
+}
+
+-- No body part is intentional.  The wings should not be attackable by enemies or get in the way of clothes or armor.  These are also intended as less of a wide stat boost than the other dream toggleable mutations and instead specifically allow flight and carry weight.
+ccb.content.define_mutation {
+    id = "ethereal_wings",
+    name = ccb.content.text("Ethereal Wings"),
+    active = true,
+    points = 1,
+    visibility = 10,
+    description = ccb.content.text("A wide set of ethereal wings sprouts from your back.  Despite them phasing through every form of matter you've encountered, they still somehow lift you off the ground.  Their mere appearance makes you feel lighter"),
+    valid = false,
+    starting_trait = false,
+    purifiable = false,
+    on_activate = "dismiss_ethereal_wings",
+    enchantments = {
+        "INLINE_ENCH_ethereal_wings_0",
+        "INLINE_ENCH_ethereal_wings_1",
+    },
+    flags = { "GLIDE", "FEATHER_FALL" },
+}
+
+ccb.content.define_mutation {
+    id = "karma_arms",
+    name = ccb.content.text("Karma"),
+    active = true,
+    points = 1,
+    visibility = 10,
+    description = ccb.content.text("Ethereal hands appear behind your back, making you looks like an ancient god."),
+    valid = false,
+    starting_trait = false,
+    purifiable = false,
+    on_activate = "dismiss_karma_arms",
+    enchantments = {
+        "INLINE_ENCH_karma_arms_0",
+        "INLINE_ENCH_karma_arms_1",
+    },
+}
+
+ccb.content.define_mutation {
+    id = "devil_tail",
+    name = ccb.content.text("Devil's Tail"),
+    active = true,
+    points = 1,
+    visibility = 6,
+    description = ccb.content.text("While not actually a devil's, this long, triangular pointed tail can stretch very far, allowing it to easily kill someone nearby."),
+    valid = false,
+    starting_trait = false,
+    purifiable = false,
+    on_activate = "dismiss_devil_tail",
+    enchantments = {
+        "INLINE_ENCH_devil_tail_0",
+        "INLINE_ENCH_devil_tail_1",
+    },
+}
+
+ccb.content.define_mutation {
+    id = "stalker_eyes",
+    name = ccb.content.text("Stalker's Vision"),
+    active = true,
+    points = 1,
+    visibility = 1,
+    description = ccb.content.text("Your eyes transform into the orbits of an unknown creature.  You now see much better in the light and dark."),
+    valid = false,
+    starting_trait = false,
+    purifiable = false,
+    on_activate = "dismiss_stalker_eyes",
+    enchantments = {
+        "INLINE_ENCH_stalker_eyes_0",
+        "INLINE_ENCH_stalker_eyes_1",
+    },
+}
+
+ccb.content.define_mutation {
+    id = "LUCID_DREAM",
+    name = ccb.content.text("Sleeper"),
+    active = true,
+    points = 99,
+    description = ccb.content.text("You still sleep, yet your dreams still can impact the world.  Activate to wake up."),
+    valid = false,
+    starting_trait = false,
+    purifiable = false,
+    on_activate = "end_lucid_dream",
+}
+
 ccb.content.define_mutation {
     id = "HEDGE_FOREST_BUSH_SHAPE",
     name = ccb.content.text_without_extraction("To Vanish Amidst the Leaves"),
@@ -297,4 +409,37 @@ ccb.content.define_mutation {
     player_display = false,
     restricts_gear = { "torso" },
     allow_soft_gear = true,
+}
+
+-- Tracker to save you from being a tree for too long.  Normally wouldn't need to display it but that throws an error about undisplayed active mutations
+ccb.content.define_mutation {
+    id = "CHANGELING_SPRING_TURN_INTO_TREE_TRACKER",
+    name = ccb.content.text("Branch of Yggdrasil"),
+    description = ccb.content.text("You are in the form of a tree."),
+    points = 0,
+    valid = false,
+    mixed_effect = true,
+    player_display = true,
+    active = true,
+    starts_active = true,
+    wet_protection = {
+        { part = "head", ignored = 40 },
+        { part = "leg_l", ignored = 40 },
+        { part = "leg_r", ignored = 40 },
+        { part = "foot_l", ignored = 40 },
+        { part = "foot_r", ignored = 40 },
+        { part = "arm_l", ignored = 40 },
+        { part = "arm_r", ignored = 40 },
+        { part = "hand_l", ignored = 40 },
+        { part = "hand_r", ignored = 40 },
+        { part = "torso", ignored = 40 },
+    },
+    ignored_by = {
+        "MAMMAL", "AMPHIBIAN", "MUTANT", "CYBORG", "REPTILE", "FISH", "KRAKEN", "MIGO", "SLIME",
+        "LEECH_PLANT", "INSECT", "CENTIPEDE", "INSECT_FLYING", "SPIDER", "BIRD", "MOLLUSK", "WORM",
+        "ZOMBIE", "NETHER", "PLANT", "FERAL", "ROBOT", "HORROR", "ABERRATION", "HUMAN", "VAMPIRE",
+        "NIGHTMARE", "HOMULLUS",
+    },
+    appearance = { id = "t_tree", tile_category = "terrain" },
+    on_process = "track_changeling_tree_healing",
 }
