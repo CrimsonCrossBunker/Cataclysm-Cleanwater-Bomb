@@ -391,6 +391,10 @@ if (CURSES)
     add_dependencies(cataclysm-common get_version)
     target_link_libraries(cataclysm PRIVATE cataclysm-common)
     configure_coop_runtime(cataclysm cataclysm-common)
+    if(NOT "${CMAKE_EXPORT_COMPILE_COMMANDS}")
+        target_precompile_headers(cataclysm-common PUBLIC
+            "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_SOURCE_DIR}/pch/main-pch.hpp>")
+    endif ()
 
     if (LOCALIZE)
         target_include_directories(cataclysm-common PUBLIC

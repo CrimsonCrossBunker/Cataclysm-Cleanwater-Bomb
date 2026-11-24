@@ -64,8 +64,16 @@ if (BUILD_TESTING)
         add_custom_target(test_mo DEPENDS ${TEST_MO})
     endif()
 
+    option(CATA_TEST_UNITY_BUILD "Enable CMake unity builds for native test executables" OFF)
+    set(CATA_TEST_UNITY_BATCH_SIZE 16 CACHE STRING "Source batch size when CATA_TEST_UNITY_BUILD is ON")
+
     if (TILES)
         add_executable(cata_test-tiles ${CATACLYSM_DDA_TEST_SOURCES})
+        if (CATA_TEST_UNITY_BUILD)
+            set_target_properties(cata_test-tiles PROPERTIES
+                UNITY_BUILD ON
+                UNITY_BUILD_BATCH_SIZE ${CATA_TEST_UNITY_BATCH_SIZE})
+        endif ()
         if (LOCALIZE)
             add_dependencies(cata_test-tiles test_mo)
         endif()
@@ -92,6 +100,11 @@ if (BUILD_TESTING)
 
     if (CURSES OR HEADLESS)
         add_executable(cata_test ${CATACLYSM_DDA_TEST_SOURCES})
+        if (CATA_TEST_UNITY_BUILD)
+            set_target_properties(cata_test PROPERTIES
+                UNITY_BUILD ON
+                UNITY_BUILD_BATCH_SIZE ${CATA_TEST_UNITY_BATCH_SIZE})
+        endif ()
         if (LOCALIZE)
             add_dependencies(cata_test test_mo)
         endif()
