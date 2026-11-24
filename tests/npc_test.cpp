@@ -55,6 +55,7 @@
 #include "iexamine.h"
 #include "monster.h"
 #include "npc.h"
+#include "npc_autonomy.h"
 #include "npc_class.h"
 #include "npctalk.h"
 #include "options_helpers.h"
@@ -128,6 +129,10 @@ static const itype_id itype_space_cake( "space_cake" );
 static const itype_id itype_sweater( "sweater" );
 static const itype_id itype_water_clean( "water_clean" );
 
+static const mtype_id mon_zeindeer( "mon_zeindeer" );
+static const mtype_id mon_zombie( "mon_zombie" );
+static const mtype_id mon_zombie_acidic( "mon_zombie_acidic" );
+
 static const npc_class_id NC_ROBOFAC_INTERCOM_DAY( "NC_ROBOFAC_INTERCOM_DAY" );
 static const npc_class_id NC_ROBOFAC_INTERCOM_NIGHT( "NC_ROBOFAC_INTERCOM_NIGHT" );
 static const npc_class_id NC_ROBOFAC_INTERCOM_SUPPLY( "NC_ROBOFAC_INTERCOM_SUPPLY" );
@@ -160,6 +165,7 @@ static const trait_id trait_SAPROVORE( "SAPROVORE" );
 static const trait_id trait_TRADE_BACKEND( "TRADE_BACKEND" );
 static const trait_id trait_WEB_WEAVER( "WEB_WEAVER" );
 
+static const vpart_id vpart_aisle( "aisle" );
 static const vpart_id vpart_cargo_lock( "cargo_lock" );
 static const vpart_id vpart_frame( "frame" );
 static const vpart_id vpart_seat( "seat" );
@@ -3869,6 +3875,133 @@ TEST_CASE( "follow_player_commitment_lifecycle", "[npc][behavior]" )
     }
 }
 
+TEST_CASE( "follower_drops_a_stale_combat_commitment", "[npc][behavior]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    set_time_to_day();
+    map &here = get_map();
+    get_player_character().setpos( here, tripoint_bub_ms( 65, 50, 0 ) );
+
+    npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
+    clear_character( guy, true );
+    guy.set_fac( faction_your_followers );
+    guy.set_attitude( NPCATT_FOLLOW );
+    guy.rules.set_flag( ally_rule::follow_close );
+    guy.set_mission( NPC_MISSION_NULL );
+    guy.guard_pos = std::nullopt;
+    guy.clear_ai_guard_pos();
+    guy.set_hunger( 0 );
+    guy.set_thirst( 0 );
+    guy.set_sleepiness( 0 );
+    guy.set_stored_kcal( guy.get_healthy_kcal() );
+    guy.set_all_parts_temp_conv( BODYTEMP_NORM );
+    guy.set_all_parts_temp_cur( BODYTEMP_NORM );
+    guy.regen_ai_cache();
+    const int start_distance = rl_dist( guy.pos_abs(), get_player_character().pos_abs() );
+    REQUIRE( start_distance > guy.follow_distance() );
+
+    const std::vector<std::string> stale_goals = { "fight", "flee", "investigate_sound" };
+    for( const std::string &goal : stale_goals ) {
+        CAPTURE( goal );
+        guy.set_committed_goal( goal );
+        guy.set_moves( 100 );
+        guy.move();
+        CHECK( guy.get_committed_goal() != goal );
+    }
+    bool resumed_following = false;
+    for( int i = 0; i < 5; ++i ) {
+        guy.set_moves( 100 );
+        guy.move();
+        resumed_following = resumed_following || guy.get_committed_goal() == "follow_player";
+    }
+    CHECK( resumed_following );
+    CHECK( rl_dist( guy.pos_abs(), get_player_character().pos_abs() ) < start_distance );
+}
+
+static int lost_track_reports()
+{
+    int reports = 0;
+    const std::vector<std::pair<std::string, std::string>> logged = Messages::recent_messages( 0 );
+    for( const std::pair<std::string, std::string> &entry : logged ) {
+        if( entry.second.find( "has lost track of you" ) != std::string::npos ) {
+            ++reports;
+        }
+    }
+    return reports;
+}
+
+TEST_CASE( "npc_autonomy_lost_leader_timeouts", "[npc][autonomy][follow][memory]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    clear_map_without_vision();
+    clear_avatar();
+    set_time_to_day();
+    Messages::clear_messages();
+    map &here = get_map();
+    avatar &leader = get_avatar();
+    npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
+    clear_character( guy, true );
+    guy.setpos( here, tripoint_bub_ms( 50, 50, 0 ) );
+    guy.set_fac( faction_your_followers );
+    guy.set_attitude( NPCATT_FOLLOW );
+    leader.setpos( here, guy.pos_bub() + tripoint( 10, 0, 0 ) );
+    for( int y = 44; y <= 56; ++y ) {
+        here.ter_set( tripoint_bub_ms( 52, y, guy.posz() ), ter_t_wall );
+    }
+    here.invalidate_map_cache( guy.posz() );
+    here.build_map_cache( guy.posz() );
+    REQUIRE_FALSE( guy.sees( here, leader ) );
+    guy.last_player_seen_pos = here.get_abs( guy.pos_bub() + tripoint( 0, -4, 0 ) );
+    const auto search = [&]() {
+        guy.set_moves( 100 );
+        guy.look_for_player( leader );
+    };
+
+    SECTION( "a follower out of sight for 30 seconds says so once per search" ) {
+        search();
+        CHECK( lost_track_reports() == 0 );
+        calendar::turn += 29_seconds;
+        search();
+        CHECK( lost_track_reports() == 0 );
+        calendar::turn += 2_seconds;
+        search();
+        CHECK( lost_track_reports() == 1 );
+        calendar::turn += 1_minutes;
+        search();
+        CHECK( lost_track_reports() == 1 );
+
+        guy.autonomy.search_origin.reset();
+        guy.last_player_seen_pos = here.get_abs( guy.pos_bub() + tripoint( 0, -3, 0 ) );
+        search();
+        calendar::turn += 31_seconds;
+        search();
+        CHECK( lost_track_reports() == 2 );
+    }
+    SECTION( "a hostile NPC never reports losing the player" ) {
+        guy.set_attitude( NPCATT_KILL );
+        search();
+        calendar::turn += 1_minutes;
+        search();
+        CHECK( lost_track_reports() == 0 );
+    }
+    SECTION( "after five minutes a follower heads for where the leader is now" ) {
+        search();
+        calendar::turn += 5_minutes;
+        guy.autonomy.search_goal.reset();
+        search();
+        CHECK( guy.autonomy.search_goal == leader.pos_abs() );
+    }
+    SECTION( "a hostile NPC keeps searching around the last sighting" ) {
+        guy.set_attitude( NPCATT_KILL );
+        search();
+        calendar::turn += 5_minutes;
+        guy.autonomy.search_goal.reset();
+        search();
+        CHECK( guy.autonomy.search_goal != leader.pos_abs() );
+    }
+}
+
 TEST_CASE( "temp_anchor_return_after_bt_idle", "[npc][behavior]" )
 {
     clear_map_without_vision();
@@ -4177,6 +4310,89 @@ TEST_CASE( "follower_yields_to_moving_player_vehicle", "[npc][behavior][vehicle]
         guy.move();
         // BT picks idle, dispatch returns npc_pause; NPC stays put.
         CHECK( guy.pos_abs() == before );
+    }
+}
+
+TEST_CASE( "follower_self_care_does_not_walk_off_a_moving_vehicle", "[npc][behavior][vehicle]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    get_player_character().setpos( here, tripoint_bub_ms( 40, 40, 0 ) );
+    npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
+    clear_character( guy, true );
+    guy.set_fac( faction_your_followers );
+    guy.set_attitude( NPCATT_FOLLOW );
+
+    const tripoint_bub_ms stern( 60, 60, 0 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, stern, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    for( int x = 0; x < 3; ++x ) {
+        REQUIRE( veh->install_part( here, point_rel_ms( x, 0 ), vpart_frame ) >= 0 );
+        REQUIRE( veh->install_part( here, point_rel_ms( x, 0 ), vpart_aisle ) >= 0 );
+    }
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    here.board_vehicle( stern, &guy );
+    REQUIRE( guy.in_vehicle );
+    REQUIRE( guy.pos_bub() == stern );
+    veh->velocity = 800;
+
+    SECTION( "a target off the vehicle is not approached" ) {
+        guy.set_moves( 100 );
+        CHECK_FALSE( guy.move_to_and_verify( stern + point::east * 3 ) );
+        CHECK( guy.pos_bub() == stern );
+    }
+    SECTION( "a spot on the vehicle can still be reached" ) {
+        guy.set_moves( 100 );
+        CHECK( guy.move_to_and_verify( stern + point::east * 2 ) );
+        CHECK( guy.pos_bub() != stern );
+    }
+    SECTION( "a parked vehicle can be left" ) {
+        veh->velocity = 0;
+        guy.set_moves( 100 );
+        CHECK( guy.move_to_and_verify( stern + point::east * 3 ) );
+        CHECK( guy.pos_bub() != stern );
+    }
+}
+
+TEST_CASE( "follower_pulps_only_corpses_the_activity_accepts", "[npc][pulp]" )
+{
+    set_time_to_day();
+    clear_map();
+    clear_avatar();
+    map &here = get_map();
+    get_player_character().setpos( here, tripoint_bub_ms( 52, 50, 0 ) );
+    npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
+    clear_character( guy, true );
+    guy.setpos( here, tripoint_bub_ms( 50, 50, 0 ) );
+    guy.set_fac( faction_your_followers );
+    guy.set_attitude( NPCATT_FOLLOW );
+    guy.rules.set_flag( ally_rule::allow_pulp );
+    guy.regen_ai_cache();
+    const auto place_corpse = [&here]( const mtype_id & type ) {
+        here.add_item_or_charges( tripoint_bub_ms( 54, 50, 0 ), item::make_corpse( type ) );
+        here.update_submaps_with_active_items();
+    };
+
+    SECTION( "an ordinary zombie corpse is picked" ) {
+        REQUIRE( g->calculate_pulpability( guy, mon_zombie.obj() ).time_to_pulp <= 600 );
+        place_corpse( mon_zombie );
+        CHECK( guy.find_corpse_to_pulp() );
+    }
+    SECTION( "an acidic zombie corpse is left alone" ) {
+        REQUIRE_FALSE( g->can_pulp_acid_corpse( guy, mon_zombie_acidic.obj() ) );
+        REQUIRE( g->calculate_pulpability( guy, mon_zombie_acidic.obj() ).time_to_pulp <= 600 );
+        place_corpse( mon_zombie_acidic );
+        CHECK_FALSE( guy.find_corpse_to_pulp() );
+    }
+    SECTION( "a corpse that takes over ten minutes is left alone" ) {
+        REQUIRE( g->can_pulp_acid_corpse( guy, mon_zeindeer.obj() ) );
+        REQUIRE( g->calculate_pulpability( guy, mon_zeindeer.obj() ).time_to_pulp > 600 );
+        REQUIRE( g->can_pulp_corpse( guy, mon_zeindeer.obj() ) );
+        place_corpse( mon_zeindeer );
+        CHECK_FALSE( guy.find_corpse_to_pulp() );
     }
 }
 
@@ -4683,6 +4899,61 @@ TEST_CASE( "on_load_migrates_legacy_camp_npcs", "[npc][camp]" )
         guy.set_guard_pos( guy.pos_abs() );
         guy.on_load( &here );
         CHECK( guy.mission == NPC_MISSION_GUARD_ALLY );
+    }
+    SECTION( "a camp resident ordered to guard keeps its post" ) {
+        guy.set_mission( NPC_MISSION_CAMP_RESIDENT );
+        guy.assigned_camp = project_to<coords::omt>( guy.pos_abs() );
+        talk_function::assign_guard( guy );
+        REQUIRE( guy.mission == NPC_MISSION_GUARD_ALLY );
+        REQUIRE( guy.get_guard_post().has_value() );
+        guy.on_load( &here );
+        CHECK( guy.mission == NPC_MISSION_GUARD_ALLY );
+        CHECK( guy.get_guard_post().has_value() );
+    }
+}
+
+TEST_CASE( "camp_resident_walks_home_along_one_overmap_path", "[npc][camp]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    get_player_character().setpos( here, tripoint_bub_ms( 50, 50, 0 ) );
+    npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
+    clear_character( guy, true );
+    guy.set_fac( faction_your_followers );
+    guy.set_attitude( NPCATT_NULL );
+    guy.set_mission( NPC_MISSION_CAMP_RESIDENT );
+    guy.guard_pos = std::nullopt;
+    guy.clear_ai_guard_pos();
+    guy.set_hunger( 0 );
+    guy.set_thirst( 0 );
+    guy.set_sleepiness( 0 );
+    guy.set_stored_kcal( guy.get_healthy_kcal() );
+    guy.set_all_parts_temp_conv( BODYTEMP_NORM );
+    guy.set_all_parts_temp_cur( BODYTEMP_NORM );
+    guy.regen_ai_cache();
+    const tripoint_abs_omt start = guy.pos_abs_omt();
+    // Camps that earlier tests could not remove would make the NPC look at home.
+    const tripoint_abs_omt camp = start + tripoint( 10, 0, 0 );
+    REQUIRE_FALSE( overmap_buffer.find_camp( camp.xy() ) );
+
+    SECTION( "a stored path is followed rather than recomputed every turn" ) {
+        guy.assigned_camp = camp;
+        guy.goal = camp;
+        guy.omt_path = { camp, start + tripoint::east };
+        guy.set_moves( 100 );
+        guy.move();
+        REQUIRE( guy.get_committed_goal() == "return_to_camp" );
+        CHECK( guy.omt_path.size() == 2 );
+    }
+    SECTION( "an unreachable camp is retried after a pause, not every turn" ) {
+        guy.assigned_camp = camp + tripoint( 0, 0, 10 );
+        guy.set_moves( 100 );
+        guy.move();
+        REQUIRE( guy.get_committed_goal() == "return_to_camp" );
+        const auto retry = guy.autonomy.failed_actions.find( "return_to_camp" );
+        REQUIRE( retry != guy.autonomy.failed_actions.end() );
+        CHECK( retry->second > calendar::turn );
     }
 }
 

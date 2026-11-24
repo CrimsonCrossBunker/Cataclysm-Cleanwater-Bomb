@@ -80,6 +80,8 @@ struct npc_autonomy_state {
     std::optional<tripoint_abs_ms> search_goal;
     std::map<tripoint_abs_ms, time_point> searched_positions;
     time_point search_checked = calendar::before_time_starts;
+    time_point search_started = calendar::before_time_starts;
+    time_point lost_reported = calendar::before_time_starts;
     time_point leader_seen = calendar::before_time_starts;
     int equipment_cursor = 0;
     int maintenance_cursor = 0;

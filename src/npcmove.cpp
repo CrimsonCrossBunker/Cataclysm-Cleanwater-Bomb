@@ -2007,6 +2007,9 @@ void npc::move()
                     completed_goal = ( new_goal != "return_to_camp" );
                 } else if( committed == "free_time" ) {
                     completed_goal = ( new_goal != "free_time" );
+                } else if( committed == "fight" || committed == "flee" ||
+                           committed == "investigate_sound" ) {
+                    completed_goal = ( new_goal != committed );
                 }
                 if( completed_goal ) {
                     committed.clear();
@@ -2097,12 +2100,15 @@ void npc::move()
                     action = npc_worker_downtime;
                 }
             } else if( new_goal == "return_to_camp" ) {
-                if( assigned_camp ) {
+                if( assigned_camp && ( goal != *assigned_camp || omt_path.empty() ) ) {
                     goal = *assigned_camp;
                     tripoint_abs_omt surface = pos_abs_omt();
                     surface.z() = 0;
                     omt_path = overmap_buffer.get_travel_path( surface, *assigned_camp,
                                overmap_path_params::for_npc() ).points;
+                    if( omt_path.empty() ) {
+                        autonomy.failed_actions[new_goal] = calendar::turn + 1_minutes;
+                    }
                 }
                 action = npc_goto_destination;
             } else if( new_goal == "free_time" ) {
@@ -5549,7 +5555,10 @@ bool npc::find_corpse_to_pulp()
         {
             if( it.can_revive() ) {
                 const mtype &corpse = *it.get_corpse_mon();
-                if( !g->can_pulp_corpse( *this, corpse ) ) {
+                // Same limits as pulp_activity_actor: it refuses acid corpses, and a pulp over
+                // 600 seconds needs a confirmation that NPCs always decline.
+                if( !g->can_pulp_acid_corpse( *this, corpse ) ||
+                    g->calculate_pulpability( *this, corpse ).time_to_pulp > 600 ) {
                     continue;
                 }
 
@@ -6427,7 +6436,13 @@ void npc::look_for_player( const Character &sought )
     if( autonomy.search_origin != last_player_seen_pos ) {
         autonomy.search_origin = last_player_seen_pos;
         autonomy.search_goal = last_player_seen_pos;
+        autonomy.search_started = calendar::turn;
         autonomy.searched_positions.clear();
+    }
+    if( is_following() && calendar::turn - autonomy.search_started >= 30_seconds &&
+        autonomy.lost_reported < autonomy.search_started ) {
+        autonomy.lost_reported = calendar::turn;
+        sought.add_msg_if_player( m_warning, _( "%s has lost track of you." ), disp_name() );
     }
     for( auto it = autonomy.searched_positions.begin(); it != autonomy.searched_positions.end(); ) {
         if( it->second <= calendar::turn ) {
@@ -6467,6 +6482,13 @@ void npc::look_for_player( const Character &sought )
         return;
     }
     autonomy.search_checked = calendar::turn;
+    if( is_following() && calendar::turn - autonomy.search_started >= 5_minutes ) {
+        autonomy.search_goal = sought.pos_abs();
+        if( advance() ) {
+            autonomy.reason = _( "Heading for the team's current position." );
+            return;
+        }
+    }
     autonomous_announce( "search", _( "I've lost sight of you; I'll check where I last saw you." ) );
     const tripoint_bub_ms origin = here.get_bub( *autonomy.search_origin );
     std::vector<std::pair<int, tripoint_bub_ms>> candidates;
@@ -7142,8 +7164,21 @@ bool npc::wear_warmest_item()
     return true;
 }
 
+static bool leaves_moving_vehicle( const map &here, const tripoint_bub_ms &from,
+                                   const tripoint_bub_ms &to )
+{
+    const optional_vpart_position vp = here.veh_at( from );
+    if( !vp || !vp->vehicle().is_moving() ) {
+        return false;
+    }
+    const optional_vpart_position dest_vp = here.veh_at( to );
+    return veh_pointer_or_null( dest_vp ) != veh_pointer_or_null( vp ) ||
+           !dest_vp.part_with_feature( VPFLAG_BOARDABLE, true );
+}
+
 bool npc::take_shelter_nearby()
 {
+    const map &here = get_map();
     const auto shelters = find_nearby_shelters();
     for( const scored_shelter &s : shelters ) {
         if( square_dist( pos_bub(), s.pos ) <= 1 ) {
@@ -7152,6 +7187,9 @@ bool npc::take_shelter_nearby()
                 return true;
             }
         } else {
+            if( leaves_moving_vehicle( here, pos_bub(), s.pos ) ) {
+                continue;
+            }
             update_path( s.pos );
             if( path.empty() ) {
                 continue;
@@ -7452,7 +7490,7 @@ bool npc::wear_item_at( item_location loc )
 bool npc::move_to_and_verify( const tripoint_bub_ms &target, bool no_bashing )
 {
     const std::optional<tripoint_bub_ms> dest = nearest_passable( target, pos_bub() );
-    if( !dest ) {
+    if( !dest || leaves_moving_vehicle( get_map(), pos_bub(), *dest ) ) {
         return false;
     }
     update_path( *dest, no_bashing );
