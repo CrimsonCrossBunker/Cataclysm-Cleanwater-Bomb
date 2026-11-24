@@ -496,7 +496,7 @@ class map
         /** Helper function for light calculation; exposed here for map editor
          */
         static apparent_light_info apparent_light_helper( const level_cache &map_cache,
-                const tripoint_bub_ms &p );
+                const tripoint_bub_ms &p, bool include_wall_surfaces = false );
         /** Determine the visible light level for a tile, based on light_at
          * for the tile, vision distance, etc
          *
@@ -504,6 +504,11 @@ class map
          * @param cache Currently cached visibility parameters
          */
         lit_level apparent_light_at( const tripoint_bub_ms &p, const visibility_variables &cache ) const;
+        // A floor-blocked tile can still expose a wall's vertical face. These
+        // queries do not change the whole-cell visibility or lighting rules.
+        bool has_wall_surface( const tripoint_bub_ms &p ) const;
+        lit_level apparent_light_on_wall_at( const tripoint_bub_ms &p,
+                                             const visibility_variables &cache ) const;
         visibility_type get_visibility( lit_level ll,
                                         const visibility_variables &cache ) const;
 
@@ -989,6 +994,7 @@ class map
         }
 
         void furniture_terrain_emit_fields( const map_simulation_regions *regions = nullptr );
+        void process_indoor_crops( const map_simulation_regions *regions = nullptr );
 
         int get_map_damage( const tripoint_bub_ms &p ) const;
         void set_map_damage( const tripoint_bub_ms &p, int dmg );
@@ -1009,7 +1015,8 @@ class map
         // the map editor.
         uint8_t get_known_connections( const tripoint_bub_ms &p,
                                        const std::bitset<NUM_TERCONN> &connect_group,
-                                       const std::map<tripoint_bub_ms, ter_id> &override = {} ) const;
+                                       const std::map<tripoint_bub_ms, ter_id> &override = {},
+                                       bool include_wall_surfaces = false ) const;
         // as above, but for furniture
         uint8_t get_known_connections_f( const tripoint_bub_ms &p,
                                          const std::bitset<NUM_TERCONN> &connect_group,
@@ -1049,7 +1056,8 @@ class map
         static void get_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
                                         const std::bitset<NUM_TERCONN> &connect_group,
                                         const std::bitset<NUM_TERCONN> &rotate_to_group,
-                                        const std::map<tripoint_bub_ms, ter_id> &ter_override = {} );
+                                        const std::map<tripoint_bub_ms, ter_id> &ter_override = {},
+                                        bool include_wall_surfaces = false );
         static void get_furn_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
                                              const std::bitset<NUM_TERCONN> &connect_group,
                                              const std::bitset<NUM_TERCONN> &rotate_to_group,
@@ -2158,6 +2166,9 @@ class map
 
         void player_in_field( Character &you );
         void monster_in_field( monster &z );
+        bool crop_is_sheltered( const tripoint_bub_ms &p ) const;
+        void grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_crop_interval,
+                         std::optional<bool> indoor_light );
         /**
          * As part of the map shifting, this shifts the trap locations stored in @ref traplocs.
          * @param shift The amount shifting in submap, the same as go into @ref shift.
@@ -2414,6 +2425,7 @@ class map
          * Vector of tripoints containing active field-emitting terrain
          */
         std::vector<tripoint_bub_ms> field_ter_locs;
+        std::set<tripoint_bub_ms> crop_locs;
         /**
          * Holds free'd caches because we probably don't have to return the memory to the OS.
          */

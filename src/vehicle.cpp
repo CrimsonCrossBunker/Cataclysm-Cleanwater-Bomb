@@ -614,7 +614,8 @@ void vehicle::init_state( map &placed_on, int init_veh_fuel, veh_spawn_status in
             //clamp 4d8 to the range of [8,20]. 8=broken, 20=undamaged.
             int broken = 8;
             int unhurt = 20;
-            int roll = dice( 4, 8 );
+            // Regular glass wear is based on the rest of the vehicle below.
+            int roll = vp.has_feature( VPFLAG_WINDOW ) ? unhurt : dice( 4, 8 );
             if( roll < unhurt ) {
                 if( roll <= broken ) {
                     set_hp( pt, 0, false );
@@ -707,6 +708,30 @@ void vehicle::init_state( map &placed_on, int init_veh_fuel, veh_spawn_status in
     // Additional 50% chance for heavy damage to disabled vehicles
     if( veh_status == veh_spawn_status::DISABLED && one_in( 2 ) ) {
         damage_all_parts( 0.5 );
+    }
+
+    if( veh_status != veh_spawn_status::UNDAMAGED ) {
+        double total_damage = 0.0;
+        int part_count = 0;
+        for( const vpart_reference &vp : get_all_parts() ) {
+            if( !vp.part().is_fake && !vp.has_feature( VPFLAG_WINDOW ) && vp.info().durability > 0 ) {
+                total_damage += vp.part().damage_percent();
+                ++part_count;
+            }
+        }
+        const double wear = part_count > 0 ? total_damage / part_count : 0.0;
+        if( wear > 0.0 ) {
+            const double glass_damage_chance = std::min( 1.0, wear * 2.0 );
+            for( const vpart_reference &vp : get_avail_parts( VPFLAG_WINDOW ) ) {
+                vehicle_part &glass = vp.part();
+                if( glass.is_fake || !x_in_y( glass_damage_chance, 1.0 ) ) {
+                    continue;
+                }
+                const double damage = std::min( 1.0, wear * rng_float( 1.0, 3.0 ) );
+                const int hp = static_cast<int>( vp.info().durability * ( 1.0 - damage ) );
+                set_hp( glass, std::min( glass.hp(), hp ), false );
+            }
+        }
     }
 
     for( const int p : engines ) {
@@ -3091,9 +3116,10 @@ bool vpart_position::can_climb_through_window() const
     if( vehicle().is_moving() || vehicle().vertical_velocity != 0 ) {
         return false;
     }
-    const auto window = avail_part_with_feature( "CABIN_WINDOW" );
+    const auto window = part_with_feature( "CABIN_WINDOW", false, true );
     const auto obstacle = obstacle_at_part();
-    return window && window->part().open && obstacle && obstacle->has_feature( VPFLAG_OPENABLE );
+    return window && ( window->part().open || window->part().is_broken() ) &&
+           obstacle && obstacle->has_feature( VPFLAG_OPENABLE );
 }
 
 std::optional<vpart_reference> vpart_position::part_displayed() const

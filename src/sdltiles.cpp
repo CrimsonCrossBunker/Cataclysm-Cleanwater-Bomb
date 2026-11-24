@@ -4679,7 +4679,7 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
 
         // game::w_terrain can be drawn by the tilecontext.
         // skip the normal drawing code for it.
-        if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && get_map().z_origin() == 0 ) {
+        if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
             const SDL_FRect dest3d{
                 static_cast<float>( win->pos.x * fontwidth ),
                 static_cast<float>( win->pos.y * fontheight ),
@@ -7301,11 +7301,15 @@ static void CheckMessages()
                     }
                     if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
                         render3d::mouse_captured() ) {
-                        // middle-drag orbit: relative motion steers the 3D
-                        // camera; do not feed the game's mouseover pipeline
+                        // right-click-toggled mouse look: relative motion steers
+                        // the 3D camera; do not feed the game's mouseover pipeline
                         render3d::note_mouse_look( ev.motion.xrel, ev.motion.yrel );
                         request_render3d_camera_redraw();
                         break;
+                    }
+                    if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && render3d::available() ) {
+                        render3d::note_mouse_position( point( ev_display.motion.x, ev_display.motion.y ) );
+                        request_render3d_camera_redraw();
                     }
                     if( get_option<std::string>( "HIDE_CURSOR" ) == "show" ||
                         get_option<std::string>( "HIDE_CURSOR" ) == "hidekb" ) {
@@ -7335,14 +7339,16 @@ static void CheckMessages()
                             last_input = input_event( MouseInput::LeftButtonPressed, input_event_t::mouse );
                             break;
                         case SDL_BUTTON_RIGHT:
-                            last_input = input_event( MouseInput::RightButtonPressed, input_event_t::mouse );
+                            if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
+                                ( render3d::available() || render3d::mouse_captured() ) ) {
+                                // Each click toggles persistent mouse look; no button hold is required.
+                                render3d::sync_mouse_capture( renderer.get(), !render3d::mouse_captured() );
+                                request_render3d_camera_redraw();
+                            } else {
+                                last_input = input_event( MouseInput::RightButtonPressed, input_event_t::mouse );
+                            }
                             break;
                         case SDL_BUTTON_MIDDLE:
-                            if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
-                                // middle-drag orbits the 3D camera; not a game action
-                                render3d::sync_mouse_capture( renderer.get(), true );
-                                request_render3d_camera_redraw();
-                            }
                             break;
                         case SDL_BUTTON_X1:
                             last_input = input_event( MouseInput::X1ButtonPressed, input_event_t::mouse );
@@ -7365,13 +7371,14 @@ static void CheckMessages()
                             last_input = input_event( MouseInput::LeftButtonReleased, input_event_t::mouse );
                             break;
                         case SDL_BUTTON_RIGHT:
-                            last_input = input_event( MouseInput::RightButtonReleased, input_event_t::mouse );
+                            // Persistent mouse look is toggled only by another right click,
+                            // focus loss, or leaving 3D, never by the button release.
+                            if( !( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
+                                   ( render3d::available() || render3d::mouse_captured() ) ) ) {
+                                last_input = input_event( MouseInput::RightButtonReleased, input_event_t::mouse );
+                            }
                             break;
                         case SDL_BUTTON_MIDDLE:
-                            if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
-                                render3d::sync_mouse_capture( renderer.get(), false );
-                                request_render3d_camera_redraw();
-                            }
                             break;
                         case SDL_BUTTON_X1:
                             last_input = input_event( MouseInput::X1ButtonReleased, input_event_t::mouse );
