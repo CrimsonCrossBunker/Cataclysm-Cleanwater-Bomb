@@ -1,5 +1,10 @@
 local ccb = require("ccb")
 
+ccb.content.define_monster_faction {
+    id = "megafauna_dm",
+    base = "animal",
+}
+
 ccb.content.define_monster {
     id = "mon_direwolf_dm",
     copy_from = "mon_direwolf",
