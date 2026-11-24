@@ -78,6 +78,12 @@
 #include "viewer.h"
 #include "vpart_position.h"
 #include "weather.h"
+#include "activity_item_handling.h"
+#include "npc_lifetime.h"
+#include "current_map.h"
+#include "json.h"
+#include "json_loader.h"
+#include "shop_cons_rate.h"
 
 class Creature;
 enum npc_action : int;
@@ -860,7 +866,7 @@ TEST_CASE( "npc_needs_bt_diagnostic_during_move", "[npc][behavior]" )
     // RAII: save and restore debug globals so later tests are unaffected
     restore_on_out_of_scope<bool> restore_debug( debug_mode );
     restore_on_out_of_scope<std::unordered_set<debugmode::debug_filter>>
-            restore_filters( debugmode::enabled_filters );
+    restore_filters( debugmode::enabled_filters );
 
     clear_map_without_vision();
     npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
@@ -3974,7 +3980,7 @@ TEST_CASE( "recruited_follower_with_guard_pos_follows_player", "[npc][behavior]"
     SECTION( "live turns: NPC closes distance to player, not post" ) {
         const int initial_dist_post = rl_dist( guy.pos_abs(), post );
         const int initial_dist_player = rl_dist( guy.pos_abs(),
-                                        get_player_character().pos_abs() );
+            get_player_character().pos_abs() );
         for( int i = 0; i < 3; ++i ) {
             guy.set_moves( 100 );
             guy.move();
@@ -6122,14 +6128,14 @@ TEST_CASE( "same_category_preemption", "[npc][needs]" )
         // Inventory water (in bottle) so has_water returns true and
         // BT selects drink_water.
         const item_group::ItemList water_items = item_group::items_from(
-                    Item_spawn_data_test_bottle_water );
+                Item_spawn_data_test_bottle_water );
         guy.i_add( water_items.front() );
         here.build_map_cache( 0 );
 
         // Pre-commit seek_warmth in holding state.
         guy.set_committed_goal( "seek_warmth" );
         guy.plan_for( npc::need_goal_id::seek_warmth ).last_result =
-            npc::need_result::holding;
+               npc::need_result::holding;
 
         guy.set_moves( 100 );
         guy.move();
@@ -6174,7 +6180,7 @@ TEST_CASE( "same_category_preemption", "[npc][needs]" )
         const tripoint_bub_ms clothing = guy.pos_bub() + tripoint( 5, 0, 0 );
         here.add_item_or_charges( clothing, item( itype_sweater ) );
         const item_group::ItemList water_items = item_group::items_from(
-                    Item_spawn_data_test_bottle_water );
+                Item_spawn_data_test_bottle_water );
         guy.i_add( water_items.front() );
         here.build_map_cache( 0 );
 
@@ -6197,13 +6203,13 @@ TEST_CASE( "same_category_preemption", "[npc][needs]" )
         guy.set_all_parts_temp_conv( BODYTEMP_VERY_COLD );
         guy.set_thirst( 1050 );
         const item_group::ItemList water_items = item_group::items_from(
-                    Item_spawn_data_test_bottle_water );
+                Item_spawn_data_test_bottle_water );
         guy.i_add( water_items.front() );
         here.build_map_cache( 0 );
 
         guy.set_committed_goal( "seek_warmth" );
         guy.plan_for( npc::need_goal_id::seek_warmth ).last_result =
-            npc::need_result::deferred;
+               npc::need_result::deferred;
 
         guy.set_moves( 100 );
         guy.move();
@@ -6445,7 +6451,7 @@ TEST_CASE( "start_fire_does_not_block_needs_forever", "[npc][needs]" )
     guy.worn.wear_item( guy, item( itype_backpack ), false, false );
     // Give water so the BT can select drink_water.
     const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+            Item_spawn_data_test_bottle_water );
     guy.i_add( water_items.front() );
 
     map &here = get_map();
@@ -6479,7 +6485,7 @@ TEST_CASE( "clear_committed_goal_clears_executor_state", "[npc][needs]" )
     fp.last_result = npc::need_result::progressed;
     fp.no_progress_turns = 3;
     guy.failed_targets_for( npc::need_goal_id::eat_food ).insert(
-        tripoint_abs_ms{ 60, 50, 0 } );
+           tripoint_abs_ms{ 60, 50, 0 } );
 
     // clear_committed_goal must reset everything.
     guy.clear_committed_goal();
@@ -6599,7 +6605,7 @@ TEST_CASE( "need_goal_id_plan_accessors", "[npc][needs]" )
     fp.goal = "eat_food";
     fp.no_progress_turns = 3;
     guy.failed_targets_for( npc::need_goal_id::eat_food ).insert(
-        tripoint_abs_ms{ 1, 2, 0 } );
+           tripoint_abs_ms{ 1, 2, 0 } );
     guy.clear_need_state( npc::need_goal_id::eat_food );
     CHECK_FALSE( fp.active() );
     CHECK( fp.no_progress_turns == 0 );
@@ -6891,7 +6897,7 @@ TEST_CASE( "npc_sleep_preemption", "[npc][needs][sleep]" )
     // Extreme thirst so drink urgency is very high.
     guy.set_thirst( 1100 );
     const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+            Item_spawn_data_test_bottle_water );
     guy.i_add( water_items.front() );
 
     map &here = get_map();
@@ -7358,3 +7364,306 @@ TEST_CASE( "npc_warmth_indoor_hold_timeout", "[npc][needs][warmth]" )
         CHECK( hold_count > 0 );
     }
 }
+
+namespace merged_npc_activity_route_test
+{
+
+TEST_CASE( "npc_work_route_waits_without_growing_backlog", "[npc][activity][crafting]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    npc &worker = spawn_npc( { 60, 60 }, "test_talker" );
+    clear_character( worker, true );
+
+    SECTION( "crafting" ) {
+        worker.assign_activity( multi_craft_activity_actor() );
+    }
+    SECTION( "disassembly" ) {
+        worker.assign_activity( multi_disassemble_activity_actor() );
+    }
+
+    const activity_id original = worker.activity.id();
+    const std::size_t backlog_size = worker.backlog.size();
+    const tripoint_bub_ms destination{ 64, 60, 0 };
+    requirement_failure_reasons failures;
+
+    for( int turn = 0; turn < 110; ++turn ) {
+        worker.set_moves( turn % 2 == 0 ? 0 : -1 );
+        player_activity current = worker.activity;
+        const std::optional<bool> routed = multi_activity_actor::route(
+                                               worker, current, destination, failures, false );
+        REQUIRE( routed.has_value() );
+        REQUIRE( *routed );
+        REQUIRE( worker.backlog.size() == backlog_size );
+        REQUIRE( worker.activity.id() == original );
+        REQUIRE_FALSE( worker.has_destination() );
+    }
+
+    // Once moves are available, the same task can start travelling normally.
+    worker.set_moves( 100 );
+    player_activity current = worker.activity;
+    const std::optional<bool> routed = multi_activity_actor::route(
+                                           worker, current, destination, failures, false );
+    REQUIRE( routed.has_value() );
+    CHECK( *routed );
+    CHECK( worker.has_destination() );
+    CHECK( worker.backlog.size() == backlog_size );
+}
+
+} // namespace merged_npc_activity_route_test
+
+namespace merged_npc_blacklist_test
+{
+
+static const itype_id itype_bow_saw( "bow_saw" );
+
+static npc_template_id const npc_template_test_npc_trader( "test_npc_trader" );
+
+TEST_CASE( "npc_blacklist", "[npc][trade]" )
+{
+    npc guy;
+    guy.load_npc_template( npc_template_test_npc_trader );
+
+    REQUIRE( guy.wants_to_buy( item( itype_bow_saw ) ) );
+    guy.set_value( "bool_bigotry_hates_bow_saws", "yes" );
+    REQUIRE( !guy.wants_to_buy( item( itype_bow_saw ) ) );
+}
+
+} // namespace merged_npc_blacklist_test
+
+namespace merged_npc_lifetime_test
+{
+
+TEST_CASE( "npc_lifetimes_belong_to_one_world_incarnation", "[npc_lifetime]" )
+{
+    npc first;
+    first.normalize();
+    first.setID( character_id( 12001 ), true );
+    npc second;
+    second.normalize();
+    second.setID( first.getID(), true );
+    npc_lifetime_registry first_world;
+    npc_lifetime_registry second_world;
+    const auto first_ref = first_world.acquire( first );
+    const auto second_ref = second_world.acquire( second );
+    REQUIRE( first_ref.resolve( first_world ) == &first );
+    REQUIRE( second_ref.resolve( second_world ) == &second );
+    CHECK_FALSE( first_ref.resolve( second_world ) );
+    CHECK_FALSE( second_ref.resolve( first_world ) );
+
+    first_world.reset();
+    CHECK_FALSE( first_ref.resolve( first_world ) );
+    CHECK( second_ref.resolve( second_world ) == &second );
+    const auto restored = first_world.acquire( first );
+    CHECK( restored.resolve( first_world ) == &first );
+    CHECK_FALSE( first_ref.resolve( first_world ) );
+
+    npc_lifetime departed;
+    {
+        npc_lifetime_registry departed_world;
+        departed = departed_world.acquire( first );
+        REQUIRE( departed.resolve( departed_world ) == &first );
+    }
+    CHECK_FALSE( departed.resolve( first_world ) );
+    CHECK( restored.resolve( first_world ) == &first );
+}
+
+TEST_CASE( "npc_lifetimes_reject_reload_replacement_and_late_unload", "[npc_lifetime]" )
+{
+    npc_lifetime_registry world;
+    npc original;
+    original.normalize();
+    original.setID( character_id( 12002 ), true );
+    const auto before_unload = world.acquire( original );
+    world.retire( original );
+    CHECK_FALSE( before_unload.resolve( world ) );
+    world.activate( original );
+    const auto after_reload = world.acquire( original );
+    CHECK( after_reload.generation() > before_unload.generation() );
+    CHECK( after_reload.resolve( world ) == &original );
+    CHECK_FALSE( before_unload.resolve( world ) );
+
+    npc replacement;
+    replacement.normalize();
+    replacement.setID( original.getID(), true );
+    const auto replacement_ref = world.acquire( replacement );
+    CHECK_FALSE( after_reload.resolve( world ) );
+    CHECK_FALSE( before_unload.resolve( world ) );
+    world.retire( original );
+    CHECK( replacement_ref.resolve( world ) == &replacement );
+    replacement.setID( character_id( 12003 ), true );
+    CHECK_FALSE( replacement_ref.resolve( world ) );
+
+    npc_lifetime destroyed;
+    {
+        npc temporary;
+        temporary.normalize();
+        temporary.setID( character_id( 12004 ), true );
+        destroyed = world.acquire( temporary );
+        REQUIRE( destroyed.resolve( world ) == &temporary );
+    }
+    CHECK_FALSE( destroyed.resolve( world ) );
+}
+
+TEST_CASE( "native_npc_unload_retires_the_world_reference", "[npc_lifetime]" )
+{
+    npc value;
+    value.normalize();
+    value.setID( character_id( 12005 ), true );
+    auto &world = g->npc_lifetimes();
+    const auto before_unload = world.acquire( value );
+    REQUIRE( before_unload.resolve( world ) == &value );
+    value.on_unload();
+    CHECK_FALSE( before_unload.resolve( world ) );
+    activate_npc_lifetime( value );
+    const auto loaded = world.acquire( value );
+    CHECK( loaded.resolve( world ) == &value );
+    CHECK_FALSE( before_unload.resolve( world ) );
+    retire_npc_lifetime( value );
+    CHECK_FALSE( loaded.resolve( world ) );
+}
+
+} // namespace merged_npc_lifetime_test
+
+namespace merged_npc_load_enchantment_test
+{
+
+TEST_CASE( "npc_deserialization_does_not_require_loaded_terrain", "[npc][regression]" )
+{
+    clear_map( -4, 0 );
+    npc original;
+    original.randomize();
+    // This serialization fixture is not registered in an overmap. Initialize
+    // its position without trying to migrate a nonexistent registry entry.
+    original.set_pos_abs_only( get_map().get_abs( tripoint_bub_ms( 59, 106, -4 ) ) );
+    // This mutation supplies a passive field emitter, like Magiclysm auras.
+    // Rebuilding personality traits must not activate it during deserialization.
+    original.personality.aggression = 10;
+    original.set_mutation( trait_id( "TEST_ENCH_MUTATION" ) );
+    map unloaded;
+    original.set_pos_abs_only( unloaded.get_abs( tripoint_bub_ms( 59, 106, -4 ) ) );
+    std::ostringstream saved;
+    JsonOut out( saved );
+    original.serialize( out );
+    npc restored;
+    swap_map use_unloaded_map( unloaded );
+    REQUIRE( unloaded.inbounds( original.pos_abs() ) );
+    const std::string errors = capture_debugmsg_during( [&]() {
+        restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+    } );
+    INFO( errors );
+    CHECK( errors.empty() );
+    CHECK( restored.pos_abs() == original.pos_abs() );
+}
+
+} // namespace merged_npc_load_enchantment_test
+
+namespace merged_npc_shop_cons_rates_test
+{
+
+static const itype_id itype_FMCNote( "FMCNote" );
+static const itype_id itype_bow_saw( "bow_saw" );
+static const itype_id itype_coin_dollar( "coin_dollar" );
+static const itype_id itype_coin_gold( "coin_gold" );
+static const itype_id itype_glass_shard( "glass_shard" );
+static const itype_id itype_hammer( "hammer" );
+static const itype_id itype_test_nuclear_carafe( "test_nuclear_carafe" );
+static const itype_id itype_test_pipe( "test_pipe" );
+
+static npc_template_id const npc_template_test_npc_trader( "test_npc_trader" );
+
+TEST_CASE( "npc_shop_cons_rates", "[npc][trade]" )
+{
+    npc guy;
+    guy.load_npc_template( npc_template_test_npc_trader );
+
+    shopkeeper_cons_rates const &myrates = guy.myclass->get_shopkeeper_cons_rates();
+
+    WHEN( "item has no matches" ) {
+        REQUIRE( myrates.get_rate( item( itype_hammer ), guy ) == myrates.default_rate );
+    }
+    WHEN( "item is matched by junk threshold" ) {
+        item const glass_shard( itype_glass_shard );
+        REQUIRE( glass_shard.price_no_contents( true ) < units::to_cent( myrates.junk_threshold ) );
+        REQUIRE( myrates.get_rate( glass_shard, guy ) == -1 );
+    }
+    WHEN( "item is matched by typeid" ) {
+        REQUIRE( myrates.get_rate( item( itype_bow_saw ), guy ) == 2 );
+    }
+    WHEN( "item is matched by typeid and condition is true" ) {
+        guy.set_value( "bool_dinner_bow_saw_eater", "yes" );
+        REQUIRE( myrates.get_rate( item( itype_bow_saw ), guy ) == 99 );
+    }
+    WHEN( "item is matched by category" ) {
+        REQUIRE( myrates.get_rate( item( itype_coin_gold ), guy ) == 10 );
+    }
+    WHEN( "item is matched by category but it's junk" ) {
+        REQUIRE( myrates.get_rate( item( itype_coin_dollar ), guy ) == -1 );
+    }
+    WHEN( "item is matched by item_group" ) {
+        REQUIRE( myrates.get_rate( item( itype_test_pipe ), guy ) == 100 );
+    }
+    WHEN( "item is matched by entry with both item_group and category" ) {
+        REQUIRE( myrates.get_rate( item( itype_test_nuclear_carafe ), guy ) == 50 );
+    }
+    WHEN( "item is matched by category and an overriding entry" ) {
+        REQUIRE( myrates.get_rate( item( itype_FMCNote ), guy ) == 25 );
+    }
+}
+
+} // namespace merged_npc_shop_cons_rates_test
+
+namespace merged_npc_vehicle_sleep_test
+{
+
+TEST_CASE( "following_npc_sleep_search_respects_moving_vehicle",
+           "[npc][sleep][vehicle][upstream_ports]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    const override_option npc_food( "NO_NPC_FOOD", "false" );
+    map &here = get_map();
+    avatar &player = get_avatar();
+    const tripoint_bub_ms driver( 60, 60, 0 );
+    const tripoint_bub_ms passenger( 61, 60, 0 );
+    const tripoint_bub_ms bed( 63, 60, 0 );
+    player.setpos( here, driver );
+    npc &companion = spawn_npc( passenger.xy(), "test_talker" );
+    clear_character( companion, true );
+    companion.set_fac( faction_id( "your_followers" ) );
+    companion.set_attitude( NPCATT_FOLLOW );
+    REQUIRE( companion.is_walking_with() );
+    vehicle *veh = here.add_vehicle( vproto_id( "none" ), driver, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh );
+    for( const point_rel_ms &mount : {
+             point_rel_ms( 0, 0 ), point_rel_ms( 1, 0 )
+         } ) {
+        REQUIRE( veh->install_part( here, mount, vpart_id( "frame" ) ) >= 0 );
+        REQUIRE( veh->install_part( here, mount, vpart_id( "seat" ) ) >= 0 );
+    }
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    here.board_vehicle( driver, &player );
+    here.board_vehicle( passenger, &companion );
+    REQUIRE( player.in_vehicle );
+    REQUIRE( companion.in_vehicle );
+    REQUIRE_FALSE( player.in_sleep_state() );
+    here.furn_set( bed, furn_id( "f_bed" ) );
+    here.build_map_cache( 0 );
+
+    const bool moving = GENERATE( false, true );
+    veh->velocity = moving ? 1000 : 0;
+    const auto candidates = companion.find_sleep_candidates();
+    REQUIRE_FALSE( candidates.empty() );
+    CHECK( candidates.front().target == here.get_abs( moving ? passenger : bed ) );
+    if( moving ) {
+        for( const auto &candidate : candidates ) {
+            CHECK( candidate.target == here.get_abs( passenger ) );
+        }
+    }
+    here.unboard_vehicle( driver );
+    here.unboard_vehicle( passenger );
+}
+
+} // namespace merged_npc_vehicle_sleep_test
