@@ -1,5 +1,48 @@
 local ccb = require("ccb")
 
+ccb.content.define_monster {
+    id = "mon_zombie_scientist_phavian",
+    copy_from = "mon_zombie_scientist",
+    looks_like = "mon_zombie_scientist",
+    name = ccb.content.plural_text("zombie scientist", "zombie scientists"),
+    death = { drops = "mon_zombie_scientist_phavian_death_drops" },
+}
+
+-- Heat armor is needed to make it immune to pyrokinesis.
+ccb.content.define_monster {
+    id = "mon_zombie_blank",
+    copy_from = "mon_zombie_base",
+    name = ccb.content.plural_text("zombie blank", "zombie blanks"),
+    description = ccb.content.text("This zombie looks fairly ordinary, other than walking slightly more quickly than the standard shambling.  But there's something subtly wrong about it.  When you look directly at it, gray static flickers on the edge of your vision and you hear a very low droning hum."),
+    species = { "ZOMBIE", "HUMAN", "PSI_NULL" },
+    symbol = "Z",
+    color = "dark_gray_white",
+    dodge = 1,
+    bleed_rate = 50,
+    vision_day = 30,
+    vision_night = 5,
+    emissions = { { id = "emit_anti_psi", delay = "1 s" } },
+    upgrade = { half_life = 120, monster_group = "GROUP_ZOMBIE_BLANK_UPGRADE" },
+    armor = {
+        electric = 1,
+        heat = 999,
+        psi_telekinetic_damage = 999,
+        psi_telepathic_damage = 999,
+        psi_teleporter_teleporting_damage = 999,
+        psi_enervation_damage = 999,
+    },
+    inheritance = {
+        add = {
+            flags = {
+                "FIREPROOF", "ENERVATE_IMMUNE", "PHOTOKIN_MONSTER_IMMUNE", "TELEPORT_IMMUNE",
+                "TEEP_IMMUNE", "TELEKIN_IMMUNE", "TELEKIN_PUSH_PULL_IMMUNE",
+            },
+        },
+        scale = { speed = 1.15 },
+    },
+    death = { outcome = { spell = { id = "delete_nullifying_fields_monster", hit_self = true } } },
+}
+
 -- Heat armor is needed to make it immune to pyrokinesis.
 ccb.content.define_monster {
     id = "mon_zombie_nullpsi",
@@ -212,4 +255,101 @@ ccb.content.define_monster {
         scale = { hp = 1.3, speed = 2 },
     },
     death = { outcome = { spell = { id = "delete_nullifying_fields_monster", hit_self = true } } },
+}
+
+ccb.content.define_monster {
+    id = "mon_zombie_pupating_psi",
+    copy_from = "mon_zombie_pupa",
+    name = ccb.content.plural_text("pupating blank", "pupating blanks"),
+    description = ccb.content.text("This human corpse is wrapped in sticky black fibers that cover everything from the neck down.  Beneath the wrapping there is a strange rhythmic movement, grotesque to behold.  When you look directly at it, gray static flickers on the edge of your vision and you hear a very low droning hum."),
+    species = { "ZOMBIE", "PSI_NULL" },
+    emissions = { { id = "emit_anti_psi", delay = "1 s" } },
+    color = "dark_gray_white",
+    attacks = {
+        { cooldown = 3, kind = "bite" },
+        {
+            spell = { id = "small_psi_raptor_spawn", hit_self = true },
+            cooldown = 50,
+            casting_message = ccb.content.text("%s bursts, and gore-smeared winged beasts climb out of the corpse!"),
+            kind = "spell",
+        },
+    },
+    armor = {
+        electric = 1,
+        psi_telekinetic_damage = 999,
+        psi_telepathic_damage = 999,
+        psi_teleporter_teleporting_damage = 999,
+        psi_enervation_damage = 999,
+    },
+    inheritance = {
+        add = {
+            flags = {
+                "ENERVATE_IMMUNE", "PHOTOKIN_MONSTER_IMMUNE", "TELEPORT_IMMUNE", "TEEP_IMMUNE",
+                "TELEKIN_IMMUNE", "TELEKIN_PUSH_PULL_IMMUNE",
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_spawn_raptor_teke_push",
+    copy_from = "mon_spawn_raptor",
+    looks_like = "mon_spawn_raptor",
+    name = ccb.content.plural_text("forcewave flesh-raptor", "forcewave flesh-raptors"),
+    description = ccb.content.text("This small, winged predator darts through the air on three thinly-haired wings that look like stretched human hands.  A sheer, jagged spike juts out from the point where the wings meet.  It looks like nothing you've seen on Earth, and yet strangely like it is made of human parts.  As it darts through the air, nearby obstacles sometimes bend slightly away from it."),
+    upgrade = {},
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "scratch",
+                    damage = { { type = "psi_telekinetic_damage", amount = 3 } },
+                    effects = { { id = "downed", duration = 2, chance = 5 } },
+                    effects_require_damage = false,
+                    avatar_hit = ccb.content.text_without_extraction("%1$s hits your %2$s with a burst of telekinetic force!"),
+                    npc_hit = ccb.content.text_without_extraction("%1$s hits <npcname> with a burst of telekinetic force!"),
+                    avatar_miss = ccb.content.text_without_extraction("%1$s flaps its wings and a burst of wind whistles around you!"),
+                    npc_miss = ccb.content.text_without_extraction("%1$s flaps its wings at <npcname>!"),
+                    avatar_no_damage = ccb.content.text_without_extraction("%1$s hits your %2$s with a burst of telekinetic force, but fails to penetrate armor."),
+                    npc_no_damage = ccb.content.text_without_extraction("%1$s hits <npcname> with a burst of telekinetic force, but fails to penetrate armor."),
+                    cooldown = { 10, 30 },
+                    when = "monster_attack_psionics_available",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_spawn_raptor_pyro_hot_air",
+    copy_from = "mon_spawn_raptor",
+    looks_like = "mon_spawn_raptor",
+    name = ccb.content.plural_text("heatwave flesh-raptor", "heatwave flesh-raptors"),
+    description = ccb.content.text("This small, winged predator darts through the air on three thinly-haired wings that look like stretched human hands.  A sheer, jagged spike juts out from the point where the wings meet.  It looks like nothing you've seen on Earth, and yet strangely like it is made of human parts.  The air around it shimmers with heat haze."),
+    upgrade = {},
+    emissions = { { id = "emit_pyrokinetic_summon_heat_3", delay = "1 s" } },
+}
+
+ccb.content.define_monster {
+    id = "mon_spawn_raptor_teleport_blink",
+    copy_from = "mon_spawn_raptor",
+    looks_like = "mon_spawn_raptor",
+    name = ccb.content.plural_text("blinking flesh-raptor", "blinking flesh-raptors"),
+    description = ccb.content.text("This small, winged predator darts through the air on three thinly-haired wings that look like stretched human hands.  A sheer, jagged spike juts out from the point where the wings meet.  It looks like nothing you've seen on Earth, and yet strangely like it is made of human parts.  Occasionally, it vanishes and reappears elsewhere."),
+    upgrade = {},
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    move_cost = 50,
+                    allow_no_target = true,
+                    maximum_range = 6,
+                    message = ccb.content.text_without_extraction("%1$s vanishes and reappears elsewhere!"),
+                    kind = "leap",
+                    cooldown = { 3, 9 },
+                    when = "monster_attack_psionics_available",
+                },
+            },
+        },
+    },
 }
