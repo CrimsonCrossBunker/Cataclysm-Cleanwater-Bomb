@@ -1305,6 +1305,9 @@ units::power vehicle::part_vpower_w( map &here, const vehicle_part &vp,
 // for motor consumption see @ref vpart_info::energy_consumption instead
 units::power vehicle::part_epower( const vehicle_part &vp ) const
 {
+    if( vp.info().has_flag( "SPLIT_HVAC_INDOOR" ) || vp.info().has_flag( "SPLIT_HVAC_OUTDOOR" ) ) {
+        return split_hvac_epower( vp );
+    }
     units::power e = vp.info().epower;
     if( e < 0_W ) {
         return e; // Consumers always draw full power, even if broken
@@ -6048,7 +6051,7 @@ units::power vehicle::total_accessory_epower() const
     for( int part : accessories ) {
         const vehicle_part &vp = parts[part];
         if( vp.enabled ) {
-            epower += vp.info().epower;
+            epower += vp.info().epower < 0_W ? part_epower( vp ) : vp.info().epower;
         }
     }
     return epower;
@@ -6431,7 +6434,7 @@ void vehicle::power_parts( map &here )
 
         for( const vpart_reference &vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
             vehicle_part &pt = vp.part();
-            if( pt.info().epower < 0_W ) {
+            if( part_epower( pt ) < 0_W ) {
                 pt.enabled = false;
                 pt.power_disabled = true;
             }
@@ -9385,7 +9388,7 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
             // matching power_parts() behavior when the battery dies.
             for( const vpart_reference &drain_vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
                 vehicle_part &pt = drain_vp.part();
-                if( pt.info().epower < 0_W ) {
+                if( part_epower( pt ) < 0_W ) {
                     pt.enabled = false;
                     pt.power_disabled = true;
                 }

@@ -9,7 +9,8 @@
     "categories": [ "utility" ],
     "color": "light_cyan",
     "durability": 150,
-    "flags": [ "APPLIANCE", "SPLIT_HVAC_INDOOR" ],
+    "epower": "-1500 W",
+    "flags": [ "APPLIANCE", "ENABLED_DRAINS_EPOWER", "SPLIT_HVAC_INDOOR" ],
     "requirements": { "install": { "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_screw", 1 ] ] }, "removal": { "time": "6 m", "using": [ [ "vehicle_screw", 1 ] ] } },
     "breaks_into": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "cable", "count": [ 2, 5 ] } ],
     "variants": [ { "symbols": ";", "symbols_broken": ":" } ]
@@ -24,7 +25,8 @@
     "categories": [ "utility" ],
     "color": "light_gray",
     "durability": 150,
-    "flags": [ "APPLIANCE", "SPLIT_HVAC_OUTDOOR" ],
+    "epower": "-1500 W",
+    "flags": [ "APPLIANCE", "ENABLED_DRAINS_EPOWER", "SPLIT_HVAC_OUTDOOR" ],
     "requirements": { "install": { "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_screw", 1 ] ] }, "removal": { "time": "6 m", "using": [ [ "vehicle_screw", 1 ] ] } },
     "breaks_into": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "cable", "count": [ 2, 5 ] } ],
     "variants": [ { "symbols": ";", "symbols_broken": ":" } ]

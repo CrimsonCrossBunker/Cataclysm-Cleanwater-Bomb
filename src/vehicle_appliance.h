@@ -17,6 +17,7 @@ class item;
 class vehicle;
 class veh_menu;
 class vpart_reference;
+struct vehicle_part;
 
 // Stable hardware identity and player choices, never client-computed costs.
 struct vehicle_appliance_selection {
@@ -46,6 +47,8 @@ void store_boiler_water( item &boiler, double liters, double temperature_c, bool
 void update_vehicle_climate( map &here, vehicle &target );
 bool is_room_heat_source( const vpart_reference &part );
 double room_appliance_watts( map &here, const vpart_reference &part, double outside_c, double room_c );
+units::power split_hvac_epower( const vehicle_part &part );
+units::power split_hvac_input_power( map &here, const vpart_reference &indoor );
 units::power room_appliance_power_draw( const vehicle &target );
 double cabin_temperature_delta( const map &here, const tripoint_bub_ms &position );
 std::optional<int> use_hvac_remote( Character *who, item *remote, const tripoint_bub_ms &position );

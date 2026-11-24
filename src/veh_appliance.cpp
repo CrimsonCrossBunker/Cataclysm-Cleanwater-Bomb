@@ -334,9 +334,19 @@ std::string veh_app_interact::draw_info_imgui_header( map &here, const vehicle_p
         }
         return _( "Connect the radiator to a boiler to circulate hot water." );
     }
+    std::string climate_status;
+    if( part.info().has_flag( "SPLIT_HVAC_INDOOR" ) ) {
+        const int index = veh->index_of_part( &part );
+        if( index >= 0 ) {
+            const units::power input = split_hvac_input_power( here, vpart_reference( *veh, index ) );
+            climate_status = string_format( _( "Air conditioner input: %d W" ),
+                                            static_cast<int>( units::to_watt( input ) ) );
+        }
+    }
     if( !has_battery_in_grid( here, veh ) ) {
         if( part.info().has_flag( "SPLIT_HVAC_INDOOR" ) ) {
-            return _( "The air conditioner can draw power through its linked outdoor unit." );
+            return climate_status + "\n" +
+                   _( "The air conditioner can draw power through its linked outdoor unit." );
         }
         if( part.info().has_flag( "SPLIT_HVAC_OUTDOOR" ) ) {
             return _( "The air conditioner can draw power through its linked indoor unit." );
@@ -384,6 +394,9 @@ std::string veh_app_interact::draw_info_imgui_header( map &here, const vehicle_p
     }
     // Always start printing this on its own line
     ret += "\n";
+    if( !climate_status.empty() ) {
+        ret += climate_status + "\n";
+    }
     print_charge( _( "Grid battery power flow: " ), grid_flow, ret );
 
     // Reactor power output
