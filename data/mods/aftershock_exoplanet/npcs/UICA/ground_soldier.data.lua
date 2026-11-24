@@ -1,6 +1,17 @@
 local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 
+-- A generic guard for uica ground installations.
+ccb.content.define_npc {
+    id = "uica_ground_soldier",
+    suffix = ccb.content.text("UICA Installation Security"),
+    class = "NC_UICA_GROUND_SOLDIER",
+    attitude = 0,
+    mission = "GUARD_PATROL",
+    chat = "TALK_UICA_GROUND_SOLDIER",
+    faction = "UICA",
+}
+
 ccb.content.define_dialogue_topic {
     id = "TALK_UICA_GROUND_SOLDIER",
     line = {
