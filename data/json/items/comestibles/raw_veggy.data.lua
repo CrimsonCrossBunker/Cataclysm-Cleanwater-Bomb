@@ -1,5 +1,1650 @@
 local ccb = require("ccb")
 
+-- red variety as theres no data on Monarda fistulosa, but this is similar enough - <https://pmc.ncbi.nlm.nih.gov/articles/PMC7356345/table/plants-09-00691-t002/>
+ccb.content.define_item {
+    id = "bee_balm",
+    name = ccb.content.plural_text("bee balm", "bee balm"),
+    description = ccb.content.text("A snow-white flower also known as wild bergamot.  Smells faintly of mint."),
+    mass = "10 g",
+    color = "white",
+    symbol = ",",
+    materials = { "veggy" },
+    volume = "20 ml",
+    price = "0 cent",
+    survival_price = "0 cent",
+    flags = { "RABBIT", "CATTLE" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        calories = 1,
+        fun = -5,
+        vitamins = { { id = "veggy_allergen", amount = 1 }, { id = "vitC", amount = "136 μg" } },
+    },
+}
+
+ccb.content.define_item {
+    id = "groundnut",
+    name = ccb.content.plural_text("handful of ground nuts", "handfuls of ground nuts"),
+    mass = "40 g",
+    volume = "40 ml",
+    price = "0 cent",
+    survival_price = "50 cent",
+    color = "brown",
+    materials = { "veggy" },
+    description = ccb.content.text("An almost forgotten staple of the native tribes, called the Indian potato by some.  Very nutritious, but mildly toxic unless cooked."),
+    symbol = ",",
+    looks_like = "potato",
+    flags = { "RAW", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        calories = 29,
+        shelf_life = "20 days",
+        healthy = -1,
+        vitamins = {
+            { id = "calcium", amount = 14 },
+            { id = "iron", amount = 1 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        fun = -3,
+    },
+}
+
+ccb.content.define_item {
+    id = "wild_sarsaparilla_root",
+    name = ccb.content.text("wild sarsaparilla root"),
+    mass = "40 g",
+    volume = "80 ml",
+    price = "0 cent",
+    survival_price = "5 cent",
+    color = "brown",
+    materials = { "veggy" },
+    description = ccb.content.text("This aromatic rhizome can be eaten as is in an emergency, but it is much better used for making beverages.  Its taste is pleasant but it is also tough and stringy."),
+    symbol = ",",
+    flags = { "RAW", "RAT" },
+    stackable = true,
+    comestible = {
+        calories = 40,
+        stimulation = 1,
+        shelf_life = "20 days",
+        kind = "FOOD",
+        vitamins = {
+            { id = "calcium", amount = 10 },
+            { id = "iron", amount = 8 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        fun = -3,
+    },
+}
+
+ccb.content.define_item {
+    id = "jerusalem_artichoke",
+    name = ccb.content.text("Jerusalem artichoke"),
+    mass = "40 g",
+    length = "10 cm",
+    price = "1 USD",
+    survival_price = "50 cent",
+    volume = "80 ml",
+    color = "yellow",
+    description = ccb.content.text("A slightly sweet tuber.  Contains much inulin which may cause some minor issues with your digestive tract, so it should be cooked."),
+    symbol = ",",
+    flags = { "RAW", "RAT" },
+    materials = { "veggy" },
+    stackable = true,
+    comestible = {
+        calories = 33,
+        shelf_life = "20 days",
+        kind = "FOOD",
+        healthy = -1,
+        vitamins = {
+            { id = "calcium", amount = 1 },
+            { id = "iron", amount = 8 },
+            { id = "vitC", amount = 2 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        fun = -2,
+    },
+}
+
+-- no flags like CATTLE because most wildlife actually hate the onion smell
+ccb.content.define_item {
+    id = "wild_garlic",
+    name = ccb.content.plural_text("wild garlic", "wild garlic"),
+    mass = "30 g",
+    price = "1 USD",
+    survival_price = "50 cent",
+    volume = "70 ml",
+    color = "light_green",
+    description = ccb.content.text("Also called ramps, this delicate leafy vegetable is healthy and a tasty ingredient for many dishes."),
+    symbol = ",",
+    flags = { "RAW" },
+    materials = { "veggy" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        calories = 12,
+        shelf_life = "3 days",
+        vitamins = {
+            { id = "vitC", amount = 10 },
+            { id = "iron", amount = 2 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        fun = -2,
+    },
+}
+
+ccb.content.define_item {
+    id = "broccoli",
+    name = ccb.content.plural_text("broccoli", "broccoli"),
+    mass = "151 g",
+    color = "green",
+    symbol = "%",
+    description = ccb.content.text("A big stalk of broccoli.  It's a bit tough, but rich in Vitamin C and quite delicious when properly cooked."),
+    price = "47 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "180 ml",
+    flags = { "EATEN_HOT", "RAW", "CATTLE", "RABBIT", "MOUSE", "RAT" },
+    comestible = {
+        shelf_life = "6 days 16 hours",
+        kind = "FOOD",
+        calories = 51,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "134700 μg" },
+            { id = "iron", amount = "1100 μg" },
+            { id = "calcium", amount = "71 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- Actually, not recommended for rats and mice to eat in big quantities because gas but no way to implement that yet, very minor detail though
+ccb.content.define_item {
+    id = "cabbage_head",
+    name = ccb.content.plural_text("cabbage head", "cabbage head"),
+    mass = "910 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("A head of crisp white cabbage.  You should probably prepare it before eating."),
+    price = "104 cent",
+    survival_price = "104 cent",
+    materials = { "veggy" },
+    volume = "1632 ml",
+    flags = { "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    comestible = {
+        shelf_life = "10 days",
+        kind = "FOOD",
+        quench = 2,
+        calories = 234,
+        fun = -2,
+        vitamins = {
+            { id = "vitC", amount = "332800 μg" },
+            { id = "iron", amount = "12900 μg" },
+            { id = "calcium", amount = "364 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "cabbage",
+    name = ccb.content.plural_text("handful of shredded cabbage", "handfuls of shredded cabbage"),
+    mass = "70 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("A handful of shredded cabbage."),
+    price = "8 cent",
+    survival_price = "8 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "10 days",
+        kind = "FOOD",
+        quench = 2,
+        calories = 18,
+        fun = -2,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "25600 μg" },
+            { id = "iron", amount = "300 μg" },
+            { id = "calcium", amount = "28 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "grape_leaves",
+    looks_like = "lettuce",
+    name = ccb.content.plural_text("grape leaves", "grape leaves"),
+    mass = "14 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("Edible leaves of the grape vine.  Typically used in salads or as a food wrapping."),
+    price = "80 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "FREEZERBURN", "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "6 days 16 hours",
+        kind = "FOOD",
+        calories = 22,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = 2 },
+            { id = "calcium", amount = 4 },
+            { id = "iron", amount = 2 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "radish_taproot",
+    name = ccb.content.plural_text("handful of radish taproots", "handfuls of radish taproots"),
+    mass = "100 g",
+    color = "red",
+    symbol = "%",
+    looks_like = "carrot",
+    description = ccb.content.text("A handful of crunchy red radish taproots."),
+    price = "104 cent",
+    survival_price = "104 cent",
+    materials = { "veggy" },
+    volume = "325 ml",
+    flags = { "RAW" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        quench = 2,
+        calories = 15,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "veggy_allergen", amount = 1 },
+            { id = "vitC", amount = "15 mg" },
+            { id = "iron", amount = "3 mg" },
+            { id = "calcium", amount = "25 mg" },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "spinach",
+    name = ccb.content.plural_text("handful of spinach", "handfuls of spinach"),
+    mass = "30 g",
+    color = "green",
+    symbol = "%",
+    description = ccb.content.text("A bunch of spinach leaves.  Their ability to provide one with superhuman strength has been greatly exaggerated by popular media."),
+    price = "18 cent",
+    survival_price = "5 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "8 days",
+        kind = "FOOD",
+        quench = 2,
+        calories = 7,
+        fun = -2,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "8400 μg" },
+            { id = "iron", amount = "800 μg" },
+            { id = "calcium", amount = "29700 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- Carrots are somewhat high in sugar and should only be eaten sparingly by rabbits but there is no way to implement that yet
+ccb.content.define_item {
+    id = "carrot",
+    name = ccb.content.text("carrot"),
+    mass = "72 g",
+    color = "light_red",
+    symbol = "%",
+    description = ccb.content.text("A healthy root vegetable.  Rich in vitamin A!"),
+    price = "23 cent",
+    survival_price = "8 cent",
+    materials = { "veggy" },
+    volume = "146 ml",
+    length = "19 cm",
+    flags = { "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    comestible = {
+        shelf_life = "5 days",
+        kind = "FOOD",
+        calories = 30,
+        fun = 1,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "4200 μg" },
+            { id = "iron", amount = "200 μg" },
+            { id = "calcium", amount = "23800 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "cattail_rhizome",
+    name = ccb.content.text("cattail rhizome"),
+    mass = "209 g",
+    color = "brown",
+    symbol = "%",
+    description = ccb.content.text("A stout, branching rhizome from a cattail plant.  Its crisp white flesh is very starchy and fibrous, but you really ought to cook it before you attempt to eat it."),
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "RAW", "RABBIT" },
+    comestible = {
+        shelf_life = "3 days 8 hours",
+        kind = "FOOD",
+        calories = 334,
+        fun = -12,
+        vitamins = { { id = "iron", amount = 8 }, { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "lotus_rhizome",
+    name = ccb.content.text("lotus root"),
+    mass = "200 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("The rhizome of the lotus, which has many tubular cavities inside, can be eaten both raw and cooked."),
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "veggy" },
+    volume = "500 ml",
+    flags = { "FREEZERBURN", "RABBIT" },
+    comestible = {
+        shelf_life = "3 days 8 hours",
+        kind = "FOOD",
+        calories = 150,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = 94 },
+            { id = "calcium", amount = 9 },
+            { id = "iron", amount = 12 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- need to be able to fit stalks in a swag_bag for MISSION_LEARN_ABOUT_CATTAIL_JELLY
+ccb.content.define_item {
+    id = "cattail_stalk",
+    name = ccb.content.text("cattail stalk"),
+    mass = "100 g",
+    length = "60 cm",
+    color = "green",
+    symbol = "%",
+    description = ccb.content.text("A stiff, green stalk from a cattail plant.  It is starchy and fibrous, but it would be much better if you cooked it."),
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "RAW", "RABBIT", "CATTLE" },
+    comestible = {
+        shelf_life = "3 days 8 hours",
+        kind = "FOOD",
+        calories = 25,
+        fun = -8,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "calcium", amount = 5 },
+            { id = "iron", amount = 5 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "plant_stalk",
+    name = ccb.content.text("plant stalk"),
+    description = ccb.content.text("A stiff, green stalk from a plant.  It is starchy and fibrous, but it would be much better if you cooked it."),
+    copy_from = "cattail_stalk",
+    comestible = {},
+}
+
+-- It appears that celery is energy-negative for rodents
+ccb.content.define_item {
+    id = "celery",
+    name = ccb.content.plural_text("celery", "celery"),
+    mass = "40 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A single stalk of celery.  Neither tasty nor very nutritious, but it goes well with salad."),
+    price = "10 cent",
+    survival_price = "10 cent",
+    materials = { "veggy" },
+    volume = "146 ml",
+    length = "19 cm",
+    flags = { "FREEZERBURN", "RAW", "CATTLE", "RABBIT" },
+    stackable = true,
+    comestible = {
+        shelf_life = "6 days 6 hours",
+        kind = "FOOD",
+        quench = 3,
+        calories = 6,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "8400 μg" },
+            { id = "iron", amount = "800 μg" },
+            { id = "calcium", amount = "29700 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "cotton_boll",
+    name = ccb.content.text("cotton boll"),
+    category = "other",
+    mass = "26 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A tough protective capsule bulging with densely-packed fibers and seeds, this cotton boll can be processed into usable material with the right tools."),
+    price = "25 cent",
+    survival_price = "2 cent",
+    materials = { "veggy", "cotton" },
+    volume = "62 ml",
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        quench = -6,
+        calories = 9,
+        fun = -10,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+-- Birds can eat spicy stuff easily due to their inability to taste spiciness
+ccb.content.define_item {
+    id = "chili_pepper",
+    name = ccb.content.text("chili pepper"),
+    mass = "45 g",
+    color = "red",
+    symbol = "%",
+    description = ccb.content.text("A spicy chili pepper.  Not the best on its own, but adds great flavor when used in cooking."),
+    price = "8 cent",
+    survival_price = "16 cent",
+    materials = { "veggy" },
+    volume = "70 ml",
+    flags = { "FREEZERBURN", "RAW", "BIRD" },
+    comestible = {
+        shelf_life = "30 days",
+        kind = "FOOD",
+        calories = 18,
+        smoking_result = "dry_chili",
+        vitamins = {
+            { id = "vitC", amount = "64700 μg" },
+            { id = "iron", amount = "500 μg" },
+            { id = "calcium", amount = "6300 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        fun = -2,
+    },
+}
+
+ccb.content.define_item {
+    id = "chili_pepper_cut",
+    copy_from = "chili_pepper",
+    name = ccb.content.text("cut chili pepper"),
+    description = ccb.content.text("A chili pepper that's been cut into pieces.  The seeds have been removed."),
+    price = "3 cent",
+    survival_price = "3 cent",
+    comestible = { cooks_like = "chili_pepper", shelf_life = "3 days" },
+}
+
+-- No data on cows finding cucumbers super tasty
+ccb.content.define_item {
+    id = "cucumber",
+    name = ccb.content.text("salad cucumber"),
+    mass = "301 g",
+    color = "green",
+    symbol = "%",
+    description = ccb.content.text("The larger cousin of a pickle.  A vegetable from the gourd family.  Not especially flavorful, but very refreshing."),
+    price = "84 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "275 ml",
+    length = "22 cm",
+    flags = { "FREEZERBURN", "RAW", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "6 days 6 hours",
+        kind = "FOOD",
+        quench = 7,
+        calories = 45,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "8400 μg" },
+            { id = "iron", amount = "800 μg" },
+            { id = "calcium", amount = "48200 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "cucumber_cut",
+    name = ccb.content.text("cut salad cucumber"),
+    volume = "274 ml",
+    mass = "300 g",
+    copy_from = "cucumber",
+    description = ccb.content.text("A chopped-up salad cucumber."),
+    price = "30 cent",
+    survival_price = "10 cent",
+    stackable = true,
+    comestible = { cooks_like = "cucumber", shelf_life = "2 days" },
+}
+
+ccb.content.define_item {
+    id = "gherkin",
+    name = ccb.content.text("gherkin cucumber"),
+    mass = "65 g",
+    color = "green",
+    symbol = "%",
+    description = ccb.content.text("A pickle before it becomes a pickle.  Gherkins are smaller cucumbers that - you guessed it - are used to make pickles."),
+    price = "13 cent",
+    survival_price = "11 cent",
+    materials = { "veggy" },
+    volume = "60 ml",
+    length = "10 cm",
+    flags = { "FREEZERBURN", "RAW", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "6 days 6 hours",
+        kind = "FOOD",
+        quench = 2,
+        calories = 7,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "700 μg" },
+            { id = "iron", amount = "300 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "gherkin_cut",
+    name = ccb.content.text("cut gherkin cucumber"),
+    copy_from = "gherkin",
+    description = ccb.content.text("A chopped-up gherkin cucumber."),
+    price = "13 cent",
+    survival_price = "5 cent",
+    comestible = { cooks_like = "gherkin", shelf_life = "2 days" },
+}
+
+-- Dahlia roots contain an incredible amount of vitamin B6. This isn't a vitamin tracked in Cataclysm, but be careful of vitamin overdose when eating dahlia in real life.
+ccb.content.define_item {
+    id = "dahlia_root",
+    name = ccb.content.text("dahlia root"),
+    mass = "190 g",
+    color = "brown",
+    symbol = "%",
+    description = ccb.content.text("The large, tuberous root of a dahlia flower.  It smells spicy, but is too starchy to eat without cooking."),
+    price = "1 USD",
+    survival_price = "25 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "RAW", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "30 days",
+        kind = "FOOD",
+        calories = 60,
+        fun = -4,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+-- Serving Size is 1 cup of sliced roots. Salsify grows in bountiful clumps, it's a weed.
+ccb.content.define_item {
+    id = "salsify_raw",
+    name = ccb.content.text("salsify root"),
+    mass = "133 g",
+    color = "green",
+    symbol = "%",
+    description = ccb.content.text("A highly nutritious root, it is tough and bland until cooked, at which point it tastes strangely similar to oysters."),
+    price = "39 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "RAW", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "30 days",
+        kind = "FOOD",
+        calories = 109,
+        fun = -2,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "10600 μg" },
+            { id = "iron", amount = "900 μg" },
+            { id = "calcium", amount = "79800 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "chicory_raw",
+    name = ccb.content.text("chicory root"),
+    mass = "60 g",
+    color = "cyan",
+    symbol = "%",
+    description = ccb.content.text("A very bitter root, not meant to be eaten raw."),
+    price = "4 cent",
+    survival_price = "25 cent",
+    materials = { "veggy" },
+    volume = "135 ml",
+    flags = { "RAW" },
+    stackable = true,
+    comestible = {
+        shelf_life = "30 days",
+        kind = "FOOD",
+        calories = 43,
+        fun = -8,
+        vitamins = {
+            { id = "vitC", amount = "3 mg" },
+            { id = "iron", amount = "500 μg" },
+            { id = "calcium", amount = "24600 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- Also known as Queen Anne's Lace. It's that boring white flower that grows wild everywhere. Water hemlock looks almost exactly like wild carrot. The easiest way to tell them apart is by their scent. Please don't eat either of them at home, hemlock will kill you deader than Socrates.
+ccb.content.define_item {
+    id = "carrot_wild",
+    name = ccb.content.text("wild root"),
+    copy_from = "carrot",
+    color = "white",
+    description = ccb.content.text("These are often wild carrots, but beware of poisonous lookalikes.  In any case, the root is tough and is not as tasty as a real raw carrot."),
+    price = "30 cent",
+    survival_price = "16 cent",
+    volume = "256 ml",
+    comestible = { fun = -2 },
+    inheritance = { add = { flags = { "FORAGE_POISON" } } },
+}
+
+ccb.content.define_item {
+    id = "dogbane",
+    name = ccb.content.plural_text("dogbane", "dogbane"),
+    description = ccb.content.text("A stalk of dogbane.  It has very fibrous stems and is mildly poisonous."),
+    flags = { "CORROSIVE" },
+    mass = "40 g",
+    color = "magenta",
+    symbol = ",",
+    materials = { "veggy" },
+    volume = "250 ml",
+    price = "0 cent",
+    survival_price = "0 cent",
+    stackable = true,
+    comestible = { kind = "FOOD", calories = 9, fun = -15, vitamins = { { id = "veggy_allergen", amount = 1 } } },
+    use_actions = { "BLECH" },
+}
+
+-- Who in their right mind would eat an entire garlic bulb raw?
+ccb.content.define_item {
+    id = "garlic",
+    name = ccb.content.text("garlic bulb"),
+    mass = "18 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("A pungent garlic bulb.  Popular as a seasoning for its strong flavor.  Can be disassembled into cloves."),
+    price = "12 cent",
+    survival_price = "48 cent",
+    materials = { "garlic" },
+    volume = "45 ml",
+    flags = { "RAW", "PLANTABLE_SEED" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        quench = -18,
+        calories = 24,
+        fun = -18,
+        vitamins = {
+            { id = "vitC", amount = "5400 μg" },
+            { id = "iron", amount = "600 μg" },
+            { id = "calcium", amount = "32400 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "garlic_clove",
+    name = ccb.content.plural_text("garlic clove", "garlic cloves"),
+    mass = "3 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("Cloves of garlic.  Useful as a seasoning."),
+    price = "2 cent",
+    survival_price = "8 cent",
+    materials = { "garlic" },
+    volume = "6 ml",
+    stackable = true,
+    subtype_order = { "seed", "comestible" },
+    seed = {
+        plant_name = ccb.content.text("garlic"),
+        fruit = "garlic",
+        byproducts = { "withered" },
+        growth_stages = {
+            { stage = "GROWTH_SEED", duration = "17 days" },
+            { stage = "GROWTH_SEEDLING", duration = "16 days" },
+            { stage = "GROWTH_MATURE", duration = "16 days" },
+            { stage = "GROWTH_HARVEST", duration = "16 days" },
+            { stage = "GROWTH_OVERGROWN", duration = "1 hour" },
+        },
+    },
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        quench = -3,
+        calories = 4,
+        smoking_result = "dry_garlic",
+        fun = -3,
+        vitamins = {
+            { id = "vitC", amount = "900 μg" },
+            { id = "iron", amount = "100 μg" },
+            { id = "calcium", amount = "5400 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "hops",
+    name = ccb.content.text("hops flower"),
+    mass = "92 g",
+    color = "light_green",
+    symbol = ",",
+    description = ccb.content.text("A cluster of small cone-like flowers, indispensable for brewing beer."),
+    price = "5 cent",
+    survival_price = "12 cent",
+    materials = { "veggy" },
+    volume = "62 ml",
+    flags = { "EDIBLE_FROZEN", "RAW" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        quench = -20,
+        calories = 87,
+        fun = -15,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "horseradish_root",
+    name = ccb.content.text("horseradish root"),
+    mass = "250 g",
+    color = "brown",
+    symbol = "%",
+    description = ccb.content.text("A large white tapered root of a horseradish plant.  Way too spicy to eat in this form, but can be used for making condiments."),
+    price = "107 cent",
+    survival_price = "80 cent",
+    materials = { "veggy" },
+    volume = "400 ml",
+    flags = { "FREEZERBURN", "RAW" },
+    stackable = true,
+    comestible = {
+        shelf_life = "60 days",
+        kind = "FOOD",
+        calories = 120,
+        fun = -12,
+        vitamins = {
+            { id = "vitC", amount = "62300 μg" },
+            { id = "iron", amount = "1100 μg" },
+            { id = "calcium", amount = "140 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "lettuce_head",
+    name = ccb.content.plural_text("lettuce head", "lettuce head"),
+    mass = "504 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A crisp head of iceberg lettuce.  You should probably prepare it before eating."),
+    price = "264 cent",
+    survival_price = "132 cent",
+    materials = { "veggy" },
+    volume = "1850 ml",
+    flags = { "FREEZERBURN", "INEDIBLE", "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    comestible = {
+        shelf_life = "10 days",
+        kind = "FOOD",
+        quench = 2,
+        calories = 70,
+        vitamins = {
+            { id = "vitC", amount = "14 mg" },
+            { id = "iron", amount = "2100 μg" },
+            { id = "calcium", amount = "91 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "lettuce",
+    name = ccb.content.plural_text("handful of shredded lettuce", "handfuls of shredded lettuce"),
+    mass = "72 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A handful of shredded iceberg lettuce."),
+    price = "35 cent",
+    survival_price = "20 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "FREEZERBURN", "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "10 days",
+        kind = "FOOD",
+        quench = 2,
+        calories = 10,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "2 mg" },
+            { id = "iron", amount = "300 μg" },
+            { id = "calcium", amount = "13 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "mugwort",
+    name = ccb.content.plural_text("mugwort", "mugwort"),
+    description = ccb.content.text("A stalk of mugwort.  Smells wonderful."),
+    mass = "40 g",
+    color = "magenta",
+    symbol = ",",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "CATTLE", "RABBIT" },
+    price = "0 cent",
+    survival_price = "10 cent",
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        shelf_life = "10 days",
+        calories = 9,
+        fun = -8,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+-- Raw onions probably aren't all that tasty to most people.
+ccb.content.define_item {
+    id = "onion",
+    name = ccb.content.text("onion"),
+    mass = "110 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("An aromatic onion used in cooking.  Cutting these up can make your eyes sting!"),
+    price = "17 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "135 ml",
+    flags = { "FREEZERBURN", "RAW" },
+    stackable = true,
+    comestible = {
+        shelf_life = "30 days",
+        kind = "FOOD",
+        calories = 44,
+        fun = -1,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "8100 μg" },
+            { id = "iron", amount = "200 μg" },
+            { id = "calcium", amount = "25300 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- 'plant_sac' should probably be migrated to something like 'fungal_sac' at some point, but it's low priority.
+ccb.content.define_item {
+    id = "plant_sac",
+    name = ccb.content.plural_text("fungal fluid sac", "fungal fluid sacs"),
+    category = "other",
+    mass = "270 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A fluid bladder from a fungus-based lifeform.  The membrane is tough and nearly indigestible.  It doesn't seem to contain anything deliberately toxic to you, but the alien biology and sharp, earthy, rotting scent suggests it still wouldn't be wise to ingest regardless of the fluid's purpose to its original owner."),
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "FUNGAL_VECTOR" },
+    comestible = { shelf_life = "3 days 8 hours", kind = "FOOD", quench = 18, calories = 35, fun = -10 },
+    use_actions = { "POISON" },
+}
+
+ccb.content.define_item {
+    id = "potato",
+    name = ccb.content.plural_text("raw potato", "raw potatoes"),
+    mass = "213 g",
+    color = "brown",
+    symbol = "%",
+    description = ccb.content.text("A potato, mildly toxic and not very tasty raw.  Delicious and filling when properly cooked."),
+    price = "84 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "232 ml",
+    flags = { "FREEZERBURN", "RAW", "RAT", "MOUSE" },
+    comestible = {
+        shelf_life = "60 days",
+        kind = "FOOD",
+        healthy = -1,
+        calories = 164,
+        fun = -3,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "42 mg" },
+            { id = "iron", amount = "1700 μg" },
+            { id = "calcium", amount = "25600 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "plantain",
+    name = ccb.content.text("cooking banana"),
+    mass = "179 g",
+    color = "yellow",
+    symbol = "%",
+    description = ccb.content.text("A much less sweet and more starchy relative of the banana; unlike dessert bananas, they usually are eaten cooked rather than raw, and can be processed into flour.  They are a staple food in tropical regions of the world.  Also known as plantains."),
+    price = "72 cent",
+    survival_price = "1 USD",
+    materials = { "veggy" },
+    volume = "190 ml",
+    flags = { "RAW", "CATTLE", "RAT" },
+    comestible = {
+        shelf_life = "5 days",
+        kind = "FOOD",
+        calories = 218,
+        fun = -1,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "32900 μg" },
+            { id = "iron", amount = "1100 μg" },
+            { id = "calcium", amount = "5400 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "pumpkin",
+    name = ccb.content.text("pumpkin"),
+    mass = "2264 g",
+    color = "light_red",
+    symbol = "%",
+    description = ccb.content.text("A large gourd, about the size of a person's head.  It'll require some disassembly before use."),
+    price = "250 cent",
+    survival_price = "6 USD",
+    materials = { "veggy" },
+    volume = "2062 ml",
+    flags = { "RAW", "INEDIBLE", "RAT", "MOUSE", "CATTLE" },
+    melee_damage = { bash = 2 },
+    comestible = {
+        shelf_life = "60 days",
+        kind = "FOOD",
+        calories = 292,
+        fun = -1,
+        vitamins = {
+            { id = "vitC", amount = "102 mg" },
+            { id = "iron", amount = "9200 μg" },
+            { id = "calcium", amount = "237600 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- Cutting it up makes it viable for rabbits, too.
+ccb.content.define_item {
+    id = "pumpkin_cut",
+    name = ccb.content.plural_text("cut pumpkin", "cut pumpkin"),
+    copy_from = "pumpkin",
+    description = ccb.content.text("A quarter section of a pumpkin.  The seeds and stringy inner pulp have been removed."),
+    price = "64 cent",
+    volume = "500 ml",
+    mass = "283 g",
+    survival_price = "60 cent",
+    flags = { "RAW", "RAT", "MOUSE", "CATTLE", "RABBIT" },
+    melee_damage = { bash = 0 },
+    comestible = {
+        shelf_life = "6 days",
+        calories = 73,
+        quench = 5,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "25500 μg" },
+            { id = "iron", amount = "2300 μg" },
+            { id = "calcium", amount = "59400 μg" },
+        },
+    },
+}
+
+-- Lots of negative results for cattle, apparently very much not good for them
+ccb.content.define_item {
+    id = "horseradish_greens",
+    name = ccb.content.plural_text("horseradish greens", "horseradish greens"),
+    mass = "70 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("Leaves of a horseradish plant with a sharp, bitter and peppery taste.  They're edible, but not commonly eaten."),
+    price = "80 cent",
+    materials = { "veggy" },
+    volume = "140 ml",
+    flags = { "FREEZERBURN", "RAW", "RABBIT" },
+    stackable = true,
+    comestible = {
+        shelf_life = "6 days 16 hours",
+        kind = "FOOD",
+        calories = 22,
+        fun = -2,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = 30 },
+            { id = "calcium", amount = 2 },
+            { id = "iron", amount = 3 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "raw_dandelion",
+    name = ccb.content.plural_text("dandelion", "dandelion"),
+    mass = "68 g",
+    color = "yellow",
+    symbol = "%",
+    description = ccb.content.text("A handful of freshly-picked yellow dandelions.  In their current raw state they are quite bitter."),
+    price = "15 cent",
+    survival_price = "12 cent",
+    materials = { "veggy" },
+    volume = "107 ml",
+    flags = { "FREEZERBURN", "RAW", "RABBIT", "CATTLE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "1 day 6 hours",
+        kind = "FOOD",
+        calories = 41,
+        fun = -12,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = 23 },
+            { id = "calcium", amount = 11 },
+            { id = "iron", amount = 10 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- Apparently toxic to rabbits
+ccb.content.define_item {
+    id = "raw_burdock",
+    name = ccb.content.plural_text("burdock", "burdock"),
+    mass = "72 g",
+    color = "magenta",
+    symbol = "%",
+    description = ccb.content.text("Burdock, a bitter thistle-like vegetable.  Can be eaten raw or cooked."),
+    price = "15 cent",
+    survival_price = "12 cent",
+    materials = { "veggy" },
+    volume = "117 ml",
+    flags = { "FREEZERBURN", "RAW", "CATTLE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "1 day 6 hours",
+        kind = "FOOD",
+        calories = 69,
+        fun = -12,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = 1 },
+            { id = "calcium", amount = 23 },
+            { id = "iron", amount = 10 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "raw_bamboo",
+    name = ccb.content.plural_text("handful of bamboo shoots", "handfuls of bamboo shoots"),
+    mass = "151 g",
+    color = "green",
+    symbol = "^",
+    description = ccb.content.text("Raw woody bamboo shoots, they require some preparation before they can be eaten safely."),
+    price = "15 cent",
+    survival_price = "12 cent",
+    materials = { "veggy" },
+    volume = "250 ml",
+    flags = { "FREEZERBURN", "RAW" },
+    stackable = true,
+    comestible = {
+        shelf_life = "1 day 6 hours",
+        kind = "FOOD",
+        healthy = -1,
+        calories = 41,
+        fun = -12,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "6 mg" },
+            { id = "iron", amount = "1 mg" },
+            { id = "calcium", amount = "20 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "rhubarb",
+    name = ccb.content.text("rhubarb"),
+    mass = "51 g",
+    color = "red",
+    symbol = "%",
+    description = ccb.content.text("A sour stalk of the rhubarb plant, often used in baking pies."),
+    price = "29 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "186 ml",
+    length = "19 cm",
+    flags = { "RAW" },
+    stackable = true,
+    comestible = {
+        shelf_life = "6 days 16 hours",
+        kind = "FOOD",
+        quench = 3,
+        calories = 36,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "4100 μg" },
+            { id = "iron", amount = "100 μg" },
+            { id = "calcium", amount = "43900 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "sugar_beet",
+    name = ccb.content.text("sugar beet"),
+    mass = "1000 g",
+    color = "brown",
+    symbol = "%",
+    description = ccb.content.text("This fleshy root is ripe and flowing with sugars; it'll just take some processing to extract them."),
+    price = "12 cent",
+    survival_price = "12 cent",
+    materials = { "veggy" },
+    volume = "940 ml",
+    flags = { "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "95 days",
+        kind = "FOOD",
+        calories = 696,
+        fun = -10,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "4 mg" },
+            { id = "iron", amount = "1 mg" },
+            { id = "calcium", amount = "13 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- Tea is sold by weight not by volume. 1 kg of tea has a volume of 3,4 liters. We use smaller packs of at least 100 mg. Such a tea has a volume of 340 ml minus package makes it around 320 ml. 3 g per serving makes 33 charges.
+ccb.content.define_item {
+    id = "tea_raw",
+    name = ccb.content.plural_text("black tea leaves", "black tea leaves"),
+    mass = "3 g",
+    color = "green",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("Dried leaves of a tropical plant.  You can boil them into tea, or you can just eat them raw.  They're pretty gross and not too filling that way, though."),
+    price = "31 cent",
+    survival_price = "7 cent",
+    materials = { { id = "dried_vegetable", portions = 10 }, { id = "veggy", portions = 1 } },
+    volume = "9 ml",
+    flags = { "EDIBLE_FROZEN", "RAW", "IRREPLACEABLE_CONSUMABLE" },
+    stackable = true,
+    comestible = {
+        sleepiness = 3,
+        stimulation = 1,
+        kind = "FOOD",
+        calories = 1,
+        fun = -1,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "wintergreen_leaves",
+    name = ccb.content.plural_text("pile of wintergreen leaves", "piles of wintergreen leaves"),
+    mass = "5 g",
+    color = "green",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("These leaves smell strongly medicinal.  When chewed, they first taste sweet but the aftertaste is incredibly bitter.  These leaves contain good amounts of methyl salicylate and merely chewing them may have a similar effect to aspirin."),
+    price = "1 USD 30 cent",
+    survival_price = "1 USD",
+    materials = { { id = "dried_vegetable", portions = 10 }, { id = "veggy", portions = 1 } },
+    volume = "50 ml",
+    flags = { "EDIBLE_FROZEN", "RAW" },
+    stackable = true,
+    comestible = {
+        sleepiness = 3,
+        stimulation = 1,
+        kind = "FOOD",
+        calories = 4,
+        fun = -10,
+        vitamins = { { id = "veggy_allergen", amount = 1 } },
+    },
+    use_actions = {
+        {
+            kind = "consume_drug",
+            message = ccb.content.text("You chew the wintergreen leaves."),
+            effects = { { id = "pkill_wintergreen", duration = "30 m" } },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "tea_green_raw",
+    name = ccb.content.plural_text("green tea leaves", "green tea leaves"),
+    copy_from = "tea_raw",
+    description = ccb.content.text("Dried leaves of a tropical plant.  You can boil them into green tea, or you can just eat them raw.  They're pretty gross and not too filling that way, though."),
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "tomato",
+    name = ccb.content.plural_text("tomato", "tomatoes"),
+    mass = "123 g",
+    color = "red",
+    symbol = "%",
+    description = ccb.content.text("A juicy red tomato.  It gained popularity in Italy after being brought back from the New World."),
+    price = "51 cent",
+    survival_price = "50 cent",
+    materials = { "tomato" },
+    volume = "150 ml",
+    flags = { "RABBIT", "CATTLE", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "3 days 18 hours",
+        kind = "FOOD",
+        quench = 28,
+        calories = 22,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "16900 μg" },
+            { id = "iron", amount = "300 μg" },
+            { id = "calcium", amount = "12300 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "tomato_cut",
+    copy_from = "tomato",
+    name = ccb.content.plural_text("cut tomato", "cut tomatoes"),
+    description = ccb.content.text("A cut-up tomato with the seeds removed."),
+    comestible = { cooks_like = "tomato", shelf_life = "2 days" },
+}
+
+-- average of broccoli, cabbage, carrot, cattail_stalk, celery, chili_pepper, cucumber, lettuce, onion, pumpkin, raw_dandelion, rhubarb, sugar_beet, tomato, zucchini
+ccb.content.define_item {
+    id = "veggy_raw",
+    abstract = true,
+    name = ccb.content.plural_text("raw vegetables", "raw vegetables"),
+    mass = "119 g",
+    color = "green",
+    symbol = "%",
+    price = "6 USD",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    flags = { "RAW" },
+    volume = "250 ml",
+    comestible = {
+        shelf_life = "3 days 8 hours",
+        kind = "FOOD",
+        calories = 34,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = 36 },
+            { id = "calcium", amount = 4 },
+            { id = "iron", amount = 4 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+-- average of broccoli, cabbage, carrot, cattail_stalk, celery, chili_pepper, cucumber, lettuce, onion, pumpkin, raw_dandelion, rhubarb, sugar_beet, tomato, zucchini
+ccb.content.define_item {
+    id = "veggy",
+    name = ccb.content.plural_text("triffid flesh", "triffid flesh"),
+    mass = "119 g",
+    color = "green",
+    symbol = "%",
+    description = ccb.content.text("An weird looking chunk of plant matter that's a shade of yellow and green, with oddly thick fibers.  It smells like a mix of rotted wood and dirt, and it leaks a clear fluid."),
+    price = "6 USD",
+    survival_price = "0 cent",
+    materials = { "veggy" },
+    flags = { "TRADER_AVOID", "RAW" },
+    volume = "250 ml",
+    stackable = true,
+    comestible = {
+        shelf_life = "3 days 8 hours",
+        kind = "FOOD",
+        calories = 34,
+        fun = -3,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = 36 },
+            { id = "calcium", amount = 4 },
+            { id = "iron", amount = 4 },
+            { id = "veggy_allergen", amount = 1 },
+            { id = "triffid_fiber", amount = 2 },
+        },
+    },
+}
+
+-- Note: Legacy item ID, this is not actually a vegetable at all anymore.
+ccb.content.define_item {
+    id = "veggy_tainted",
+    name = ccb.content.plural_text("alien fungus chunk", "alien fungus chunks"),
+    category = "other",
+    copy_from = "veggy",
+    looks_like = "mushroom",
+    description = ccb.content.text("A chunk of fungal matter from some sort of alien mushroom creature.  Eating unfamiliar mushrooms is a bad idea."),
+    price = "0 cent",
+    survival_price = "0 cent",
+    flags = { "FUNGAL_VECTOR" },
+    comestible = { shelf_life = "40 hours", fun = -10, smoking_result = "dry_veggy_tainted" },
+    use_actions = { "POISON" },
+}
+
+-- In real life many root vegetables are mildly toxic until cooked
+ccb.content.define_item {
+    id = "veggy_wild",
+    name = ccb.content.plural_text("wild vegetables", "wild vegetables"),
+    copy_from = "veggy",
+    description = ccb.content.text("An assortment of edible-looking wild plants.  Most are quite bitter-tasting.  Some are inedible until cooked."),
+    survival_price = "10 cent",
+    flags = { "FREEZERBURN", "RAW" },
+    comestible = { fun = -10 },
+}
+
+ccb.content.define_item {
+    id = "zucchini",
+    name = ccb.content.text("zucchini"),
+    mass = "196 g",
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A tasty summer squash."),
+    price = "46 cent",
+    survival_price = "50 cent",
+    materials = { "veggy" },
+    volume = "180 ml",
+    length = "22 cm",
+    flags = { "EATEN_HOT", "CATTLE", "MOUSE", "RAT", "MOUSE" },
+    comestible = {
+        shelf_life = "5 days",
+        kind = "FOOD",
+        calories = 33,
+        smoking_result = "dry_veggy",
+        vitamins = {
+            { id = "vitC", amount = "35100 μg" },
+            { id = "iron", amount = "700 μg" },
+            { id = "calcium", amount = "31400 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "zucchini_cut",
+    name = ccb.content.text("cut zucchini"),
+    copy_from = "zucchini",
+    description = ccb.content.text("A chopped-up summer squash.  The seeds have been removed."),
+    comestible = { cooks_like = "zucchini", shelf_life = "2 days 12 hours" },
+}
+
+ccb.content.define_item {
+    id = "raw_beans",
+    name = ccb.content.plural_text("handful of raw beans", "handfuls of raw beans"),
+    color = "brown",
+    volume = "250 ml",
+    mass = "184 g",
+    symbol = "%",
+    description = ccb.content.text("Raw, uncooked kidney beans.  They are mildly toxic to humans in this form, but you could cook them to make them tasty."),
+    price = "90 cent",
+    survival_price = "25 cent",
+    materials = { "veggy" },
+    flags = { "EDIBLE_FROZEN", "RAW", "INEDIBLE", "CATTLE", "PLANTABLE_SEED" },
+    stackable = true,
+    subtype_order = { "seed", "comestible" },
+    seed = {
+        plant_name = ccb.content.text("beans"),
+        fruit = "raw_beans",
+        drop_seeds = false,
+        byproducts = { "withered" },
+        growth_stages = {
+            { stage = "GROWTH_SEED", duration = "23 days" },
+            { stage = "GROWTH_SEEDLING", duration = "23 days" },
+            { stage = "GROWTH_MATURE", duration = "23 days" },
+            { stage = "GROWTH_HARVEST", duration = "22 days" },
+            { stage = "GROWTH_OVERGROWN", duration = "1 hour" },
+        },
+        climate = {
+            base_c = 10,
+            optimum_c = 25,
+            min_c = 0,
+            max_c = 36,
+            degree_days = 480,
+            water_mm = 350,
+            growing_days = 63,
+            water_peak = 0.68,
+        },
+    },
+    comestible = {
+        shelf_life = "2 days",
+        kind = "FOOD",
+        calories = 53,
+        cooks_like = "beans_cooked",
+        smoking_result = "dry_beans",
+        vitamins = {
+            { id = "vitC", amount = "71 mg" },
+            { id = "iron", amount = "1 mg" },
+            { id = "calcium", amount = "31 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        pet_food = { "CATTLEFOOD" },
+    },
+}
+
+-- Fiddleheads that haven't been boiled can make you sick.  As they are poisonous here, they will get no CATTLE or RABBIT flag as the poison should not get nullified.
+ccb.content.define_item {
+    id = "fiddlehead_raw",
+    name = ccb.content.plural_text("fiddleheads", "fiddleheads"),
+    mass = "50 g",
+    flags = { "FREEZERBURN", "RAW" },
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("A handful of immature fern fronds, still curled up like the head of a fiddle.  Delicious when cooked, but consuming them raw can cause food poisoning."),
+    price = "40 cent",
+    survival_price = "10 cent",
+    materials = { "veggy" },
+    volume = "62 ml",
+    stackable = true,
+    comestible = {
+        shelf_life = "2 days 12 hours",
+        kind = "FOOD",
+        calories = 18,
+        fun = -10,
+        vitamins = {
+            { id = "vitC", amount = 6 },
+            { id = "calcium", amount = 4 },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+    use_actions = { "POISON" },
+}
+
+ccb.content.define_item {
+    id = "young_leaves",
+    name = ccb.content.plural_text("handful of young leaves", "handfuls of young leaves"),
+    mass = "20 g",
+    flags = { "FREEZERBURN", "RAW", "CATTLE", "RABBIT" },
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("Some young leaves from miscellaneous plants.  They're tender enough to eat, but not very tasty on their own."),
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "veggy" },
+    volume = "45 ml",
+    stackable = true,
+    comestible = {
+        shelf_life = "1 day",
+        kind = "FOOD",
+        calories = 18,
+        fun = -2,
+        vitamins = { { id = "vitC", amount = 1 }, { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "chicory_leaves",
+    name = ccb.content.plural_text("handful of chicory greens", "handfuls of chicory greens"),
+    copy_from = "young_leaves",
+    description = ccb.content.text("Some chicory greens.  They are quite bitter but high in calcium."),
+    survival_price = "20 cent",
+    mass = "29 g",
+    volume = "250 ml",
+    stackable = true,
+    comestible = {
+        fun = -8,
+        calories = 6,
+        vitamins = {
+            { id = "vitC", amount = "7 mg" },
+            { id = "iron", amount = "300 μg" },
+            { id = "calcium", amount = "29 mg" },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "japanese_knotweed_stem",
+    name = ccb.content.plural_text("Japanese knotweed stems", "Japanese knotweed stems"),
+    mass = "60 g",
+    flags = { "FREEZERBURN", "RAW", "RABBIT", "CATTLE" },
+    color = "light_green",
+    symbol = "%",
+    description = ccb.content.text("Some young Japanese knotweed stems.  They taste a bit like rhubarb and contain good amounts of vitamin A.  Refreshing."),
+    price = "40 cent",
+    survival_price = "10 cent",
+    materials = { "veggy" },
+    volume = "62 ml",
+    length = "20 cm",
+    stackable = true,
+    comestible = {
+        shelf_life = "2 days",
+        kind = "FOOD",
+        quench = 6,
+        calories = 25,
+        vitamins = { { id = "vitC", amount = 6 }, { id = "veggy_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "bell_pepper",
+    name = ccb.content.text("bell pepper"),
+    mass = "119 g",
+    color = "green",
+    symbol = "%",
+    description = ccb.content.text("A green bell pepper.  Eating it whole and raw would be kind of a hassle, considering all the seeds."),
+    price = "54 cent",
+    survival_price = "20 cent",
+    materials = { "veggy" },
+    volume = "221 ml",
+    flags = { "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" },
+    stackable = true,
+    comestible = {
+        shelf_life = "3 days 8 hours",
+        kind = "FOOD",
+        quench = 2,
+        calories = 23,
+        smoking_result = "dry_veggy",
+        fun = -5,
+        vitamins = {
+            { id = "vitC", amount = "95700 μg" },
+            { id = "iron", amount = "400 μg" },
+            { id = "calcium", amount = "11900 μg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "bell_pepper_cut",
+    name = ccb.content.text("cut bell pepper"),
+    copy_from = "bell_pepper",
+    description = ccb.content.text("A chopped up bell pepper with the seeds removed."),
+    price = "10 cent",
+    comestible = { shelf_life = "1 days 16 hours", fun = 0 },
+}
+
+-- 250 ml is equivalent to 1 cup of flour.  10 charges is roughly equivalent to a cup of flour for American recipes.  Nutritional data based off buckwheat flour.
+ccb.content.define_item {
+    id = "flour_wheat_free",
+    name = ccb.content.plural_text("wheat-free flour", "wheat-free flour"),
+    mass = "12400 mg",
+    color = "white",
+    default_container = "box_small",
+    symbol = "%",
+    description = ccb.content.text("This wheat-free white flour is useful for baking items for those with grain intolerances."),
+    price = "45 cent",
+    survival_price = "10 cent",
+    materials = { "veggy", "powder" },
+    volume = "25 ml",
+    flags = { "EDIBLE_FROZEN", "RAW", "NO_AUTO_CONSUME" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        quench = -1,
+        calories = 40,
+        vitamins = {
+            { id = "iron", amount = "500 μg" },
+            { id = "calcium", amount = "5 mg" },
+            { id = "veggy_allergen", amount = 1 },
+        },
+        fun = -5,
+    },
+    use_actions = { "BLECH" },
+}
+
 ccb.content.define_item {
     id = "raw_bottle_gourd",
     name = ccb.content.text("raw bottle gourd"),

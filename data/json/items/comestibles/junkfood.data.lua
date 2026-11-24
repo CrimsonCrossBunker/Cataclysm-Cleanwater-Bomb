@@ -1,6 +1,853 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "toastem",
+    name = ccb.content.plural_text("toaster pastry", "toaster pastries"),
+    conditional_names = {
+        {
+            kind = "COMPONENT_ID",
+            key = "apple",
+            name = ccb.content.plural_text("%s with apple filling", "%s with apple filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "apricot",
+            name = ccb.content.plural_text("%s with apricot filling", "%s with apricot filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "banana",
+            name = ccb.content.plural_text("%s with banana filling", "%s with banana filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "blackberries",
+            name = ccb.content.plural_text("%s with blackberry filling", "%s with blackberry filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "blueberries",
+            name = ccb.content.plural_text("%s with blueberry filling", "%s with blueberry filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "chokeberries",
+            name = ccb.content.plural_text("%s with chokeberries filling", "%s with chokeberries filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "cherries",
+            name = ccb.content.plural_text("%s with cherry filling", "%s with cherry filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "crabapple",
+            name = ccb.content.plural_text("%s with crabapple filling", "%s with crabapple filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "elderberries",
+            name = ccb.content.plural_text("%s with elderberry filling", "%s with elderberry filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "grapefruit",
+            name = ccb.content.plural_text("%s with grapefruit filling", "%s with grapefruit filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "grapes",
+            name = ccb.content.plural_text("%s with grape filling", "%s with grape filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "guayaba",
+            name = ccb.content.plural_text("%s with guava filling", "%s with guava filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "hobbleberries",
+            name = ccb.content.plural_text("%s with hobbleberry filling", "%s with hobbleberry filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "huckleberries",
+            name = ccb.content.plural_text("%s with huckleberry filling", "%s with huckleberry filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "irradiated_apple",
+            name = ccb.content.plural_text("%s with apple filling", "%s with apple filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "kiwi",
+            name = ccb.content.plural_text("%s with kiwi filling", "%s with kiwi filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "lulo",
+            name = ccb.content.plural_text("%s with lulo filling", "%s with lulo filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "m_stellatum_berries",
+            name = ccb.content.plural_text("%s with Solomon's seal filling", "%s with Solomon's seal filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "mango",
+            name = ccb.content.plural_text("%s with mango filling", "%s with mango filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "maracuya",
+            name = ccb.content.plural_text("%s with passionfruit filling", "%s with passionfruit filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "mayapple",
+            name = ccb.content.plural_text("%s with mayapple filling", "%s with mayapple filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "melon_chunks",
+            name = ccb.content.plural_text("%s with melon filling", "%s with melon filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "mulberries",
+            name = ccb.content.plural_text("%s with mulberry filling", "%s with mulberry filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "nannyberries",
+            name = ccb.content.plural_text("%s with nannyberries filling", "%s with nannyberries filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "orange",
+            name = ccb.content.plural_text("%s with orange filling", "%s with orange filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "papaya",
+            name = ccb.content.plural_text("%s with papaya filling", "%s with papaya filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "peach",
+            name = ccb.content.plural_text("%s with peach filling", "%s with peach filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "pear",
+            name = ccb.content.plural_text("%s with pear filling", "%s with pear filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "pineapple_chunks",
+            name = ccb.content.plural_text("%s with pineapple filling", "%s with pineapple filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "plums",
+            name = ccb.content.plural_text("%s with plum filling", "%s with plum filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "pomegranate",
+            name = ccb.content.plural_text("%s with pomegranate filling", "%s with pomegranate filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "pumpkin_cut",
+            name = ccb.content.plural_text("%s with pumpkin filling", "%s with pumpkin filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "raspberries",
+            name = ccb.content.plural_text("%s with raspberry filling", "%s with raspberry filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "rose_hips_cut",
+            name = ccb.content.plural_text("%s with rose hip filling", "%s with rose hip filling"),
+        },
+        {
+            kind = "COMPONENT_ID_SUBSTRING",
+            key = "strawberries",
+            name = ccb.content.plural_text("%s with strawberry filling", "%s with strawberry filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "tupelo_fruit",
+            name = ccb.content.plural_text("%s with tupelo fruit filling", "%s with tupelo fruit filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "watermelon_wedge",
+            name = ccb.content.plural_text("%s with watermelon filling", "%s with watermelon filling"),
+        },
+        {
+            kind = "COMPONENT_ID",
+            key = "wintergreen_berry",
+            name = ccb.content.plural_text("%s with wintergreen berry filling", "%s with wintergreen berry filling"),
+        },
+    },
+    description = ccb.content.text("A dry toaster pastry coated with solid frosting.  Pretty good on its own but would taste even better hot and toasted."),
+    symbol = "%",
+    color = "red",
+    price = "50 cent",
+    survival_price = "125 cent",
+    materials = { "wheat", "junk" },
+    volume = "125 ml",
+    mass = "50 g",
+    default_container = "box_small",
+    flags = { "EATEN_HOT" },
+    stackable = true,
+    comestible = {
+        kind = "FOOD",
+        shelf_life = "90 days",
+        quench = -8,
+        calories = 200,
+        vitamins = {
+            { id = "iron", amount = 10 },
+            { id = "wheat_allergen", amount = 1 },
+            { id = "junk_allergen", amount = 1 },
+        },
+        fun = 15,
+    },
+}
+
+-- Semi-arbitrary spoilage of 60 hours, as the cooked product.
+ccb.content.define_item {
+    id = "toasterpastryfrozen",
+    copy_from = "toastem",
+    name = ccb.content.plural_text("uncooked toaster pastry", "uncooked toaster pastries"),
+    description = ccb.content.text("A toaster pastry coated with solid frosting.  This one is only partially cooked and will go bad very fast if left unfrozen."),
+    default_container = "box_snack",
+    price = "2 USD",
+    survival_price = "62 cent",
+    stackable = true,
+    comestible = { shelf_life = "2 days 12 hours", fun = 5 },
+}
+
+ccb.content.define_item {
+    id = "toasterpastry",
+    copy_from = "toastem",
+    name = ccb.content.plural_text("toasted pastry", "toasted pastries"),
+    description = ccb.content.text("A toaster pastry that has been toasted, delicious!"),
+    comestible = { fun = 20 },
+}
+
+ccb.content.define_item {
+    id = "buttercream",
+    name = ccb.content.plural_text("buttercream icing", "cups of buttercream icing"),
+    mass = "32 g",
+    color = "brown",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("Smooth, sugary buttercream icing.  Almost good enough to forget the end of everything."),
+    price = "12 cent",
+    survival_price = "50 cent",
+    materials = { "junk" },
+    volume = "125 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = { kind = "FOOD", calories = 288, fun = 6, vitamins = { { id = "junk_allergen", amount = 1 } } },
+}
+
+ccb.content.define_item {
+    id = "pretzels",
+    name = ccb.content.plural_text("pretzels", "pretzels"),
+    mass = "62 g",
+    color = "brown",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A handful of tiny, heavily-salted bread twists.  A tasty treat, but they'll make you thirsty."),
+    price = "61 cent",
+    survival_price = "1 USD",
+    materials = { "wheat", "junk" },
+    volume = "83 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "90 days",
+        kind = "FOOD",
+        quench = -4,
+        calories = 237,
+        vitamins = {
+            { id = "iron", amount = 16 },
+            { id = "wheat_allergen", amount = 1 },
+            { id = "junk_allergen", amount = 1 },
+        },
+        fun = 4,
+    },
+}
+
+ccb.content.define_item {
+    id = "chocpretzels",
+    name = ccb.content.plural_text("chocolate-covered pretzel", "chocolate-covered pretzel"),
+    mass = "96 g",
+    color = "brown",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A handful of tiny bread twists covered in chocolate."),
+    price = "66 cent",
+    survival_price = "116 cent",
+    materials = { "wheat", "junk" },
+    volume = "100 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "90 days",
+        kind = "FOOD",
+        quench = -2,
+        calories = 377,
+        fun = 6,
+        vitamins = { { id = "wheat_allergen", amount = 1 }, { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "chocolate",
+    name = ccb.content.text("chocolate bar"),
+    mass = "43 g",
+    color = "brown",
+    default_container = "wrapper",
+    symbol = "%",
+    description = ccb.content.text("A bar of chocolate from a popular candy brand.  A delicious treat."),
+    price = "43 cent",
+    survival_price = "66 cent",
+    materials = { "junk" },
+    volume = "83 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        calories = 220,
+        vitamins = {
+            { id = "calcium", amount = 8 },
+            { id = "iron", amount = 8 },
+            { id = "junk_allergen", amount = 1 },
+        },
+        fun = 10,
+    },
+}
+
+ccb.content.define_item {
+    id = "marshmallow",
+    name = ccb.content.plural_text("marshmallows", "marshmallows"),
+    mass = "53 g",
+    color = "white",
+    default_container = "bag_plastic",
+    symbol = "%",
+    description = ccb.content.text("A handful of squishy, fluffy, puffy, delicious marshmallows."),
+    price = "50 cent",
+    survival_price = "20 cent",
+    materials = { "junk" },
+    volume = "50 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "90 days",
+        kind = "FOOD",
+        calories = 168,
+        fun = 10,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "smores",
+    name = ccb.content.plural_text("s'mores", "s'mores"),
+    mass = "180 g",
+    color = "brown",
+    default_container = "bag_plastic",
+    symbol = "%",
+    description = ccb.content.text("A pair of graham crackers with some chocolate and a marshmallow between them."),
+    price = "4 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "wheat", "junk" },
+    volume = "250 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "90 days",
+        kind = "FOOD",
+        calories = 418,
+        vitamins = {
+            { id = "calcium", amount = 4 },
+            { id = "iron", amount = 6 },
+            { id = "wheat_allergen", amount = 1 },
+            { id = "junk_allergen", amount = 1 },
+        },
+        fun = 20,
+    },
+}
+
+ccb.content.define_item {
+    id = "candy",
+    name = ccb.content.plural_text("peanut butter candy", "peanut butter candy"),
+    mass = "33 g",
+    color = "brown",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A handful of peanut butter cups… your favorite!"),
+    price = "60 cent",
+    survival_price = "50 cent",
+    materials = { "junk" },
+    volume = "30 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        quench = -1,
+        healthy = -1,
+        calories = 209,
+        fun = 4,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "candy2",
+    name = ccb.content.plural_text("chocolate candy", "chocolate candy"),
+    mass = "33 g",
+    color = "red",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A handful of colorful chocolate-filled candies."),
+    price = "60 cent",
+    survival_price = "133 cent",
+    materials = { "junk" },
+    volume = "30 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        healthy = -1,
+        calories = 287,
+        vitamins = { { id = "iron", amount = 9 }, { id = "junk_allergen", amount = 1 } },
+        fun = 3,
+    },
+}
+
+ccb.content.define_item {
+    id = "candy3",
+    name = ccb.content.plural_text("chewy candy", "chewy candy"),
+    mass = "33 g",
+    color = "yellow",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A handful of colorful fruit-flavored chewy candies."),
+    price = "60 cent",
+    survival_price = "66 cent",
+    materials = { "junk" },
+    volume = "30 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        healthy = -1,
+        calories = 85,
+        fun = 3,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "candy4",
+    name = ccb.content.plural_text("gummy candy", "gummy candy"),
+    mass = "33 g",
+    color = "yellow",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A handful of colorful fruit- and soda-flavored gummy candies."),
+    price = "60 cent",
+    survival_price = "66 cent",
+    materials = { "junk", "flesh" },
+    volume = "33 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        healthy = -1,
+        calories = 85,
+        fun = 5,
+        vitamins = { { id = "meat_allergen", amount = 1 }, { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "candy5",
+    name = ccb.content.plural_text("vegan gummy candy", "vegan gummy candy"),
+    mass = "33 g",
+    color = "light_green",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A handful of colorful fruit- and soda-flavored vegan gummy candies made from agar instead of animal gelatin.  They have kind of a strange texture, but they're still tasty."),
+    price = "60 cent",
+    survival_price = "66 cent",
+    materials = { "junk", "veggy" },
+    volume = "30 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        healthy = -1,
+        calories = 85,
+        fun = 4,
+        vitamins = { { id = "veggy_allergen", amount = 1 }, { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "candy3gator",
+    name = ccb.content.plural_text("chewy reptilian candy", "chewy reptilian candy"),
+    copy_from = "candy3",
+    description = ccb.content.text("A handful of colorful fruit-flavored chewy candies shaped in a reptilian fashion.  Made by SugarRush."),
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "cow_candy",
+    name = ccb.content.plural_text("candy cattle", "candy cattle"),
+    description = ccb.content.text("A handful of chocolate candies shaped like cows."),
+    symbol = "*",
+    copy_from = "candy2",
+    color = "brown",
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "licorice",
+    name = ccb.content.plural_text("licorice", "licorice"),
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    volume = "10 ml",
+    mass = "78 g",
+    color = "red",
+    materials = { "junk" },
+    description = ccb.content.text("A swirly confectionary treat in strings of sweet-tasting candy."),
+    price = "85 cent",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "230 days",
+        kind = "FOOD",
+        quench = -1,
+        calories = 135,
+        stimulation = 1,
+        fun = 7,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "powder_candy",
+    name = ccb.content.plural_text("powder candy sticks", "powder candy sticks"),
+    mass = "46 g",
+    color = "red",
+    symbol = "%",
+    description = ccb.content.text("Thin paper tubes of sweet & sour candy powder.  Who thinks of this stuff?"),
+    price = "24 cent",
+    survival_price = "60 cent",
+    materials = { "junk" },
+    volume = "50 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        quench = -6,
+        healthy = -1,
+        calories = 180,
+        fun = 6,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "candy_bracelet",
+    name = ccb.content.plural_text("candy bracelet", "candy bracelets"),
+    looks_like = "copper_bracelet",
+    color = "yellow",
+    description = ccb.content.text("A candy bracelet made by stringing candies onto a thread.  In theory, you could both wear and eat the bracelet."),
+    copy_from = "candy4",
+    materials = { "junk" },
+    subtype_order = { "comestible", "armor" },
+    comestible = { vitamins = { { id = "junk_allergen", amount = 1 } } },
+    armor = {
+        sided = true,
+        portions = {
+            {
+                coverage = 50,
+                covers = { "hand_l", "hand_r" },
+                subparts = { "hand_wrist_l", "hand_wrist_r" },
+            },
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "maple_candy",
+    name = ccb.content.plural_text("maple syrup candy", "maple syrup candy"),
+    mass = "18 g",
+    color = "brown",
+    default_container = "bag_plastic_small",
+    symbol = "%",
+    description = ccb.content.text("A handful of golden, translucent leaf candies made with pure maple syrup.  They melt slowly in your mouth as you savor the taste of real maple."),
+    price = "3 USD",
+    survival_price = "25 cent",
+    materials = { "junk" },
+    volume = "50 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "360 days",
+        kind = "FOOD",
+        quench = -1,
+        healthy = -1,
+        calories = 54,
+        fun = 10,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "grahmcrackers",
+    name = ccb.content.text("graham cracker"),
+    mass = "31 g",
+    color = "brown",
+    default_container = "box_small",
+    symbol = "%",
+    description = ccb.content.text("These dry, sugary crackers will leave you thirsty, but they go well with some chocolate and marshmallows."),
+    price = "13 cent",
+    survival_price = "37 cent",
+    materials = { "wheat", "junk" },
+    volume = "93 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "90 days",
+        kind = "FOOD",
+        quench = -4,
+        calories = 110,
+        vitamins = {
+            { id = "calcium", amount = 4 },
+            { id = "iron", amount = 6 },
+            { id = "wheat_allergen", amount = 1 },
+            { id = "junk_allergen", amount = 1 },
+        },
+        fun = 2,
+    },
+}
+
+ccb.content.define_item {
+    id = "grahmcrackers_roe",
+    name = ccb.content.plural_text("graham cracker chunks", "graham cracker chunks"),
+    copy_from = "grahmcrackers",
+    description = ccb.content.text("These dry, sugary cracker pellets will leave you thirsty, and they're not the right size to make s'mores with.  Made by SugarRush!"),
+    comestible = {},
+}
+
+-- dimensions are picked from oreo
+ccb.content.define_item {
+    id = "cookies",
+    name = ccb.content.text("cookie"),
+    mass = "11 g",
+    color = "brown",
+    default_container = "box_snack",
+    symbol = "%",
+    description = ccb.content.text("A sweet, delicious cookie, just like grandma used to bake."),
+    price = "9 cent",
+    survival_price = "7 cent",
+    materials = { "wheat", "junk" },
+    volume = "58 ml",
+    flags = { "EDIBLE_FROZEN" },
+    stackable = true,
+    comestible = {
+        shelf_life = "60 days",
+        kind = "FOOD",
+        quench = -1,
+        calories = 160,
+        vitamins = {
+            { id = "calcium", amount = 2 },
+            { id = "iron", amount = 6 },
+            { id = "wheat_allergen", amount = 1 },
+            { id = "junk_allergen", amount = 1 },
+        },
+        fun = 7,
+    },
+}
+
+ccb.content.define_item {
+    id = "cookies_egg",
+    name = ccb.content.text("cookie egg"),
+    copy_from = "cookies",
+    description = ccb.content.text("A sweet, delicious cookie, shaped like an egg.  Made by SugarRush!"),
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "syrup",
+    name = ccb.content.plural_text("maple syrup", "maple syrup"),
+    mass = "21 g",
+    color = "brown",
+    default_container = "bottle_glass",
+    symbol = "%",
+    description = ccb.content.text("Boiling the sap of a maple tree has concentrated it into this sweet, delicious maple syrup."),
+    display_type = "BY_VOLUME",
+    price = "6 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { { id = "sugar", portions = 66 }, { id = "water", portions = 34 } },
+    volume = "250 ml",
+    phase = "liquid",
+    comestible = {
+        kind = "FOOD",
+        quench = 1,
+        calories = 54,
+        servings = 16,
+        fun = 5,
+        vitamins = { { id = "calcium", amount = 2 }, { id = "junk_allergen", amount = 1 } },
+        freezing_point = -57,
+    },
+}
+
+ccb.content.define_item {
+    id = "beet_syrup",
+    name = ccb.content.plural_text("sugar beet syrup", "sugar beet syrup"),
+    color = "brown",
+    default_container = "bottle_glass",
+    symbol = "%",
+    description = ccb.content.text("A thick syrup produced from shredded sugar beets.  Useful in cooking as a sweetener."),
+    display_type = "BY_VOLUME",
+    price = "15 USD",
+    survival_price = "3 USD 50 cent",
+    materials = { { id = "sugar", portions = 78 }, { id = "water", portions = 22 } },
+    mass = "11 g",
+    volume = "125 ml",
+    phase = "liquid",
+    comestible = {
+        kind = "FOOD",
+        quench = 3,
+        calories = 34,
+        vitamins = { { id = "iron", amount = 34 }, { id = "junk_allergen", amount = 1 } },
+        servings = 16,
+    },
+}
+
+ccb.content.define_item {
+    id = "syrup_simple",
+    name = ccb.content.plural_text("simple syrup", "simple syrup"),
+    mass = "21 g",
+    color = "light_gray",
+    default_container = "bottle_glass",
+    symbol = "%",
+    description = ccb.content.text("A simple syrup, made of just sugar and water.  Used usually as a sweetener for stuff like cocktails."),
+    display_type = "BY_VOLUME",
+    price = "6 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { { id = "sugar", portions = 66 }, { id = "water", portions = 34 } },
+    volume = "250 ml",
+    phase = "liquid",
+    comestible = {
+        shelf_life = "30 days",
+        kind = "FOOD",
+        quench = 16,
+        calories = 34,
+        servings = 16,
+        fun = -1,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+        freezing_point = -57,
+    },
+}
+
+ccb.content.define_item {
+    id = "syrup_corn",
+    name = ccb.content.plural_text("corn syrup", "corn syrup"),
+    mass = "21 g",
+    color = "yellow",
+    default_container = "bottle_glass",
+    symbol = "%",
+    description = ccb.content.text("A syrup made from corn."),
+    display_type = "BY_VOLUME",
+    price = "6 USD",
+    survival_price = "7 USD 50 cent",
+    materials = { { id = "sugar", portions = 80 }, { id = "water", portions = 20 } },
+    volume = "250 ml",
+    phase = "liquid",
+    comestible = {
+        kind = "FOOD",
+        quench = 1,
+        calories = 60,
+        servings = 16,
+        vitamins = { { id = "junk_allergen", amount = 1 } },
+        freezing_point = -57,
+    },
+}
+
+ccb.content.define_item {
+    id = "jihelucake",
+    name = ccb.content.plural_text("slice of birthday cake", "slices of birthday cake"),
+    mass = "38 g",
+    color = "white",
+    symbol = "%",
+    description = ccb.content.text("A slice of delicious sponge cake with white buttercream icing and covered in sprinkles!  Part of the words \"Happy Birthday\" are written on top in frosting."),
+    price = "10 cent",
+    survival_price = "16 cent",
+    materials = { "wheat", "junk" },
+    volume = "166 ml",
+    stackable = true,
+    comestible = {
+        shelf_life = "52 hours",
+        kind = "FOOD",
+        calories = 280,
+        vitamins = {
+            { id = "calcium", amount = 3 },
+            { id = "iron", amount = 6 },
+            { id = "wheat_allergen", amount = 1 },
+            { id = "junk_allergen", amount = 1 },
+        },
+        fun = 15,
+    },
+}
+
+ccb.content.define_item {
+    id = "cake2",
+    name = ccb.content.plural_text("slice of chocolate cake", "slices of chocolate cake"),
+    copy_from = "jihelucake",
+    description = ccb.content.text("Delicious chocolate cake.  It has all the icing.  All of it."),
+    comestible = { shelf_life = "4 days", calories = 280 },
+}
+
+ccb.content.define_item {
+    id = "cake3",
+    name = ccb.content.text("slice of guff cake"),
+    copy_from = "jihelucake",
+    description = ccb.content.text("A slice of cake coated in the thickest icing you've ever seen.  Someone has written \"guff\" on every slice."),
+    comestible = { shelf_life = "4 days", calories = 295, quench = -5, fun = 20 },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_item {
+    id = "debug_calories",
+    name = ccb.content.text_without_extraction("unholy debug angel cake"),
+    copy_from = "jihelucake",
+    description = ccb.content.text_without_extraction("This unholy confection of delight does not lie, it packs a heavenly amount of calories in each sinful bite.  For debug use only."),
+    comestible = { shelf_life = "4 days", calories = 10000, fun = 20 },
+}
+
+ccb.content.define_item {
     id = "choco_coffee_beans",
     name = ccb.content.plural_text("chocolate-covered coffee beans", "chocolate-covered coffee beans"),
     mass = "30 g",

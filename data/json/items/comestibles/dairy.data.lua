@@ -1,5 +1,153 @@
 local ccb = require("ccb")
 
+-- A 12-charge gallon currently goes for around US$4.
+ccb.content.define_item {
+    id = "milk",
+    name = ccb.content.plural_text("milk", "milk"),
+    mass = "258 g",
+    color = "white",
+    symbol = "~",
+    description = ccb.content.text("Baby cow food, appropriated for human consumption.  Spoils rapidly."),
+    display_type = "BY_VOLUME",
+    price = "38 cent",
+    survival_price = "50 cent",
+    materials = { "milk" },
+    volume = "250 ml",
+    phase = "liquid",
+    flags = { "EATEN_COLD" },
+    comestible = {
+        shelf_life = "1 d",
+        kind = "DRINK",
+        quench = 70,
+        calories = 132,
+        servings = 1,
+        vitamins = {
+            { id = "vitC", amount = 4 },
+            { id = "calcium", amount = 25 },
+            { id = "milk_allergen", amount = 1 },
+        },
+        fun = 1,
+    },
+}
+
+ccb.content.define_item {
+    id = "milk_choc",
+    name = ccb.content.plural_text("chocolate milk", "chocolate milk"),
+    copy_from = "milk",
+    color = "brown",
+    description = ccb.content.text("Baby cow food, with chocolate added for human enjoyment.  Spoils rapidly."),
+    comestible = { calories = 272, fun = 6 },
+}
+
+ccb.content.define_item {
+    id = "milk_reconstituted",
+    name = ccb.content.plural_text("reconstituted milk", "reconstituted milk"),
+    copy_from = "milk",
+    description = ccb.content.text("Baby cow food, appropriated for adult humans.  This milk has been reconstituted from powder.  Spoils rapidly."),
+    comestible = {},
+}
+
+ccb.content.define_item {
+    id = "milk_UHT",
+    name = ccb.content.plural_text("shelf stable milk", "shelf stable milk"),
+    copy_from = "milk",
+    description = ccb.content.text("This is milk that has been pasteurized at much higher temperatures than normal.  It tastes slightly different, but, unopened, will last far longer than regular milk."),
+    price = "50 cent",
+    survival_price = "1 USD 50 cent",
+    comestible = { shelf_life = "7 d" },
+}
+
+ccb.content.define_item {
+    id = "milk_evap",
+    name = ccb.content.plural_text("evaporated milk", "evaporated milk"),
+    copy_from = "milk",
+    mass = "312 g",
+    default_container = "can_medium",
+    description = ccb.content.text("Milk that's had about 60% of its water removed prior to canning."),
+    price = "38 cent",
+    survival_price = "2 USD",
+    materials = { "milk" },
+    volume = "500 ml",
+    comestible = {
+        calories = 207,
+        quench = 10,
+        servings = 2,
+        vitamins = { { id = "milk_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "buttermilk",
+    name = ccb.content.plural_text("buttermilk", "buttermilk"),
+    copy_from = "milk",
+    default_container = "bottle_plastic",
+    sealed_container = false,
+    description = ccb.content.text("This is cultured milk defatted either due to churning or curdling.  Spoils quickly."),
+    price = "1 cent",
+    comestible = {
+        shelf_life = "2 d",
+        quench = 20,
+        calories = 161,
+        vitamins = { { id = "vitC", amount = 1 }, { id = "calcium", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "yoghurt",
+    name = ccb.content.plural_text("yogurt", "yogurt"),
+    mass = "257 g",
+    color = "magenta",
+    default_container = "cup_plastic_yoghurt",
+    symbol = "%",
+    description = ccb.content.text("Delicious fermented dairy.  It tastes of vanilla."),
+    display_type = "BY_VOLUME",
+    price = "1 USD 90 cent",
+    survival_price = "1 USD",
+    materials = { "milk" },
+    volume = "250 ml",
+    phase = "liquid",
+    flags = { "EDIBLE_FROZEN" },
+    comestible = {
+        shelf_life = "20 hours",
+        kind = "FOOD",
+        calories = 150,
+        servings = 1,
+        fun = 15,
+        vitamins = {
+            { id = "vitC", amount = 3 },
+            { id = "calcium", amount = 33 },
+            { id = "iron", amount = 1 },
+            { id = "milk_allergen", amount = 1 },
+        },
+    },
+}
+
+-- 撤销 PR #85568 — 恢复黄油直接食用的快乐值
+ccb.content.define_item {
+    id = "butter",
+    name = ccb.content.plural_text("butter", "butter"),
+    mass = "14180 mg",
+    color = "yellow",
+    symbol = "%",
+    default_container = "wrapper",
+    description = ccb.content.text("A yellow stick of milkfat and milk solids, usually made from cow's milk."),
+    display_type = "BY_WEIGHT",
+    price = "9 cent",
+    survival_price = "23 cent",
+    materials = { "milk" },
+    volume = "15 ml",
+    flags = { "NO_AUTO_CONSUME" },
+    comestible = {
+        shelf_life = "14 days",
+        kind = "FOOD",
+        quench = -1,
+        calories = 101,
+        fun = -1,
+        vitamins = { { id = "milk_allergen", amount = 1 } },
+        on_consume = "eat_butter",
+    },
+}
+
 ccb.content.define_item {
     id = "raw_butter",
     name = ccb.content.plural_text("raw butter", "raw butter"),

@@ -1,6 +1,82 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "donut_holes",
+    name = ccb.content.text("donut hole"),
+    materials = { "wheat" },
+    mass = "14 g",
+    color = "yellow",
+    symbol = "%",
+    description = ccb.content.text("These balls of dough have been cut into shape, covered with sugar, and cooked to a crisp.  A staple of fairgrounds everywhere."),
+    price = "25 cent",
+    survival_price = "12 cent",
+    volume = "30 ml",
+    flags = { "EATEN_HOT" },
+    looks_like = "bread",
+    stackable = true,
+    comestible = {
+        shelf_life = "10 days",
+        kind = "FOOD",
+        calories = 60,
+        quench = -1,
+        fun = 4,
+        vitamins = { { id = "wheat_allergen", amount = 1 } },
+    },
+}
+
+ccb.content.define_item {
+    id = "sourdough_young_uncovered_active",
+    category = "food",
+    name = ccb.content.plural_text("juvenile sourdough starter", "juvenile sourdough starter"),
+    description = ccb.content.text("A floury paste that is slowly going bad.  Someday it will be sourdough."),
+    mass = "100 g",
+    volume = "100 ml",
+    price = "10 cent",
+    survival_price = "10 cent",
+    materials = { "wheat" },
+    symbol = "%",
+    color = "white",
+    flags = { "SOFT", "SPAWN_ACTIVE" },
+    revert_to = "sourdough_starter_uncovered",
+    stackable = true,
+    subtype_order = { "comestible", "tool" },
+    comestible = {
+        kind = "FOOD",
+        fun = -5,
+        calories = 192,
+        vitamins = { { id = "wheat_allergen", amount = 1 } },
+    },
+    tool = {},
+    countdown_interval = "6 days",
+}
+
+ccb.content.define_item {
+    id = "sourdough_split_uncovered_active",
+    category = "food",
+    name = ccb.content.plural_text("freshly fed sourdough starter", "freshly fed sourdough starter"),
+    description = ccb.content.text("A floury paste with sourdough starter mixed in.  It needs a day to recover its strength before it can be used again."),
+    mass = "100 g",
+    volume = "100 ml",
+    price = "10 cent",
+    survival_price = "10 cent",
+    materials = { "wheat" },
+    symbol = "%",
+    color = "white",
+    flags = { "SOFT" },
+    revert_to = "sourdough_starter_uncovered",
+    stackable = true,
+    subtype_order = { "comestible", "tool" },
+    comestible = {
+        kind = "FOOD",
+        fun = -5,
+        calories = 192,
+        vitamins = { { id = "wheat_allergen", amount = 1 } },
+    },
+    tool = {},
+    countdown_interval = "1 day",
+}
+
+ccb.content.define_item {
     id = "sourdough_starter_uncovered",
     category = "food",
     name = ccb.content.plural_text("sourdough starter", "sourdough starter"),
