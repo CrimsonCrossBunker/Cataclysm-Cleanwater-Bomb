@@ -1,5 +1,7 @@
 # `tests/` agent instructions
 
+- Prefer appending new focused regression cases to an existing domain
+  `*_test.cpp` file rather than creating new tiny single-case `*_test.cpp` files.
 - Prefer a focused regression test that fails before the fix and passes after.
 - Keep tests deterministic; print or record the RNG seed when randomness is
   relevant.

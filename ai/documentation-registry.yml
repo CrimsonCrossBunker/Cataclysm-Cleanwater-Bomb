@@ -1,9 +1,9 @@
 schema_version: 1
 kind: documentation_registry
-source_commit: 73f285ce0085a34611ef22f7b50f6252c62b9e45
+source_commit: ef85653c720148d4a70bf4a6b3b423d23d87c10a
 scope: Tracked documentation and machine contracts from the Git index; untracked build caches are never
   traversed.
-entry_count: 243
+entry_count: 251
 entries:
 - id: repo.github-agents-md
   path: .github/AGENTS.md
@@ -481,6 +481,17 @@ entries:
   generated: false
   generated_by: null
   include_in_ai_index: true
+- id: repo.data-json-regional-climate-readme-md
+  path: data/json/regional_climate/README.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
 - id: repo.data-lua-agents-md
   path: data/lua/AGENTS.md
   category: agent_instruction
@@ -1203,6 +1214,83 @@ entries:
   generated: false
   generated_by: null
   include_in_ai_index: true
+- id: repo.data-raw-north-america-md
+  path: data/raw/north_america.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.data-raw-north-america-ecology-md
+  path: data/raw/north_america_ecology.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.data-raw-north-america-ground-and-transport-md
+  path: data/raw/north_america_ground_and_transport.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.data-raw-north-america-local-weather-and-farming-md
+  path: data/raw/north_america_local_weather_and_farming.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.data-raw-north-america-loot-md
+  path: data/raw/north_america_loot.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.data-raw-north-america-seasons-and-snow-md
+  path: data/raw/north_america_seasons_and_snow.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.data-raw-north-america-supplies-and-soils-md
+  path: data/raw/north_america_supplies_and_soils.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
 - id: repo.data-reference-json-ccb-eoc-conditions-json
   path: data/reference/json/ccb_eoc_conditions.json
   category: generated_document

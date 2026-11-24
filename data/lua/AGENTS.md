@@ -16,6 +16,10 @@ registrations, LuaLS declarations, and relevant tests define current behavior;
   not replace gameplay evidence.
 - Keep templates and examples runnable; Mods need neither a `lua/` subdirectory
   nor an author-maintained JSON manifest.
+- Reuse `require("ccb_runtime_helpers")` for shared runtime helpers in bundled
+  mods; do not copy-paste `eoc_runtime.lua` or `H.*` boilerplate across mods.
+- Keep high-level Lua convenience helpers in pure Lua (`data/lua/`) rather than
+  adding heavy Sol2 template bindings in `src/lua_platform_*.cpp`.
 
 CCB-Docs explains the contract. When a page conflicts with source or
 declarations, fix the page and leave runtime behavior unchanged.

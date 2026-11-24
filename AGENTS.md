@@ -183,3 +183,6 @@ Android, tools, and documentation:
 
 - Do not keep work report notes that only prove you are using vibe coding at code. Ensure that any newly added code comments are necessary.
 - The need for testing does not mean that every minor modification must be tested by editing complete tool scripts such as `tests/`. Files tracked by Git are not the backyard of Agents tools, and for small changes or only JSON data changes that do not affect existing tests, it may not be necessary to track them to the repository.
+- Prefer appending new focused regression cases to an existing domain `*_test.cpp` file rather than creating new tiny single-case `*_test.cpp` files.
+- Reuse `require("ccb_runtime_helpers")` for shared runtime helpers in bundled mods; do not copy-paste `eoc_runtime.lua` or `H.*` helper blocks across mods.
+- Keep high-level Lua convenience helpers in pure Lua (`data/lua/`) rather than adding heavy Sol2 template bindings to `src/lua_platform_*.cpp`.

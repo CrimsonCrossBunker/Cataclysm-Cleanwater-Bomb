@@ -18,7 +18,7 @@ cases:
     expected_validation_ids: [cpp-format, cpp-tests]
   - id: json-content
     task: Add JSON item content without breaking stable IDs.
-    files: [data/json/items/melee/misc.json]
+    files: [data/json/items/melee/bludgeons.data.lua]
     expected_routes: [json-content]
     expected_paths: [data/json/]
     expected_documentation_ids: [json.overview]
