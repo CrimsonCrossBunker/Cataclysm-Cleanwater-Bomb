@@ -1,6 +1,95 @@
 local ccb = require("ccb")
 
 ccb.content.define_spell {
+    id = "burn_at_both_ends",
+    name = ccb.content.text("Burn at Both Ends"),
+    description = ccb.content.text("A candle burns the most brightly at both ends, and yet it burns twice as fast."),
+    valid_targets = { "hostile" },
+    flags = {
+        "EVOCATION_SPELL",
+        "RANDOM_DAMAGE",
+        "CONCENTRATE",
+        "SOMATIC",
+        "NO_PROJECTILE",
+        "MUST_HAVE_CLASS_TO_LEARN",
+        "SPLIT_DAMAGE",
+    },
+    extra_spells = { { spell = "eoc_evocation_setup", self = true } },
+    effect = "attack",
+    shape = "blast",
+    damage_type = "heat",
+    min_damage = { handler = "scaled_burn_at_both_ends_min_damage", fallback = 11.0 },
+    max_damage = { handler = "scaled_burn_at_both_ends_max_damage", fallback = 19.0 },
+    min_range = 3,
+    range_increment = 0.1,
+    max_range = 6,
+    min_duration = 0,
+    duration_increment = 100,
+    max_duration = 3500,
+    min_dot = 10,
+    max_dot = 10,
+    base_energy_cost = 200,
+    spell_class = "SOULFIRE",
+    difficulty = 8,
+    max_level = 35,
+    base_casting_time = 225,
+    sound_description = ccb.content.text("skin crackling"),
+    sound_id = "fire_spell",
+    sound_variant = "strong",
+    magic_type = "magiclysm_evocation_magic",
+}
+
+-- NO_I18N
+ccb.content.define_spell {
+    id = "soul_afterburner_cooldown_backlash",
+    name = ccb.content.text("Soul backlash"),
+    description = ccb.content.text_without_extraction("This is a description for a spell the player will never see."),
+    valid_targets = { "self" },
+    flags = { "NO_EXPLOSION_SFX", "SILENT", "NO_PROJECTILE", "SPLIT_DAMAGE" },
+    min_damage = 30,
+    max_damage = 30,
+    damage_increment = 1.5,
+    damage_type = "pure",
+    shape = "blast",
+    effect = "attack",
+}
+
+ccb.content.define_spell {
+    id = "soul_afterburner_real",
+    shape = "blast",
+    effect = "mod_moves",
+    spell_class = "SOULFIRE",
+    name = "Soul Afterburner",
+    description = ccb.content.text_without_extraction("This is a description for a spell the player will never see."),
+    flags = { "ENHANCEMENT_SPELL", "VERBAL", "SILENT", "MUST_HAVE_CLASS_TO_LEARN" },
+    valid_targets = { "self" },
+    min_damage = { handler = "wave14a_magiclysm_stat_18", fallback = 0 },
+    max_damage = { handler = "wave14a_magiclysm_stat_18", fallback = 0 },
+    difficulty = 6,
+    max_level = 35,
+    extra_spells = {
+        { spell = "soul_afterburner_effect_1", self = true },
+        { spell = "eoc_enhancement_setup", self = true },
+    },
+}
+
+ccb.content.define_spell {
+    id = "soul_afterburner_effect_1",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "soul_burn",
+    name = ccb.content.text_without_extraction("Soul Burn"),
+    description = ccb.content.text_without_extraction("This is a description for a spell the player will never see."),
+    flags = { "ENHANCEMENT_SPELL" },
+    valid_targets = { "self" },
+    min_damage = 0,
+    max_damage = 0,
+    min_duration = { handler = "wave14a_magiclysm_stat_19", fallback = 0 },
+    max_duration = { handler = "wave14a_magiclysm_stat_19", fallback = 0 },
+    max_level = 35,
+}
+
+ccb.content.define_spell {
     id = "soul_afterburner",
     shape = "blast",
     spell_class = "SOULFIRE",

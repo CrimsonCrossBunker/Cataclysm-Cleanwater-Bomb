@@ -1,5 +1,57 @@
 local ccb = require("ccb")
 
+ccb.content.define_spell {
+    id = "summon_subzero_talons",
+    name = ccb.content.text("Subzero Talons"),
+    description = ccb.content.text("Your fingers stiffen as condensation freezes into claws, intensifying your naturally cold touch and protecting your hands from damage."),
+    valid_targets = { "none" },
+    flags = { "CONJURATION_SPELL", "NO_LEGS", "CONCENTRATE", "MUST_HAVE_CLASS_TO_LEARN" },
+    extra_spells = { { spell = "eoc_summon_setup", self = true } },
+    min_damage = 1,
+    max_damage = 1,
+    effect = "spawn_item",
+    effect_data = "subzero_talons",
+    shape = "blast",
+    magic_type = "magiclysm_conjuration_magic",
+    spell_class = "ICE_ELEMENTAL",
+    difficulty = 7,
+    max_level = 35,
+    base_casting_time = 400,
+    base_energy_cost = 400,
+    energy_increment = -10,
+    final_energy_cost = 250,
+    min_duration = 18000,
+    max_duration = 120000,
+    duration_increment = 4500,
+}
+
+ccb.content.define_spell {
+    id = "cold_heart",
+    name = ccb.content.text("Cold Heart"),
+    description = ccb.content.text("Harshly drop the temperature inside of your enemies, slowing down their bloodstreams or even shattering organs."),
+    valid_targets = { "hostile" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "SOMATIC", "NO_PROJECTILE", "SILENT", "SPLIT_DAMAGE" },
+    effect = "attack",
+    shape = "blast",
+    damage_type = "cold",
+    min_damage = { handler = "scaled_cold_heart_min_damage", fallback = 5.0 },
+    max_damage = { handler = "scaled_cold_heart_max_damage", fallback = 12.0 },
+    min_range = 6,
+    max_range = 20,
+    range_increment = 0.4,
+    max_level = 35,
+    difficulty = 10,
+    spell_class = "ICE_ELEMENTAL",
+    base_casting_time = 150,
+    final_casting_time = 75,
+    casting_time_increment = -2.2,
+    magic_type = "magiclysm_evocation_magic",
+    base_energy_cost = 160,
+    energy_increment = -2.3,
+    final_energy_cost = 80,
+    extra_spells = { { spell = "cold_heart_slow" }, { spell = "eoc_evocation_setup", self = true } },
+}
+
 -- NO_I18N
 -- NO_I18N
 ccb.content.define_spell {

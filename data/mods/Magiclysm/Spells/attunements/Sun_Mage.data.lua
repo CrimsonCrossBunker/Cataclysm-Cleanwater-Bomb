@@ -1,6 +1,37 @@
 local ccb = require("ccb")
 
 ccb.content.define_spell {
+    id = "solar_beam",
+    name = ccb.content.text("Solar Beam"),
+    description = ccb.content.text("Fire a blast of sunlight in a wide beam, blinding everything in its path and leaving it bright enough for you to see for a few seconds."),
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "SOMATIC", "MUST_HAVE_CLASS_TO_LEARN" },
+    extra_spells = { { spell = "eoc_evocation_setup", self = true } },
+    effect = "attack",
+    shape = "line",
+    effect_data = "blind",
+    damage_type = "light",
+    min_damage = { handler = "scaled_solar_beam_min_damage", fallback = 8.0 },
+    max_damage = { handler = "scaled_solar_beam_max_damage", fallback = 14.0 },
+    min_range = 12,
+    max_range = 12,
+    min_aoe = 3,
+    max_aoe = 3,
+    min_duration = 0,
+    duration_increment = 100,
+    max_duration = 3500,
+    base_energy_cost = 750,
+    field = "fd_clairvoyant",
+    min_field_intensity = 1,
+    max_field_intensity = 1,
+    spell_class = "SUN_MAGE",
+    difficulty = 5,
+    max_level = 35,
+    base_casting_time = 350,
+    magic_type = "magiclysm_evocation_magic",
+}
+
+ccb.content.define_spell {
     id = "sunmage_pocket_sun",
     name = ccb.content.text("Pocket Sun"),
     description = ccb.content.text("You create a stable portal in the fabric of reality to the sun, through which you can draw on its light and temperature."),

@@ -1,6 +1,50 @@
 local ccb = require("ccb")
 
 ccb.content.define_spell {
+    id = "shortwave",
+    name = ccb.content.text("Shortwave"),
+    description = ccb.content.text("Cook nearby monsters (and yourself to an extent)."),
+    valid_targets = { "hostile", "ground", "self" },
+    flags = { "EVOCATION_SPELL", "SOMATIC", "MUST_HAVE_CLASS_TO_LEARN", "NO_HANDS", "SPLIT_DAMAGE" },
+    effect = "attack",
+    shape = "blast",
+    damage_type = "necrotic",
+    min_damage = 20,
+    max_damage = 20,
+    min_range = 3,
+    max_range = 3,
+    min_aoe = 3,
+    max_aoe = 3,
+    base_energy_cost = 200,
+    spell_class = "RADIATION_MAGE",
+    difficulty = 5,
+    max_level = 35,
+    base_casting_time = 120,
+    magic_type = "magiclysm_evocation_magic",
+    extra_spells = { { spell = "shortwave_2" }, { spell = "eoc_evocation_setup", self = true } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "shortwave_2",
+    name = ccb.content.text_without_extraction("Shortwave 2"),
+    description = ccb.content.text_without_extraction("Cook nearby monsters (and yourself to an extent)."),
+    valid_targets = { "hostile" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "SOMATIC", "MUST_HAVE_CLASS_TO_LEARN", "SPLIT_DAMAGE" },
+    effect = "attack",
+    shape = "blast",
+    damage_type = "heat",
+    min_damage = { handler = "scaled_shortwave_2_min_damage", fallback = 26.0 },
+    max_damage = { handler = "scaled_shortwave_2_max_damage", fallback = 51.0 },
+    min_range = 3,
+    max_range = 3,
+    min_aoe = 3,
+    max_aoe = 3,
+    max_level = 35,
+}
+
+ccb.content.define_spell {
     id = "gamma_burst",
     name = ccb.content.text("Gamma Burst"),
     description = ccb.content.text("Cause cell damage to everything in a wide area.  Fast to cast, but does damage slowly."),

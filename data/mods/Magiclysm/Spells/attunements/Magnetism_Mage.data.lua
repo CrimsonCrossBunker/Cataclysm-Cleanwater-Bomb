@@ -1,6 +1,124 @@
 local ccb = require("ccb")
 
 ccb.content.define_spell {
+    id = "railgun",
+    name = ccb.content.text("Railgun"),
+    description = ccb.content.text("Magnetize a bullet, and fire it at supersonic speeds by applying an opposite magnetic force to the bullet.  Leaves a trail of sparks"),
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "LOUD", "SOMATIC", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN" },
+    valid_targets = { "hostile" },
+    spell_class = "MAGNETISM_MAGE",
+    magic_type = "magiclysm_evocation_magic",
+    damage_type = "bullet",
+    effect = "attack",
+    shape = "blast",
+    max_level = 35,
+    components = "railgun_bullet",
+    min_damage = { handler = "scaled_railgun_min_damage", fallback = 65.0 },
+    max_damage = { handler = "scaled_railgun_max_damage", fallback = 80.0 },
+    min_range = 20,
+    max_range = 20,
+    base_casting_time = 400,
+    base_energy_cost = 600,
+    extra_spells = { { spell = "railgun_sparks" }, { spell = "eoc_evocation_setup", self = true } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "railgun_sparks",
+    name = ccb.content.text_without_extraction("Railgun Sparks"),
+    description = ccb.content.text_without_extraction("The spark portion of the Railgun spell."),
+    valid_targets = { "ground", "hostile", "ally" },
+    effect = "attack",
+    shape = "line",
+    min_aoe = 3,
+    max_aoe = 3,
+    field = "fd_electricity",
+    min_field_intensity = 1,
+    max_field_intensity = 1,
+    field_chance = 2,
+}
+
+ccb.content.define_spell {
+    id = "magnetismmage_electrolaser",
+    name = ccb.content.text("Electrolaser"),
+    description = ccb.content.text("Creates a conductive channel from the caster's hand to the target by ionizing air molecules using a high-powered laser beam, then sends a powerful half million volt charge down the channel."),
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "SOMATIC", "NO_LEGS", "LOUD" },
+    effect = "attack",
+    shape = "line",
+    damage_type = "light",
+    multiple_projectiles = 4,
+    min_damage = { handler = "scaled_magnetismmage_electrolaser_min_damage", fallback = 5.0 },
+    max_damage = { handler = "scaled_magnetismmage_electrolaser_max_damage", fallback = 12.0 },
+    min_range = 6,
+    max_range = 26,
+    range_increment = 0.6,
+    min_aoe = 1,
+    max_aoe = 3,
+    aoe_increment = 0.12,
+    max_level = 35,
+    difficulty = 9,
+    spell_class = "MAGNETISM_MAGE",
+    base_casting_time = 250,
+    final_casting_time = 75,
+    casting_time_increment = -5,
+    magic_type = "magiclysm_evocation_magic",
+    base_energy_cost = 500,
+    final_energy_cost = 150,
+    energy_increment = -10,
+    field = "fd_laser",
+    min_field_intensity = 2,
+    max_field_intensity = 2,
+    field_chance = 1,
+    extra_spells = {
+        { spell = "magnetismmage_electrolaser_electro" },
+        { spell = "eoc_evocation_setup", self = true },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "magnetismmage_electrolaser_electro",
+    name = ccb.content.text_without_extraction("Electrolaser Electric Damage"),
+    description = ccb.content.text_without_extraction("Give some electric damage for Electrolaser spell.  Subspell; you aren't allowed to see it except in debug mode."),
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE" },
+    effect = "attack",
+    shape = "line",
+    multiple_projectiles = 4,
+    damage_type = "electric",
+    min_damage = { handler = "scaled_magnetismmage_electrolaser_electro_min_damage", fallback = 5.0 },
+    max_damage = { handler = "scaled_magnetismmage_electrolaser_electro_max_damage", fallback = 12.0 },
+    max_range = 26,
+    min_aoe = 1,
+    max_aoe = 5,
+    aoe_increment = 0.12,
+    max_level = 35,
+    extra_spells = { { spell = "railgun_sparks" } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "robot_disabler",
+    name = ccb.content.text_without_extraction("Surge mod moves"),
+    description = ccb.content.text_without_extraction("Subtract some moves from targeted_monster_ids monsters.  Subspell; you aren't allowed to see it except in debug mode."),
+    valid_targets = { "hostile" },
+    targeted_species = { "ROBOT", "CYBORG" },
+    effect = "mod_moves",
+    shape = "blast",
+    max_level = 35,
+    min_damage = -1500,
+    max_damage = -12000,
+    damage_increment = -300,
+    min_aoe = 3,
+    aoe_increment = 0.17,
+    max_aoe = 15,
+}
+
+ccb.content.define_spell {
     id = "robot_disabler_explosion",
     name = ccb.content.text("Surge"),
     description = ccb.content.text("Send a wave of high-frequency alternating pulses.  It can't hurt living creatures, but is exceptional at stunning and destroying robots.  Even though it isn't an EMP."),

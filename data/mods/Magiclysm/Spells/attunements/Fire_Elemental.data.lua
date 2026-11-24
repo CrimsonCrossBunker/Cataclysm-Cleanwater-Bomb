@@ -1,6 +1,39 @@
 local ccb = require("ccb")
 
 ccb.content.define_spell {
+    id = "flareup",
+    name = ccb.content.text("Flareup"),
+    description = ccb.content.text("You channel heat through your hands to severely burn a target you touch."),
+    valid_targets = { "hostile" },
+    flags = {
+        "EVOCATION_SPELL",
+        "RANDOM_DAMAGE",
+        "CONCENTRATE",
+        "SOMATIC",
+        "NO_PROJECTILE",
+        "MUST_HAVE_CLASS_TO_LEARN",
+        "TOUCH_REQUIRED",
+    },
+    extra_spells = { { spell = "eoc_evocation_setup", self = true } },
+    effect = "attack",
+    shape = "blast",
+    damage_type = "heat",
+    min_damage = { handler = "scaled_flareup_min_damage", fallback = 8.0 },
+    max_damage = { handler = "scaled_flareup_max_damage", fallback = 20.0 },
+    min_range = 1,
+    max_range = 1,
+    base_energy_cost = 120,
+    spell_class = "FIRE_ELEMENTAL",
+    difficulty = 4,
+    max_level = 35,
+    base_casting_time = 150,
+    sound_description = ccb.content.text("skin crackling"),
+    sound_id = "fire_spell",
+    sound_variant = "strong",
+    magic_type = "magiclysm_evocation_magic",
+}
+
+ccb.content.define_spell {
     id = "flarewhip",
     name = ccb.content.text("Flarewhip"),
     description = ccb.content.text("You conjure a whip made of solid flame."),

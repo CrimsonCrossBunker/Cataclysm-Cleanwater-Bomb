@@ -1,6 +1,56 @@
 local ccb = require("ccb")
 
 ccb.content.define_spell {
+    id = "auroral_wave",
+    name = ccb.content.text("Auroral Wave"),
+    description = ccb.content.text("A rippling wave of luminous energy spreads from your hands, a beautiful torrent of magnetic force and chill wind."),
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "SOMATIC", "MUST_HAVE_CLASS_TO_LEARN", "NO_HANDS", "SPLIT_DAMAGE" },
+    effect = "attack",
+    shape = "cone",
+    extra_spells = { { spell = "auroral_wave_cold" }, { spell = "eoc_evocation_setup", self = true } },
+    damage_type = "light",
+    min_damage = { handler = "scaled_auroral_wave_min_damage", fallback = 25.0 },
+    max_damage = { handler = "scaled_auroral_wave_max_damage", fallback = 45.0 },
+    min_range = 3,
+    max_range = 7,
+    range_increment = 0.12,
+    min_aoe = 22,
+    max_aoe = 60,
+    aoe_increment = 1.5,
+    base_energy_cost = 350,
+    spell_class = "BOREAL_MAGE",
+    difficulty = 4,
+    max_level = 35,
+    base_casting_time = 230,
+    sound_description = ccb.content.text("a faint shimmering crackle"),
+    magic_type = "magiclysm_evocation_magic",
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "auroral_wave_cold",
+    name = ccb.content.text_without_extraction("Auroral Wave"),
+    description = ccb.content.text_without_extraction("This is the cold damage portion of the Auroral Wave spell, it is a wider blast around the central high damage cone."),
+    effect = "attack",
+    shape = "cone",
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "SPLIT_DAMAGE" },
+    min_damage = { handler = "scaled_auroral_wave_cold_min_damage", fallback = 11.0 },
+    max_damage = { handler = "scaled_auroral_wave_cold_max_damage", fallback = 23.0 },
+    min_range = 4,
+    max_range = 12,
+    range_increment = 0.25,
+    min_aoe = 45,
+    max_aoe = 120,
+    aoe_increment = 3,
+    magic_type = "magiclysm_evocation_magic",
+    damage_type = "cold",
+    max_level = 35,
+}
+
+ccb.content.define_spell {
     id = "borealmage_auroral_guard",
     name = ccb.content.text("Auroral Guard"),
     description = ccb.content.text("Create a sturdy shell that wraps around your body, bestowing a sturdy defense."),

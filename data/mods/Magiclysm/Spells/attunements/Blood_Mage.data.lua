@@ -1,5 +1,45 @@
 local ccb = require("ccb")
 
+ccb.content.define_spell {
+    id = "banishment_greater",
+    name = ccb.content.text("Greater Banishment"),
+    description = ccb.content.text("A more advanced version of Banishment, which is a ritual spell that attempts to banish a monster.  Being closely related to blood magic, the Blood Mage is much more specialized to use a spell like this."),
+    valid_targets = { "hostile" },
+    flags = { "CONVEYANCE_SPELL", "SOMATIC", "VERBAL", "MUST_HAVE_CLASS_TO_LEARN", "NO_HANDS" },
+    extra_spells = { { spell = "eoc_conveyance_setup", self = true } },
+    effect = "banishment",
+    shape = "blast",
+    min_damage = 120,
+    damage_increment = 15,
+    max_damage = 640,
+    min_range = 6,
+    max_range = 6,
+    min_aoe = 0,
+    max_aoe = 2,
+    aoe_increment = 0.04,
+    base_energy_cost = 400,
+    spell_class = "BLOOD_MAGE",
+    difficulty = 6,
+    max_level = 35,
+    base_casting_time = 100,
+    magic_type = "magiclysm_conveyance_magic",
+}
+
+ccb.content.define_item {
+    id = "demon_possession_aura",
+    name = ccb.content.plural_text("Ixythyug the Destroyer's soul", "Ixythyug the Destroyer's souls"),
+    description = ccb.content.text("RIP AND TEAR"),
+    mass = "1 g",
+    volume = "1 ml",
+    symbol = "o",
+    color = "white",
+    flags = { "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" },
+    max_worn = 1,
+    subtype_order = { "armor", "artifact" },
+    armor = {},
+    artifact = { enchantments = { "ITEM_ENCH_Magiclysm_demon_possession_aura_0" } },
+}
+
 -- NO_I18N
 -- NO_I18N
 ccb.content.define_spell {

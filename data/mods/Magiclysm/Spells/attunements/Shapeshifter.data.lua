@@ -1,5 +1,37 @@
 local ccb = require("ccb")
 
+ccb.content.define_spell {
+    id = "shapeshifter_alkahest",
+    name = ccb.content.text("Alkahest"),
+    description = ccb.content.text("Release a spray of mana-saturated bioactive solvent.  Your ley lines give you a resistance to this acid due to your mana signature, but others beware!"),
+    valid_targets = { "hostile", "ground" },
+    flags = { "EVOCATION_SPELL", "RANDOM_DAMAGE", "SILENT", "NO_HANDS", "NO_LEGS", "SPLIT_DAMAGE" },
+    extra_spells = { { spell = "eoc_evocation_setup", self = true } },
+    spell_class = "SHAPESHIFTER",
+    effect = "attack",
+    shape = "cone",
+    damage_type = "acid",
+    max_level = 35,
+    min_damage = { handler = "scaled_shapeshifter_alkahest_min_damage", fallback = 1.0 },
+    max_damage = { handler = "scaled_shapeshifter_alkahest_max_damage", fallback = 4.0 },
+    min_range = 3,
+    max_range = 16,
+    range_increment = 0.4,
+    min_aoe = 80,
+    max_aoe = 360,
+    aoe_increment = 8,
+    difficulty = 10,
+    field = "fd_alkahest",
+    field_chance = 1,
+    min_field_intensity = 1,
+    max_field_intensity = 1,
+    base_casting_time = 1200,
+    final_casting_time = 100,
+    casting_time_increment = -35,
+    magic_type = "magiclysm_evocation_magic",
+    base_energy_cost = 350,
+}
+
 -- thats supposed to be a magikarp power - weak on the very beginning but op in the end of the path. also it has a cool feature - you can support it indefinitely, if you have enough mana (and thats the only problem for the user - it requires really ton of mana to support it)
 ccb.content.define_spell {
     id = "biomechanic",
