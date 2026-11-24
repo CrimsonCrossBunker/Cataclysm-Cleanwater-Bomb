@@ -3,6 +3,49 @@ local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
+    id = { "TALK_FRIEND", "TALK_GIVE_ITEM", "TALK_USE_ITEM", "TALK_RADIO" },
+    replies = {
+        {
+            text = ccb.content.text("You said that you have experience in electrical engineering…"),
+            next_topic = "TALK_ENG_LIGHTHOUSE",
+            when = predicates.all({ predicates.has_any_trait("interlocutor", { "Exp_Eng_Electrical2", "Exp_Eng_Electrical1Fake2", "Exp_Eng_Electrical0Fake2" }), predicates.has_mission("MISSION_lighthouse_man_5") }),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ENG_LIGHTHOUSE",
+    line = ccb.content.text("I did, actually.  Why are you asking?"),
+    replies = {
+        {
+            text = ccb.content.text("We're here.  Ready to start?"),
+            next_topic = "TALK_ENG_LIGHTHOUSE_2",
+            when = predicates.handler("dlg_p_dda_f0bf0c5e00c6"),
+            actions = { "leave", "assign_guard" },
+        },
+        {
+            text = ccb.content.text("Can you repair the mechanism of the lighthouse?"),
+            next_topic = "TALK_ENG_LIGHTHOUSE_1",
+        },
+        {
+            text = ccb.content.text("<done_conversation_section>"),
+            next_topic = "TALK_NONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_ENG_LIGHTHOUSE_1",
+    line = ccb.content.text("Sure thing, boss.  Take me there and in a few days it will be like new."),
+    replies = {
+        {
+            text = ccb.content.text_without_extraction("<done_conversation_section>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
     id = "TALK_ENG_LIGHTHOUSE_2",
     line = ccb.content.text("Hmm, looks shitty.  I'll do my best."),
     replies = {

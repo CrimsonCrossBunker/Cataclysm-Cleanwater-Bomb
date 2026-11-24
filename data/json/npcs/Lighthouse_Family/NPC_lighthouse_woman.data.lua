@@ -2,6 +2,17 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+ccb.content.define_npc {
+    id = "NPC_lighthouse_woman",
+    unique_name = ccb.content.text("Heather Frolova"),
+    gender = "female",
+    class = "NC_NONE",
+    attitude = 1,
+    mission = "GUARD_PATROL",
+    chat = "TALK_lighthouse_woman_start",
+    faction = "fisherman_family",
+}
+
 ccb.content.define_dialogue_topic {
     id = "TALK_lighthouse_woman_start",
     line = ccb.content.text("I'm scared.  Where is my husband?"),
@@ -80,4 +91,32 @@ ccb.content.define_dialogue_topic {
             next_topic = "TALK_DONE",
         },
     },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_lighthouse_woman_Background",
+    line = ccb.content.text("I don't have much to tell, sorry.  I'm busy with tiding this place, making it our new home.  You should talk to my husband, he doesn't look busy right now.  Or always…"),
+}
+
+ccb.content.define_mission {
+    id = "MISSION_lighthouse_woman_0",
+    generic_rewards = false,
+    name = ccb.content.text("Protect fisherman's wife"),
+    description = ccb.content.text("She looks like a nice woman.  Maybe you should not let her die?"),
+    goal = "MGOAL_CONDITION",
+    difficulty = 0,
+    value = 0,
+    origins = { "ORIGIN_SECONDARY" },
+    dialogue = {
+        describe = ccb.content.text("-"),
+        offer = ccb.content.text("-"),
+        accepted = ccb.content.text("-"),
+        rejected = ccb.content.text("-"),
+        advice = ccb.content.text("-"),
+        inquire = ccb.content.text("-"),
+        success = ccb.content.text("-"),
+        success_lie = ccb.content.text("-"),
+        failure = ccb.content.text("-"),
+    },
+    failure = { handler = "mark_flag_death_lighthouse_wife_dead" },
 }

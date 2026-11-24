@@ -2,6 +2,27 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+-- Generic random survivor related to lighthouse family
+ccb.content.define_npc {
+    id = "NPC_survivor_lighthouse",
+    class = "NC_NONE",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_LIGHTHOUSE_SURVIVOR",
+    faction = "fisherman_family",
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_LIGHTHOUSE_SURVIVOR",
+    line = ccb.content.text("Hello!  Glad to meet another survivor."),
+    replies = {
+        {
+            text = ccb.content.text("Me too.  How did you manage to get here?"),
+            next_topic = "TALK_LIGHTHOUSE_SURVIVOR1",
+        },
+    },
+}
+
 -- Could use more variety.
 ccb.content.define_dialogue_topic {
     id = "TALK_LIGHTHOUSE_SURVIVOR1",
