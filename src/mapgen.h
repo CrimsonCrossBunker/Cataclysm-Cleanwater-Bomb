@@ -209,6 +209,9 @@ class jmapgen_piece
         /** Sanity-check this piece */
         virtual void check( const std::string &/*context*/, const mapgen_parameters &,
                             const jmapgen_int &/*x*/, const jmapgen_int &/*y*/, const jmapgen_int &/*z*/ ) const { }
+        virtual bool check_depends_on_coords() const {
+            return false;
+        }
 
         virtual void merge_parameters_into( mapgen_parameters &,
                                             const std::string &/*outer_context*/ ) const {}
@@ -414,6 +417,8 @@ struct jmapgen_objects {
         bool empty() const {
             return objects.empty();
         }
+        bool has_nested_mapgen() const;
+        bool has_z0_furniture() const;
 
         bool has_terrain_placements( const mapgen_parameters &params ) const;
         bool any_nested_has_unguarded_terrain_for_furniture(

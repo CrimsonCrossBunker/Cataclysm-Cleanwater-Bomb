@@ -12542,9 +12542,7 @@ small_fake_map::small_fake_map( const ter_id &ter_type )
             for( int gridz = -OVERMAP_DEPTH; gridz <= OVERMAP_HEIGHT; gridz++ ) {
                 std::unique_ptr<submap> sm = std::make_unique<submap>();
 
-                sm->set_all_ter( ter_type );
-                sm->set_all_furn( furn_str_id::NULL_ID() );
-                sm->set_all_traps( tr_null );
+                sm->set_all_ter( ter_type, true );
 
                 setsubmap( get_nonant( tripoint_rel_sm{ gridx, gridy, gridz } ), sm.get() );
 

@@ -48,6 +48,7 @@
 #include "game.h"
 #include "horde_entity.h"
 #include "line.h"
+#include "thread_pool.h"
 #include "lua_platform_content.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
@@ -2189,6 +2190,35 @@ void overmap::place_forests()
     const om_noise::om_noise_layer_forest f( origin, g->get_seed() );
     const bool geographic_forest = north_america::active();
 
+    if( !geographic_forest ) {
+        std::vector<uint8_t> forest_tier( OMAPX * OMAPY, 0 );
+        parallel_for_compute( 0, OMAPX, [&]( int x ) {
+            for( int y = 0; y < OMAPY; y++ ) {
+                const tripoint_om_omt p( x, y, 0 );
+                if( ter( p ) != default_oter_id ) {
+                    continue;
+                }
+                const float n = f.noise_at( p.xy() ) + forest_size_adjust;
+                if( n > settings_forest.noise_threshold_forest_thick ) {
+                    forest_tier[x * OMAPY + y] = 2;
+                } else if( n > settings_forest.noise_threshold_forest ) {
+                    forest_tier[x * OMAPY + y] = 1;
+                }
+            }
+        } );
+        for( int x = 0; x < OMAPX; x++ ) {
+            for( int y = 0; y < OMAPY; y++ ) {
+                const uint8_t tier = forest_tier[x * OMAPY + y];
+                if( tier == 2 ) {
+                    ter_set( { x, y, 0 }, oter_forest_thick );
+                } else if( tier == 1 ) {
+                    ter_set( { x, y, 0 }, oter_forest );
+                }
+            }
+        }
+        return;
+    }
+
     for( int x = 0; x < OMAPX; x++ ) {
         for( int y = 0; y < OMAPY; y++ ) {
             const tripoint_om_omt p( x, y, 0 );
@@ -2280,23 +2310,37 @@ void overmap::place_swamps()
     // Get a layer of noise to use in conjunction with our river buffered floodplain.
     const om_noise::om_noise_layer_floodplain f( global_base_point(), g->get_seed() );
 
-    for( int x = 0; x < OMAPX; x++ ) {
+    std::vector<uint8_t> is_forest_tile( OMAPX * OMAPY, 0 );
+    std::vector<float> swamp_noise( OMAPX * OMAPY, -1.0f );
+    parallel_for_compute( 0, OMAPX, [&]( int x ) {
         for( int y = 0; y < OMAPY; y++ ) {
             const tripoint_om_omt pos( x, y, 0 );
+            if( is_ot_match( "forest", ter( pos ), ot_match_type::contains ) ) {
+                const int idx = x * OMAPY + y;
+                is_forest_tile[idx] = 1;
+                swamp_noise[idx] = f.noise_at( pos.xy() );
+            }
+        }
+    } );
+
+    for( int x = 0; x < OMAPX; x++ ) {
+        for( int y = 0; y < OMAPY; y++ ) {
+            const int idx = x * OMAPY + y;
             // If this location isn't a forest, there's nothing to do here. We'll only grow swamps in existing
             // forest terrain.
-            if( !is_ot_match( "forest", ter( pos ), ot_match_type::contains ) ) {
+            if( !is_forest_tile[idx] ) {
                 continue;
             }
 
+            const tripoint_om_omt pos( x, y, 0 );
             // If this was a part of our buffered floodplain, and the noise here meets the threshold, and the one_in rng
             // triggers, then we should flood this location and make it a swamp.
-            const bool should_flood = ( floodplain[x][y] > 0 && !one_in( floodplain[x][y] ) && f.noise_at( { x, y } )
+            const bool should_flood = ( floodplain[x][y] > 0 && !one_in( floodplain[x][y] ) && swamp_noise[idx]
                                         > settings_forest.noise_threshold_swamp_adjacent_water );
 
             // If this location meets our isolated swamp threshold, regardless of floodplain values, we'll make it
             // into a swamp.
-            const bool should_isolated_swamp = f.noise_at( pos.xy() ) >
+            const bool should_isolated_swamp = swamp_noise[idx] >
                                                settings_forest.noise_threshold_swamp_isolated;
             if( should_flood || should_isolated_swamp )  {
                 ter_set( pos, oter_forest_water );
@@ -3349,6 +3393,34 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
         return false;
     }
 
+    const std::vector<overmap_special_locations> fixed_terrains = special.required_locations();
+    const bool terrain_ok = std::all_of( fixed_terrains.begin(), fixed_terrains.end(),
+    [&]( const overmap_special_locations & elem ) {
+        const tripoint_om_omt rp = p + om_direction::rotate( elem.p, dir );
+
+        if( !inbounds( rp, 1 ) ) {
+            return false;
+        }
+
+        if( must_be_unexplored ) {
+            // If this must be unexplored, check if we've already got a submap generated.
+            const bool existing_submap = is_omt_generated( rp );
+
+            // If there is an existing submap, this area has already been explored and this
+            // isn't a valid placement.
+            if( existing_submap ) {
+                return false;
+            }
+        }
+
+        const oter_id &tid = ter( rp );
+
+        return elem.can_be_placed_on( tid ) || ( rp.z() != 0 && tid == get_default_terrain( rp.z() ) );
+    } );
+    if( !terrain_ok ) {
+        return false;
+    }
+
     if( special.has_eoc() ) {
         dialogue d( get_talker_for( get_avatar() ), nullptr );
         if( !special.get_eoc()->test_condition( d ) ) {
@@ -3372,9 +3444,18 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
     // produced yet, and it also provides some extra breathing room margin in most cases.
     const overmap_special_spawns &spawns = special.get_monster_spawns();
     if( spawns.group ) {
-        const point_abs_omt base = coords::project_to<coords::omt>( this->pos() );
         for( int x = p.x() - spawns.radius.max; x <= p.x() + spawns.radius.max; x++ ) {
             for( int y = p.y() - spawns.radius.max; y <= p.y() + spawns.radius.max; y++ ) {
+                if( x >= 0 && x < OMAPX && y >= 0 && y < OMAPY ) {
+                    if( !overmap_special_placements.empty() ) {
+                        const auto it = overmap_special_placements.find( tripoint_om_omt{ x, y, p.z() } );
+                        if( it != overmap_special_placements.end() &&
+                            it->second.obj().has_flag( "SAFE_AT_WORLDGEN" ) ) {
+                            return false;
+                        }
+                    }
+                    continue;
+                }
                 const tripoint_abs_omt target = tripoint_abs_omt{ base, p.z() } + point_rel_omt{ x, y };
                 if( overmap_buffer.get_existing( coords::project_to<coords::om>( target.xy() ) ) ) {
                     const std::optional<overmap_special_id> spec = overmap_buffer.overmap_special_at( target );
@@ -3387,31 +3468,7 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
         }
     }
 
-    const std::vector<overmap_special_locations> fixed_terrains = special.required_locations();
-
-    return std::all_of( fixed_terrains.begin(), fixed_terrains.end(),
-    [&]( const overmap_special_locations & elem ) {
-        const tripoint_om_omt rp = p + om_direction::rotate( elem.p, dir );
-
-        if( !inbounds( rp, 1 ) ) {
-            return false;
-        }
-
-        if( must_be_unexplored ) {
-            // If this must be unexplored, check if we've already got a submap generated.
-            const bool existing_submap = is_omt_generated( rp );
-
-            // If there is an existing submap, this area has already been explored and this
-            // isn't a valid placement.
-            if( existing_submap ) {
-                return false;
-            }
-        }
-
-        const oter_id &tid = ter( rp );
-
-        return elem.can_be_placed_on( tid ) || ( rp.z() != 0 && tid == get_default_terrain( rp.z() ) );
-    } );
+    return true;
 }
 
 // checks around the selected point to see if the special can be placed there

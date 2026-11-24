@@ -23,6 +23,7 @@
 #include <type_traits>
 #include <typeinfo>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "all_enum_values.h"
@@ -966,8 +967,47 @@ void calculate_mapgen_weights()   // TODO: rename as it runs jsonfunction setup 
     }
 }
 
+namespace
+{
+struct cached_sibling_coords {
+    std::set<point_rel_ms> terrain;
+    std::set<point_rel_ms> furniture;
+    int ter_min_x = 0;
+    int ter_max_x = 0;
+    int ter_min_y = 0;
+    int ter_max_y = 0;
+    int furn_min_x = 0;
+    int furn_max_x = 0;
+    int furn_min_y = 0;
+    int furn_max_y = 0;
+};
+
+struct mapgen_check_cache {
+    std::unordered_map<const mapgen_function_json_nested *, terrain_coord_map> nest_terrain_cache;
+    std::unordered_map<const mapgen_function_json_nested *, cached_sibling_coords>
+    sibling_coords_cache;
+};
+
+thread_local mapgen_check_cache *active_mapgen_check_cache = nullptr;
+
+struct scoped_mapgen_check_cache {
+    mapgen_check_cache cache;
+    mapgen_check_cache *previous;
+
+    scoped_mapgen_check_cache() : previous( active_mapgen_check_cache ) {
+        active_mapgen_check_cache = &cache;
+    }
+    ~scoped_mapgen_check_cache() {
+        active_mapgen_check_cache = previous;
+    }
+    scoped_mapgen_check_cache( const scoped_mapgen_check_cache & ) = delete;
+    scoped_mapgen_check_cache &operator=( const scoped_mapgen_check_cache & ) = delete;
+};
+} // namespace
+
 void check_mapgen_definitions()
 {
+    const scoped_mapgen_check_cache check_cache_guard;
     oter_mapgen.check_consistency();
     for( const auto &oter_definition : nested_mapgens ) {
         for( const auto &mapgen_function_ptr : oter_definition.second.funcs() ) {
@@ -2156,6 +2196,11 @@ class jmapgen_alternatively : public jmapgen_piece_with_has_vehicle_collision
                 piece.check( context, params, x, y, z );
             }
         }
+        bool check_depends_on_coords() const override {
+            return std::any_of( alternatives.begin(), alternatives.end(), []( const PieceType & p ) {
+                return p.check_depends_on_coords();
+            } );
+        }
         void merge_parameters_into( mapgen_parameters &params,
                                     const std::string &outer_context ) const override {
             for( const PieceType &piece : alternatives ) {
@@ -2199,6 +2244,9 @@ class jmapgen_constrained : public jmapgen_piece
         void check( const std::string &context, const mapgen_parameters &params,
                     const jmapgen_int &x, const jmapgen_int &y, const jmapgen_int &z ) const override {
             underlying_piece->check( context, params, x, y, z );
+        }
+        bool check_depends_on_coords() const override {
+            return underlying_piece->check_depends_on_coords();
         }
 
         void merge_parameters_into( mapgen_parameters &params, const std::string &outer_context
@@ -3020,6 +3068,9 @@ class jmapgen_vehicle : public jmapgen_piece_with_has_vehicle_collision
                 faction = jsi.get_string( "faction" );
             }
         }
+        bool check_depends_on_coords() const override {
+            return true;
+        }
         void apply( const mapgendata &dat, const jmapgen_int &x, const jmapgen_int &y, const jmapgen_int &z,
                     const std::string &/*context*/ ) const override {
             if( !x_in_y( chance, 100 ) ) {
@@ -3605,6 +3656,9 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
             }
         }
 
+        bool check_depends_on_coords() const override {
+            return true;
+        }
         void check( const std::string &context, const mapgen_parameters &params,
                     const jmapgen_int &x, const jmapgen_int &y, const jmapgen_int &z ) const override {
             std::string short_summary =
@@ -4210,12 +4264,12 @@ class jmapgen_nested : public jmapgen_piece
 
             ( *ptr )->nest( dat, tripoint_rel_ms( x.get(), y.get(), z.get() ), context );
         }
+        bool check_depends_on_coords() const override {
+            return true;
+        }
         void check( const std::string &oter_name, const mapgen_parameters &parameters,
                     const jmapgen_int &x, const jmapgen_int &y, const jmapgen_int &z
                   ) const override {
-            for( const std::pair<mapgen_value<nested_mapgen_id>, dbl_or_var> &p : entries ) {
-                p.first.check( oter_name, parameters );
-            }
             for( const std::pair<mapgen_value<nested_mapgen_id>, dbl_or_var> &p : entries ) {
                 p.first.check( oter_name, parameters );
             }
@@ -5040,8 +5094,66 @@ bool mapgen_function_json_base::setup_common( const JsonObject &jo )
 
     parameters = palette.get_parameters();
 
+    std::array<bool, 128> ascii_has_terrain{};
+    for( const map_key &mk : keys_with_terrain ) {
+        if( mk.str.size() == 1 ) {
+            const unsigned char ch = static_cast<unsigned char>( mk.str[0] );
+            if( ch < 128 ) {
+                ascii_has_terrain[ch] = true;
+            }
+        }
+    }
+    std::array<const mapgen_palette::placing_map::mapped_type *, 128> ascii_placing{};
+    for( const auto &fp : format_placings ) {
+        if( fp.first.str.size() == 1 ) {
+            const unsigned char ch = static_cast<unsigned char>( fp.first.str[0] );
+            if( ch < 128 ) {
+                ascii_placing[ch] = &fp.second;
+            }
+        }
+    }
+
     for( int c = m_offset.y(); c < expected_dim.y(); c++ ) {
         const std::string row = default_rows ? default_row : parray.get_string( c );
+        const bool pure_ascii = row.size() == static_cast<size_t>( total_size.x() ) &&
+                                std::all_of( row.begin(), row.end(), []( const char ch ) {
+                                    const unsigned char u = static_cast<unsigned char>( ch );
+                                    return u >= 0x20 && u < 0x7f;
+                                } );
+        if( pure_ascii ) {
+            for( int i = m_offset.x(); i < expected_dim.x(); i++ ) {
+                const unsigned char ch = static_cast<unsigned char>( row[i] );
+                const bool has_terrain = ascii_has_terrain[ch];
+                const auto *placing_ptr = ascii_placing[ch];
+                const bool has_placing = placing_ptr != nullptr;
+
+                if( !has_terrain && !fallback_terrain_exists ) {
+                    cata_assert( !default_rows );
+                    parray.string_error( c, i + 1,
+                                         string_format( "format: rows: row %d column %d: '%s' is not in 'terrain',"
+                                                        "and no 'fill_ter', 'predecessor_mapgen' or 'fallback_predecessor_mapgen' is set!",
+                                                        c + 1, i + 1, std::string( 1, row[i] ) ) );
+                }
+                if( !has_terrain && !has_placing && ch != ' ' && ch != '.' ) {
+                    try {
+                        cata_assert( !default_rows );
+                        parray.string_error( c, i + 1,
+                                             string_format( "format: rows: row %d column %d: '%s' has no terrain, furniture, or other definition",
+                                                            c + 1, i + 1, std::string( 1, row[i] ) ) );
+                    } catch( const JsonError &e ) {
+                        debugmsg( "(json-error)\n%s", e.what() );
+                    }
+                }
+                if( has_placing ) {
+                    jmapgen_place where( tripoint_rel_ms( i, c, 0 ) - m_offset );
+                    for( const auto &what : *placing_ptr ) {
+                        objects.add( where, what );
+                    }
+                }
+            }
+            continue;
+        }
+
         static std::vector<std::string_view> row_keys;
         row_keys.clear();
         row_keys.reserve( total_size.x() );
@@ -5271,24 +5383,28 @@ void mapgen_function_json_base::check_common() const
 
     objects.check( context_, parameters );
 
-    // Collect parent explicit terrain (this level only, no nesting)
-    terrain_coord_map parent_terrain;
-    objects.collect_terrain_data( parent_terrain, parameters, 0 );
-    collect_setmap_terrain( parent_terrain );
-
-    // Collect setmap furniture at z=0
-    std::set<point_rel_ms> setmap_furn;
-    for( const jmapgen_setmap &sm : setmap_points ) {
-        if( sm.phase() == mapgen_phase::furniture &&
-            sm.z.val <= 0 && sm.z.valmax >= 0 ) {
-            for_each_setmap_point( sm, [&]( const point_rel_ms & p ) {
-                setmap_furn.insert( p );
-            } );
+    if( objects.has_nested_mapgen() ) {
+        // Collect setmap furniture at z=0
+        std::set<point_rel_ms> setmap_furn;
+        for( const jmapgen_setmap &sm : setmap_points ) {
+            if( sm.phase() == mapgen_phase::furniture &&
+                sm.z.val <= 0 && sm.z.valmax >= 0 ) {
+                for_each_setmap_point( sm, [&]( const point_rel_ms & p ) {
+                    setmap_furn.insert( p );
+                } );
+            }
         }
-    }
 
-    objects.check_nested_overlaps( context_, parameters, setmap_furn,
-                                   parent_terrain, get_fill_ter() );
+        // Collect parent explicit terrain (this level only, no nesting) only if parent furniture exists
+        terrain_coord_map parent_terrain;
+        if( !setmap_furn.empty() || objects.has_z0_furniture() ) {
+            objects.collect_terrain_data( parent_terrain, parameters, 0 );
+            collect_setmap_terrain( parent_terrain );
+        }
+
+        objects.check_nested_overlaps( context_, parameters, setmap_furn,
+                                       parent_terrain, get_fill_ter() );
+    }
 }
 
 void mapgen_function_json_base::add_placement_coords_to( std::unordered_set<point_rel_ms> &result )
@@ -5334,15 +5450,51 @@ void update_mapgen::remove( const update_mapgen_function_json *p )
 
 void jmapgen_objects::finalize()
 {
-    std::stable_sort( objects.begin(), objects.end(), compare_phases );
+    const std::size_t n = objects.size();
+    if( n > 1 ) {
+        std::vector<std::uint8_t> phases( n );
+        constexpr std::size_t num_phases = static_cast<std::size_t>( mapgen_phase::last );
+        std::array<std::size_t, num_phases> counts{};
+        bool already_sorted = true;
+        std::uint8_t prev_phase = 0;
+        for( std::size_t i = 0; i < n; ++i ) {
+            const std::size_t p = static_cast<std::size_t>( objects[i].second->phase() );
+            phases[i] = static_cast<std::uint8_t>( p );
+            ++counts[p];
+            if( p < prev_phase ) {
+                already_sorted = false;
+            }
+            prev_phase = static_cast<std::uint8_t>( p );
+        }
+        if( !already_sorted ) {
+            std::array<std::size_t, num_phases> offsets{};
+            std::size_t acc = 0;
+            for( std::size_t p = 0; p < num_phases; ++p ) {
+                offsets[p] = acc;
+                acc += counts[p];
+            }
+            std::vector<jmapgen_obj> sorted( n );
+            for( std::size_t i = 0; i < n; ++i ) {
+                sorted[offsets[phases[i]]++] = std::move( objects[i] );
+            }
+            objects = std::move( sorted );
+        }
+    }
     objects.shrink_to_fit();
 }
 
 void jmapgen_objects::check( const std::string &context, const mapgen_parameters &parameters ) const
 {
+    std::unordered_set<const jmapgen_piece *> checked_pieces;
     for( const jmapgen_obj &obj : objects ) {
         const jmapgen_place &where = obj.first;
         const jmapgen_piece &what = *obj.second;
+        if( checked_pieces.count( &what ) != 0 ) {
+            continue;
+        }
+        if( !what.check_depends_on_coords() ) {
+            checked_pieces.insert( &what );
+        }
         what.check( context, parameters, where.x, where.y, where.z );
     }
 }
@@ -5350,9 +5502,29 @@ void jmapgen_objects::check( const std::string &context, const mapgen_parameters
 void jmapgen_objects::merge_parameters_into( mapgen_parameters &params,
         const std::string &outer_context ) const
 {
+    std::unordered_set<const jmapgen_piece *> seen;
     for( const jmapgen_obj &obj : objects ) {
-        obj.second->merge_parameters_into( params, outer_context );
+        const jmapgen_piece *piece = obj.second.get();
+        if( !seen.insert( piece ).second ) {
+            continue;
+        }
+        piece->merge_parameters_into( params, outer_context );
     }
+}
+
+bool jmapgen_objects::has_nested_mapgen() const
+{
+    return std::any_of( objects.begin(), objects.end(), []( const jmapgen_obj & obj ) {
+        return obj.second->phase() == mapgen_phase::nested_mapgen;
+    } );
+}
+
+bool jmapgen_objects::has_z0_furniture() const
+{
+    return std::any_of( objects.begin(), objects.end(), []( const jmapgen_obj & obj ) {
+        return obj.second->phase() == mapgen_phase::furniture &&
+               obj.first.z.val <= 0 && obj.first.z.valmax >= 0;
+    } );
 }
 
 void jmapgen_objects::add_placement_coords_to( std::unordered_set<point_rel_ms> &result ) const
@@ -5798,17 +5970,23 @@ void jmapgen_objects::collect_terrain_data(
     static std::unordered_map<nested_mapgen_id, terrain_coord_map> data_cache;
 
     // Direct terrain placements at z=0
+    std::unordered_map<const jmapgen_piece *, std::set<ter_str_id>> piece_ter_cache;
     for( const jmapgen_obj &obj : objects ) {
         if( obj.second->phase() != mapgen_phase::terrain ) {
-            continue;
-        }
-        const std::set<ter_str_id> ids = get_terrain_ids( obj.second.get(), params );
-        if( ids.empty() ) {
             continue;
         }
         const jmapgen_place &where = obj.first;
         // Only collect z=0 terrain (matches nest z-check)
         if( where.z.val > 0 || where.z.valmax < 0 ) {
+            continue;
+        }
+        const jmapgen_piece *piece = obj.second.get();
+        auto cache_it = piece_ter_cache.find( piece );
+        if( cache_it == piece_ter_cache.end() ) {
+            cache_it = piece_ter_cache.emplace( piece, get_terrain_ids( piece, params ) ).first;
+        }
+        const std::set<ter_str_id> &ids = cache_it->second;
+        if( ids.empty() ) {
             continue;
         }
         for( int x = where.x.val; x <= where.x.valmax; ++x ) {
@@ -6039,6 +6217,11 @@ void jmapgen_objects::check_nested_overlaps(
 
     // Phase 1: parent furniture vs nested terrain (skip if no parent furniture)
     if( !furn_positions.empty() ) {
+        std::unordered_map<const mapgen_function_json_nested *, terrain_coord_map>
+        local_nest_terrain_cache;
+        auto &nest_terrain_cache = active_mapgen_check_cache != nullptr ?
+                                   active_mapgen_check_cache->nest_terrain_cache :
+                                   local_nest_terrain_cache;
 
         // For each nested piece, check if its actual terrain positions overlap furniture
         for( const jmapgen_obj &obj : objects ) {
@@ -6072,8 +6255,13 @@ void jmapgen_objects::check_nested_overlaps(
                              &variant_pair : it->second.funcs() ) {
                             const mapgen_function_json_nested &variant = *variant_pair.first;
                             // Get terrain data (positions + IDs) from this nested mapgen
-                            terrain_coord_map nest_terrain;
-                            variant.collect_terrain_data( nest_terrain );
+                            auto ncache_it = nest_terrain_cache.find( &variant );
+                            if( ncache_it == nest_terrain_cache.end() ) {
+                                terrain_coord_map nt;
+                                variant.collect_terrain_data( nt );
+                                ncache_it = nest_terrain_cache.emplace( &variant, std::move( nt ) ).first;
+                            }
+                            const terrain_coord_map &nest_terrain = ncache_it->second;
                             if( nest_terrain.empty() ) {
                                 continue;
                             }
@@ -6157,13 +6345,18 @@ void jmapgen_objects::check_nested_overlaps(
         const jmapgen_place *where;
         std::string nest_id_str;
         point_rel_ms nest_size;
-        std::set<point_rel_ms> furniture;
-        std::set<point_rel_ms> terrain;
+        const cached_sibling_coords *coords;
         bool reliably_clears;
         // Which place_nested entry this came from; alternatives within one
         // entry are mutually exclusive at runtime, so same-index pairs skip.
         size_t piece_index;
     };
+
+    std::unordered_map<const mapgen_function_json_nested *, cached_sibling_coords>
+    local_sibling_cache;
+    auto &sibling_coords_cache = active_mapgen_check_cache != nullptr ?
+                                 active_mapgen_check_cache->sibling_coords_cache :
+                                 local_sibling_cache;
 
     std::vector<sibling_info> siblings;
     size_t current_piece_index = 0;
@@ -6200,20 +6393,47 @@ void jmapgen_objects::check_nested_overlaps(
                          &variant_pair : it->second.funcs() ) {
                         const mapgen_function_json_nested &variant = *variant_pair.first;
 
-                        sibling_info info;
-                        info.where = &where;
-                        info.nest_id_str = nest_id.str();
-                        info.nest_size = variant.get_mapgensize();
-                        info.reliably_clears = variant.reliably_clears_furniture();
+                        auto sc_it = sibling_coords_cache.find( &variant );
+                        if( sc_it == sibling_coords_cache.end() ) {
+                            cached_sibling_coords cached;
+                            // Collect terrain ignoring this nest's own clearing flags
+                            const mapgen_parameters &nest_params = variant.get_parameters();
+                            variant.jmapgen_objects_for_check().collect_terrain_coords_for_sibling(
+                                cached.terrain, nest_params );
+                            variant.collect_furniture_coords( cached.furniture, 3 );
+                            if( !cached.terrain.empty() ) {
+                                const point_rel_ms first = *cached.terrain.begin();
+                                cached.ter_min_x = cached.ter_max_x = first.x();
+                                cached.ter_min_y = cached.ter_max_y = first.y();
+                                for( const point_rel_ms &pt : cached.terrain ) {
+                                    cached.ter_min_x = std::min( cached.ter_min_x, pt.x() );
+                                    cached.ter_max_x = std::max( cached.ter_max_x, pt.x() );
+                                    cached.ter_min_y = std::min( cached.ter_min_y, pt.y() );
+                                    cached.ter_max_y = std::max( cached.ter_max_y, pt.y() );
+                                }
+                            }
+                            if( !cached.furniture.empty() ) {
+                                const point_rel_ms first = *cached.furniture.begin();
+                                cached.furn_min_x = cached.furn_max_x = first.x();
+                                cached.furn_min_y = cached.furn_max_y = first.y();
+                                for( const point_rel_ms &pt : cached.furniture ) {
+                                    cached.furn_min_x = std::min( cached.furn_min_x, pt.x() );
+                                    cached.furn_max_x = std::max( cached.furn_max_x, pt.x() );
+                                    cached.furn_min_y = std::min( cached.furn_min_y, pt.y() );
+                                    cached.furn_max_y = std::max( cached.furn_max_y, pt.y() );
+                                }
+                            }
+                            sc_it = sibling_coords_cache.emplace( &variant, std::move( cached ) ).first;
+                        }
 
-                        // Collect terrain ignoring this nest's own clearing flags
-                        const mapgen_parameters &nest_params = variant.get_parameters();
-                        variant.jmapgen_objects_for_check().collect_terrain_coords_for_sibling(
-                            info.terrain, nest_params );
-                        variant.collect_furniture_coords( info.furniture, 3 );
-
-                        info.piece_index = this_piece_index;
-                        if( !info.terrain.empty() || !info.furniture.empty() ) {
+                        if( !sc_it->second.terrain.empty() || !sc_it->second.furniture.empty() ) {
+                            sibling_info info;
+                            info.where = &where;
+                            info.nest_id_str = nest_id.str();
+                            info.nest_size = variant.get_mapgensize();
+                            info.coords = &sc_it->second;
+                            info.reliably_clears = variant.reliably_clears_furniture();
+                            info.piece_index = this_piece_index;
                             siblings.push_back( std::move( info ) );
                         }
                     }
@@ -6234,38 +6454,49 @@ void jmapgen_objects::check_nested_overlaps(
             }
             auto check_pair = [&]( const sibling_info & furn_sib,
             const sibling_info & ter_sib ) {
-                if( ter_sib.reliably_clears || ter_sib.terrain.empty() ||
-                    furn_sib.furniture.empty() ) {
+                if( ter_sib.reliably_clears || ter_sib.coords->terrain.empty() ||
+                    furn_sib.coords->furniture.empty() ) {
                     return;
                 }
                 const jmapgen_place &fw = *furn_sib.where;
                 const jmapgen_place &tw = *ter_sib.where;
-                for( const point_rel_ms &tc : ter_sib.terrain ) {
+                if( tw.x.val > tw.x.valmax || tw.y.val > tw.y.valmax ||
+                    fw.x.val > fw.x.valmax || fw.y.val > fw.y.valmax ) {
+                    return;
+                }
+                const cached_sibling_coords &tc_data = *ter_sib.coords;
+                const cached_sibling_coords &fc_data = *furn_sib.coords;
+                if( tw.x.valmax + tc_data.ter_max_x < fw.x.val + fc_data.furn_min_x ||
+                    tw.x.val + tc_data.ter_min_x > fw.x.valmax + fc_data.furn_max_x ||
+                    tw.y.valmax + tc_data.ter_max_y < fw.y.val + fc_data.furn_min_y ||
+                    tw.y.val + tc_data.ter_min_y > fw.y.valmax + fc_data.furn_max_y ) {
+                    return;
+                }
+                for( const point_rel_ms &tc : tc_data.terrain ) {
                     for( int tnx = tw.x.val; tnx <= tw.x.valmax; ++tnx ) {
                         for( int tny = tw.y.val; tny <= tw.y.valmax; ++tny ) {
                             const point_rel_ms ter_abs( tnx + tc.x(), tny + tc.y() );
-                            for( const point_rel_ms &fc : furn_sib.furniture ) {
-                                for( int fnx = fw.x.val; fnx <= fw.x.valmax; ++fnx ) {
-                                    for( int fny = fw.y.val; fny <= fw.y.valmax; ++fny ) {
-                                        if( ter_abs == point_rel_ms( fnx + fc.x(),
-                                                                     fny + fc.y() ) ) {
-                                            debugmsg(
-                                                "In %s, sibling nested mapgens %s and %s "
-                                                "overlap at (%d, %d): %s places furniture "
-                                                "and %s places terrain without a reliable "
-                                                "clearing flag (ALLOW_TERRAIN_UNDER_FURNITURE "
-                                                "or ERASE_FURNITURE_BEFORE_PLACING_TERRAIN).  "
-                                                "Add a clearing flag to %s, or prevent the "
-                                                "overlap.",
-                                                context,
-                                                furn_sib.nest_id_str,
-                                                ter_sib.nest_id_str,
-                                                ter_abs.x(), ter_abs.y(),
-                                                furn_sib.nest_id_str,
-                                                ter_sib.nest_id_str,
-                                                ter_sib.nest_id_str );
-                                            return;
-                                        }
+                            for( int fnx = fw.x.val; fnx <= fw.x.valmax; ++fnx ) {
+                                for( int fny = fw.y.val; fny <= fw.y.valmax; ++fny ) {
+                                    if( fc_data.furniture.count(
+                                            point_rel_ms( ter_abs.x() - fnx,
+                                                          ter_abs.y() - fny ) ) != 0 ) {
+                                        debugmsg(
+                                            "In %s, sibling nested mapgens %s and %s "
+                                            "overlap at (%d, %d): %s places furniture "
+                                            "and %s places terrain without a reliable "
+                                            "clearing flag (ALLOW_TERRAIN_UNDER_FURNITURE "
+                                            "or ERASE_FURNITURE_BEFORE_PLACING_TERRAIN).  "
+                                            "Add a clearing flag to %s, or prevent the "
+                                            "overlap.",
+                                            context,
+                                            furn_sib.nest_id_str,
+                                            ter_sib.nest_id_str,
+                                            ter_abs.x(), ter_abs.y(),
+                                            furn_sib.nest_id_str,
+                                            ter_sib.nest_id_str,
+                                            ter_sib.nest_id_str );
+                                        return;
                                     }
                                 }
                             }
@@ -8807,15 +9038,35 @@ std::pair<std::map<ter_id, int>, std::map<furn_id, int>> get_changed_ids_from_up
     fake_md.skip = { mapgen_phase::zones };
 
     if( update_function->second.funcs()[0]->update_map( fake_md ).success() ) {
+        const furn_id furn_null = furn_str_id::NULL_ID();
         for( int z = -OVERMAP_DEPTH; z <= OVERMAP_DEPTH; z++ ) {
-            for( const tripoint_omt_ms &pos : tmp_map.points_on_zlevel( z ) ) {
-                const ter_id &ter_at_pos = tmp_map.ter( pos );
-                if( ter_at_pos != base_ter ) {
-                    terrains[ter_at_pos] += 1;
-                }
-                if( tmp_map.has_furn( pos ) ) {
-                    const furn_id &furn_at_pos = tmp_map.furn( pos );
-                    furnitures[furn_at_pos] += 1;
+            for( int gx = 0; gx < 2; gx++ ) {
+                for( int gy = 0; gy < 2; gy++ ) {
+                    const submap *sm = tmp_map.maptile_at(
+                                           tripoint_omt_ms{ gx * SEEX, gy * SEEY, z } ).wrapped_submap();
+                    if( sm == nullptr ) {
+                        continue;
+                    }
+                    if( sm->is_uniform() ) {
+                        const ter_id ut = sm->get_ter( point_sm_ms::zero );
+                        if( ut != base_ter ) {
+                            terrains[ut] += SEEX * SEEY;
+                        }
+                        continue;
+                    }
+                    for( int x = 0; x < SEEX; x++ ) {
+                        for( int y = 0; y < SEEY; y++ ) {
+                            const point_sm_ms p{ x, y };
+                            const ter_id ter_at_pos = sm->get_ter( p );
+                            if( ter_at_pos != base_ter ) {
+                                terrains[ter_at_pos] += 1;
+                            }
+                            const furn_id furn_at_pos = sm->get_furn( p );
+                            if( furn_at_pos != furn_null ) {
+                                furnitures[furn_at_pos] += 1;
+                            }
+                        }
+                    }
                 }
             }
         }

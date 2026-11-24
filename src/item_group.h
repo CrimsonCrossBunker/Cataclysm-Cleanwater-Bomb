@@ -9,6 +9,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -440,6 +441,16 @@ class Item_group : public Item_spawn_data
          * picks; cleared when @ref items mutates.
          */
         mutable std::vector<int> cached_cum_prob;
+};
+
+struct scoped_item_group_consistency_cache {
+    scoped_item_group_consistency_cache();
+    ~scoped_item_group_consistency_cache();
+    scoped_item_group_consistency_cache( const scoped_item_group_consistency_cache & ) = delete;
+    scoped_item_group_consistency_cache &operator=( const scoped_item_group_consistency_cache & ) = delete;
+
+    std::unordered_set<std::string> checked_plain_ids;
+    std::unordered_set<std::string> *previous = nullptr;
 };
 
 #endif // CATA_SRC_ITEM_GROUP_H

@@ -69,6 +69,7 @@
 #include "remote_vehicle_activity.h"
 #include "requirements.h"
 #include "ret_val.h"
+#include "rng.h"
 #include "stomach.h"
 #include "string_formatter.h"
 #include "subbodypart.h"
@@ -2502,6 +2503,7 @@ bool Item_factory::check_ammo_type( std::string &msg, const ammotype &ammo ) con
 
 void Item_factory::check_definitions() const
 {
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
     auto is_container = []( const itype * t ) {
         bool am_container = false;
         for( const pocket_data &pocket : t->pockets ) {
@@ -3229,7 +3231,11 @@ void Item_factory::check_definitions() const
             }
         }
 
-        if( !migrations.count( type->id ) && !item_is_blacklisted( type->id ) ) {
+        const bool could_hold_ammo = type->gun || type->magazine ||
+            std::any_of( type->pockets.begin(), type->pockets.end(), []( const pocket_data & p ) {
+                return p.type == pocket_type::MAGAZINE;
+            } );
+        if( could_hold_ammo && !migrations.count( type->id ) && !item_is_blacklisted( type->id ) ) {
             // If type has a default ammo then check it can fit within
             item tmp_item( type );
             if( tmp_item.is_gun() || tmp_item.is_magazine() ) {
@@ -3262,6 +3268,7 @@ void Item_factory::check_definitions() const
             }
         }
     }
+    scoped_item_group_consistency_cache item_group_cache_guard;
     for( const auto &elem : m_template_groups ) {
         elem.second->check_consistency( true );
         inp_mngr.pump_events();

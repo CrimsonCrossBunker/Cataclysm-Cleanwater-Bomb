@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <value_ptr.h>
 
 #include "calendar.h"
@@ -41,6 +42,22 @@ static const fault_id fault_gun_dirt( "fault_gun_dirt" );
 static const fault_id fault_gun_unlubricated( "fault_gun_unlubricated" );
 
 static const flag_id json_flag_MISSION_ITEM( "MISSION_ITEM" );
+
+namespace
+{
+thread_local std::unordered_set<std::string> *active_consistency_cache = nullptr;
+} // namespace
+
+scoped_item_group_consistency_cache::scoped_item_group_consistency_cache()
+    : previous( active_consistency_cache )
+{
+    active_consistency_cache = &checked_plain_ids;
+}
+
+scoped_item_group_consistency_cache::~scoped_item_group_consistency_cache()
+{
+    active_consistency_cache = previous;
+}
 
 static Item_spawn_data *get_local_spawn_group( const item_group_id &id )
 {
@@ -377,8 +394,14 @@ void Single_item_creator::check_consistency( bool actually_spawn ) const
     }
     // If this is to create a group and there's no container to restrain it, no need to actually create it,
     // since groups are processed separately.
-    Item_spawn_data::check_consistency( ( type == S_ITEM_GROUP &&
-                                          !container_item ) ? false : actually_spawn );
+    bool spawn = ( type == S_ITEM_GROUP && !container_item ) ? false : actually_spawn;
+    if( spawn && active_consistency_cache != nullptr &&
+        type == S_ITEM && !container_item && !modifier &&
+        !components_items && !artifact && !active &&
+        !active_consistency_cache->insert( id ).second ) {
+        spawn = false;
+    }
+    Item_spawn_data::check_consistency( spawn );
 }
 
 bool Single_item_creator::remove_item( const itype_id &itemid )
