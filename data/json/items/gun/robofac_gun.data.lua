@@ -1,5 +1,416 @@
 local ccb = require("ccb")
 
+-- Forward ejection port would require a different brass catcher design
+ccb.content.define_item {
+    id = "robofac_gun",
+    copy_from = "gun_base_rifle_semi",
+    looks_like = "fn_p90",
+    name = ccb.content.text("Hub 01 HWP"),
+    description = ccb.content.text("The Hub 01 Hybrid Weapons Platform, or just the HWP.  With its combination of black-finished steel, blue polymer furniture, and a number of proprietary bolts and fasteners to hold the pieces in place, this weapon looks like it belongs in a science fiction movie.  The body has \"MULTI CALIBER\" inlaid in the steel, near a quick release used both to exchange the installed barrel and to change the magazine well's adapter."),
+    mass = "2500 g",
+    volume = "4000 ml",
+    length = "50 cm",
+    price = "1 kUSD 250 USD",
+    survival_price = "20 USD",
+    materials = { "steel", "plastic" },
+    symbol = "(",
+    color = "blue",
+    flags = { "NO_TURRET" },
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            allowed_items = {
+                "robofac40", "robofac20", "robofac50", "robofac100", "robofac10", "robofac60",
+                "robofacmultimag", "robofac30", "robofac60_123ln",
+            },
+        },
+    },
+    gun = {
+        ammunition = { "NULL" },
+        damage = { type = "bullet", amount = -2 },
+        modes = {},
+        dispersion = 150,
+        durability = 9,
+        min_cycle_recoil = 1350,
+        default_mods = {
+            "robofac_handguard",
+            "hybrid_sight_4x",
+            "holo_sight",
+            "robofac_laser_sight",
+            "robofac_stock",
+        },
+        mod_locations = {
+            { id = "underbarrel", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "bore", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "stock accessory", count = 1 },
+        },
+    },
+}
+
+-- Forward ejection port would require a different brass catcher design
+ccb.content.define_item {
+    id = "xedra_gun",
+    copy_from = "gun_base_rifle_semi",
+    looks_like = "modular_ar15",
+    name = ccb.content.text("prototype gun"),
+    description = ccb.content.text("A weapons platform you don't recognize.  With its combination of black-finished steel, brown polymer furniture, and a number of proprietary bolts and fasteners to hold the pieces in place, this weapon looks like it belongs in a science fiction movie.  The body has \"XE\" inlaid in the steel."),
+    mass = "2500 g",
+    volume = "4000 ml",
+    length = "50 cm",
+    price = "1 kUSD 250 USD",
+    survival_price = "20 USD",
+    materials = { "steel", "plastic" },
+    symbol = "(",
+    color = "blue",
+    flags = { "NO_TURRET" },
+    pockets = { { kind = "MAGAZINE_WELL", allowed_items = { "xedra40", "xedra10" } } },
+    gun = {
+        ammunition = { "NULL" },
+        damage = { type = "bullet", amount = -2 },
+        modes = {},
+        dispersion = 150,
+        durability = 9,
+        min_cycle_recoil = 1350,
+        default_mods = {
+            "robofac_handguard",
+            "hybrid_sight_4x",
+            "holo_sight",
+            "robofac_laser_sight",
+            "robofac_stock",
+        },
+        mod_locations = {
+            { id = "underbarrel", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "bore", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stock", count = 1 },
+            { id = "stock accessory", count = 1 },
+        },
+    },
+}
+
+-- based off attributes of an m4 with integrated muzzle break
+ccb.content.define_item {
+    id = "robofac_gun_ar",
+    looks_like = "retool_ar15_300blk",
+    mass = "750 g",
+    volume = "500 ml",
+    integral_volume = "250 ml",
+    integral_mass = "750 g",
+    integral_length = "20 cm",
+    length = "45 cm",
+    price = "500 USD",
+    survival_price = "30 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "green",
+    name = ccb.content.plural_text("HWP assault configuration", "HWP assault configuration"),
+    description = ccb.content.text("A Hub 01 Hybrid Weapons Platform quick swap conversion kit.  This version has a long barrel with \"5.56 NATO ASSAULT\" stamped into the metal and an integrated muzzle brake."),
+    gunmod = {
+        barrel_length = "443 mm",
+        location = ccb.content.text("bore"),
+        targets = { ccb.content.text("robofac_gun", "gun_type_type") },
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 },
+            { rpm = 900, quantity = 3 },
+        },
+        install_time = "1 m",
+        ammo_types = { "223" },
+        dispersion_modifier = 15,
+        handling_modifier = 4,
+        loudness_modifier = 14,
+        min_cycle_recoil = 1350,
+    },
+    minimum_skills = { { id = "weapon", count = 1 } },
+}
+
+ccb.content.define_item {
+    id = "xedra_gun_ar",
+    copy_from = "robofac_gun_ar",
+    name = ccb.content.plural_text("rifled barrel", "rifled barrel"),
+    flags = { "IRREMOVABLE" },
+    description = ccb.content.text("This weapon is fitted with a long barrel with \"5.56 NATO ASSAULT\" stamped into the metal and an integrated muzzle brake."),
+    gunmod = { targets = { ccb.content.text("xedra_gun", "gun_type_type") } },
+}
+
+-- based off attributes of an smg with integrated silencer
+-- this gives similar attributes to other 9mm pdws
+ccb.content.define_item {
+    id = "robofac_gun_smg",
+    looks_like = "retool_ar15_300blk",
+    mass = "500 g",
+    volume = "500 ml",
+    integral_volume = "250 ml",
+    integral_mass = "500 g",
+    integral_length = "15 cm",
+    length = "40 cm",
+    price = "500 USD",
+    survival_price = "30 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "green",
+    name = ccb.content.plural_text("HWP personal defense configuration", "HWP personal defense configuration"),
+    description = ccb.content.text("A Hub 01 Hybrid Weapons Platform quick swap conversion kit.  This version has a short barrel with \"9mm Parabellum PDW\" stamped into the metal and an integrated silencer."),
+    gunmod = {
+        barrel_length = "432 mm",
+        location = ccb.content.text("bore"),
+        targets = { ccb.content.text("robofac_gun", "gun_type_type") },
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 },
+            { rpm = 900, quantity = 4 },
+        },
+        install_time = "1 m",
+        ammo_types = { "9mm" },
+        handling_modifier = 2,
+        loudness_modifier = -50,
+        damage_modifier = { type = "bullet", amount = 4 },
+        range_modifier = 20,
+        min_cycle_recoil = 450,
+    },
+    minimum_skills = { { id = "weapon", count = 1 } },
+}
+
+-- based off attributes of an smg with integrated silencer
+-- this gives similar attributes to other pdws
+ccb.content.define_item {
+    id = "robofac_gun_57",
+    looks_like = "retool_ar15_300blk",
+    mass = "500 g",
+    volume = "500 ml",
+    integral_volume = "250 ml",
+    integral_mass = "500 g",
+    integral_length = "15 cm",
+    length = "40 cm",
+    price = "500 USD",
+    survival_price = "30 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "green",
+    name = ccb.content.plural_text("HWP personal 5.7x28mm configuration", "HWP personal 5.7x28mm configuration"),
+    description = ccb.content.text("A Hub 01 Hybrid Weapons Platform quick swap conversion kit.  This version has a short barrel with \"5.7mm NATO PDW\" stamped into the metal and an integrated silencer."),
+    gunmod = {
+        barrel_length = "432 mm",
+        location = ccb.content.text("bore"),
+        targets = { ccb.content.text("robofac_gun", "gun_type_type") },
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 },
+            { rpm = 900, quantity = 3 },
+        },
+        install_time = "1 m",
+        ammo_types = { "57" },
+        handling_modifier = 2,
+        loudness_modifier = -50,
+        damage_modifier = { type = "bullet", amount = 4 },
+        range_modifier = 20,
+        min_cycle_recoil = 81,
+    },
+    minimum_skills = { { id = "weapon", count = 1 } },
+}
+
+-- based off attributes of a dmr with integrated flash hider
+ccb.content.define_item {
+    id = "robofac_gun_dmr",
+    looks_like = "retool_ar15_300blk",
+    mass = "1000 g",
+    volume = "500 ml",
+    integral_volume = "250 ml",
+    integral_mass = "1000 g",
+    integral_length = "30 cm",
+    length = "55 cm",
+    price = "500 USD",
+    survival_price = "30 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "green",
+    name = ccb.content.plural_text("HWP designated marksman configuration", "HWP designated marksman configuration"),
+    description = ccb.content.text("A Hub 01 Hybrid Weapons Platform quick swap conversion kit.  This version has a long barrel with \"7.62 NATO DMR\" stamped into the metal and an integrated flash hider."),
+    gunmod = {
+        barrel_length = "610 mm",
+        location = ccb.content.text("bore"),
+        targets = { ccb.content.text("robofac_gun", "gun_type_type") },
+        modes = { { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 } },
+        install_time = "1 m",
+        ammo_types = { "308" },
+        dispersion_modifier = 12,
+        handling_modifier = 2,
+        loudness_modifier = -10,
+        damage_modifier = { type = "bullet", amount = -1 },
+        min_cycle_recoil = 2700,
+    },
+    minimum_skills = { { id = "weapon", count = 1 } },
+}
+
+-- based off attributes of a shotgun barrel with integrated choke
+ccb.content.define_item {
+    id = "robofac_gun_shotgun",
+    looks_like = "retool_ar15_300blk",
+    mass = "1000 g",
+    volume = "500 ml",
+    integral_volume = "250 ml",
+    integral_mass = "1000 g",
+    integral_length = "25 cm",
+    length = "50 cm",
+    price = "500 USD",
+    survival_price = "30 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "green",
+    name = ccb.content.plural_text("HWP close quarters configuration", "HWP close quarters configuration"),
+    flags = { "CHOKE" },
+    description = ccb.content.text("A Hub 01 Hybrid Weapons Platform quick swap conversion kit.  This version has a long barrel with \"00 CQC\" stamped into the metal and an integrated choke."),
+    gunmod = {
+        barrel_length = "546 mm",
+        location = ccb.content.text("bore"),
+        targets = { ccb.content.text("robofac_gun", "gun_type_type") },
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 },
+            { rpm = 900, quantity = 2 },
+        },
+        install_time = "1 m",
+        ammo_types = { "shot" },
+        damage_modifier = { type = "bullet", amount = 2 },
+        shot_spread_modifier = -0.3,
+        min_cycle_recoil = 1250,
+    },
+    minimum_skills = { { id = "weapon", count = 1 } },
+}
+
+-- based on M26-MASS; shot_spread_multiplier_modifier is increased due the short barrel
+ccb.content.define_item {
+    id = "robofac_gun_shotgun_breach",
+    copy_from = "robofac_gun_shotgun",
+    integral_volume = "175 ml",
+    integral_mass = "650 g",
+    integral_length = "12 cm",
+    length = "42 cm",
+    flags = {},
+    name = ccb.content.plural_text("HWP breacher configuration", "HWP breacher configuration"),
+    description = ccb.content.text("A Hub 01 Hybrid Weapons Platform quick swap conversion kit.  This version looks like the close quarters configuration, but has a shortened barrel with \"00 BREACH\" stamped into the metal."),
+    gunmod = { targets = { ccb.content.text("robofac_gun", "gun_type_type") }, barrel_length = "197 mm" },
+}
+
+ccb.content.define_item {
+    id = "xedra_gun_shotgun",
+    copy_from = "robofac_gun_shotgun",
+    name = ccb.content.plural_text("unrifled barrel", "unrifled barrel"),
+    flags = { "IRREMOVABLE" },
+    description = ccb.content.text("This weapon is fitted with long barrel with \"00 CQC\" stamped into the metal."),
+    gunmod = { targets = { ccb.content.text("xedra_gun", "gun_type_type") } },
+}
+
+-- This is just a Rheinmetall Hydra.
+ccb.content.define_item {
+    id = "robofac_gun_40mm",
+    copy_from = "launcher_base",
+    looks_like = "mark19",
+    name = ccb.content.plural_text("Hub 01 FSP", "Hub 01 FSP"),
+    description = ccb.content.text("The Hub 01 Fire Support Platform, or just the FSP.  Like the Hybrid Weapons Platform, it combines black-finished aluminum, blue polymer furniture, and a number of proprietary bolts and fasteners for a sci-fi aesthetic.  The barrel is stamped with \"40x46mm LV\", and the magwell looks like it accepts some truly MASSIVE magazines, which the gun appears to be capable of emptying in semi-automatic or fully-automatic fashion."),
+    mass = "4082 g",
+    volume = "5822 ml",
+    length = "83 cm",
+    price = "30 kUSD",
+    survival_price = "75 USD",
+    materials = { "aluminum", "plastic" },
+    symbol = "(",
+    color = "blue",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            allowed_items = { "robofac_gun_40mm_3rd", "robofac_gun_40mm_5rd", "robofac_gun_40mm_10rd" },
+        },
+    },
+    melee_damage = { bash = 14 },
+    inheritance = { add = { flags = { "NO_TURRET" } } },
+    gun = {
+        barrel_length = "254 mm",
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 },
+            { rpm = 900, quantity = 3 },
+        },
+        ammunition = { "40x46mm" },
+        dispersion = 120,
+        durability = 9,
+        blackpowder_tolerance = 40,
+        min_cycle_recoil = 1400,
+        built_in_mods = { "robofac_handguard", "hybrid_sight_4x", "holo_sight", "robofac_laser_sight" },
+        mod_locations = {
+            { id = "underbarrel", count = 1 },
+            { id = "rail", count = 1 },
+            { id = "sling", count = 1 },
+            { id = "bore", count = 1 },
+            { id = "sights", count = 2 },
+            { id = "stock", count = 1 },
+            { id = "stock accessory", count = 1 },
+        },
+    },
+}
+
+-- based off attributes of the EXODII BR
+-- this makes damage the same as pamd68
+ccb.content.define_item {
+    id = "robofac_gun_exodii",
+    looks_like = "retool_ar15_300blk",
+    mass = "2400 g",
+    volume = "1200 ml",
+    integral_volume = "950 ml",
+    integral_mass = "2400 g",
+    integral_length = "30 cm",
+    length = "55 cm",
+    price = "500 USD",
+    survival_price = "30 USD",
+    materials = { "steel" },
+    symbol = ":",
+    color = "green",
+    name = ccb.content.plural_text("HWP EXOTIC configuration", "HWP EXOTIC configuration"),
+    flags = { "BIPOD", "SLOW_WIELD" },
+    description = ccb.content.text("A Hub 01 Hybrid Weapons Platform quick swap conversion kit.  This version has a heavy barrel with an integrated bipod, threaded muzzle and \"EXODIC\" stamped into the metal.  The typo appears to be intentional."),
+    gunmod = {
+        barrel_length = "508 mm",
+        location = ccb.content.text("bore"),
+        targets = { ccb.content.text("robofac_gun", "gun_type_type") },
+        modes = {
+            { id = "DEFAULT", label = ccb.content.text("semi-auto"), quantity = 1 },
+            { id = "AUTO", label = ccb.content.text("auto-rpm"), rpm = 1500 },
+        },
+        install_time = "1 m",
+        ammo_types = { "123ln" },
+        added_slots = { { id = "muzzle", count = 1 } },
+        handling_modifier = 18,
+        damage_modifier = { type = "bullet", amount = 2 },
+        min_cycle_recoil = 3500,
+    },
+    minimum_skills = { { id = "weapon", count = 1 } },
+}
+
+ccb.content.define_item {
+    id = "robofac_laser_sight",
+    copy_from = "rail_laser_sight",
+    name = ccb.content.plural_text("integral laser designator", "integral laser designators"),
+    flags = { "LASER_SIGHT", "IRREMOVABLE" },
+    gunmod = {},
+}
+
+ccb.content.define_item {
+    id = "robofac_handguard",
+    copy_from = "grip",
+    name = ccb.content.plural_text("integrated front grip", "integrated front grips"),
+    flags = { "PUMP_RAIL_COMPATIBLE", "IRREMOVABLE" },
+    gunmod = { incompatible_mods = { "offset_grip" } },
+}
+
+ccb.content.define_item {
+    id = "robofac_stock",
+    copy_from = "adjustable_stock",
+    name = ccb.content.plural_text("bullpup adjustable stock", "bullpup adjustable stocks"),
+    flags = { "IRREMOVABLE" },
+    gunmod = {},
+}
+
 ccb.content.define_item {
     id = "robofac40",
     name = ccb.content.text("HWP 40-round 5.56 magazine"),
