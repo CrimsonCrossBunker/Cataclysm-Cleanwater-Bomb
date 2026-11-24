@@ -2,7 +2,16 @@ local ccb = require("ccb")
 local actions = ccb.content.dialogue_actions
 local predicates = ccb.content.dialogue_predicates
 
-
+-- Provides hair cuts
+ccb.content.define_npc {
+    id = "ranch_barber",
+    suffix = ccb.content.text("Barber"),
+    class = "NC_HUNTER",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_RANCH_BARBER",
+    faction = "tacoma_commune",
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_RANCH_BARBER_JOB",

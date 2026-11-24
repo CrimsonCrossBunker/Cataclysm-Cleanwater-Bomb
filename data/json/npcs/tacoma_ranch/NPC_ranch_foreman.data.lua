@@ -1,4 +1,365 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+-- Appears at the ranch after you progress in the refugee center quests.  Faction critical.
+ccb.content.define_npc {
+    id = "ranch_foreman",
+    suffix = ccb.content.text("Foreman"),
+    class = "NC_BOUNTY_HUNTER",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_RANCH_FOREMAN",
+    missions_offered = "MISSION_RANCH_FOREMAN_1",
+    faction = "tacoma_commune",
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN",
+    line = {
+        when = predicates.any_equal({ "no", { scope = "speaker", key = "mission_flag_Bartender_rewarded" } }),
+        yes = ccb.content.text("Hello again.  If you have no other business with me, I'd like to talk to you about something."),
+        no = {
+            when = predicates.any_equal({ "no", { scope = "speaker", key = "mission_flag_Doctor_rewarded" } }),
+            yes = ccb.content.text("Hello again.  If you have no other business with me, I'd like to talk to you about something."),
+            no = {
+                when = predicates.wears("speaker", "badge_marshal"),
+                yes = ccb.content.text("Can I help you, marshal?"),
+                no = {
+                    when = predicates.actor_state("speaker", "male"),
+                    yes = ccb.content.text("Morning sir, how can I help you?"),
+                    no = ccb.content.text("Morning ma'am, how can I help you?"),
+                },
+            },
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("What is it?"),
+            next_topic = "TALK_RANCH_FOREMAN_reward",
+            when = predicates.any({ predicates.any_equal({ "no", { scope = "speaker", key = "mission_flag_Bartender_rewarded" } }), predicates.any_equal({ "no", { scope = "speaker", key = "mission_flag_Doctor_rewarded" } }) }),
+        },
+        {
+            text = ccb.content.text("The merchant at the Refugee Center sent me to get a prospectus from you."),
+            next_topic = "TALK_RANCH_FOREMAN_PROSPECTUS",
+            when = predicates.all({ predicates.has_mission("MISSION_FREE_MERCHANTS_EVAC_3"), predicates.negate(predicates.has_effect("speaker", "has_prospectus")) }),
+        },
+        {
+            text = ccb.content.text("The doctor needs some help building an anesthetic machine.  Do you have anything that could help?"),
+            next_topic = "TALK_RANCH_FOREMAN_ANESTHETIC_FOR_DOCTOR",
+            when = predicates.has_mission("MISSION_RANCH_DOCTOR_MEDICAL_ANESTHETIC"),
+        },
+        {
+            text = ccb.content.text("I heard you were setting up an outpost out here."),
+            next_topic = "TALK_RANCH_FOREMAN_OUTPOST",
+        },
+        {
+            text = ccb.content.text("What's your job here?"),
+            next_topic = "TALK_RANCH_FOREMAN_JOB",
+        },
+        {
+            text = ccb.content.text("What do you need done?"),
+            next_topic = "TALK_MISSION_LIST",
+        },
+        {
+            text = ccb.content.text("I figured you might be looking for some help…"),
+            next_topic = "TALK_RANCH_FOREMAN",
+            actions = { actions.handler("dlg_a_dda_057883a7b153") },
+        },
+        {
+            text = ccb.content.text("Hey, are you looking for workers here?  I know a couple people back at the refugee center that might be willing to come."),
+            next_topic = "TALK_RANCH_FOREMAN_Nunez",
+            when = predicates.all({ predicates.has_mission("MISSION_TACOMA_Nunez"), predicates.any_equal({ "phase_1", { scope = "speaker", key = "recruit_general_Nunez_Tacoma" } }) }),
+            actions = { actions.handler("dlg_a_dda_18ae4cdcf60d") },
+        },
+        {
+            text = ccb.content.text("Hey, are you looking for workers here?"),
+            next_topic = "TALK_RANCH_FOREMAN_Nunez_Clue",
+            when = predicates.negate(predicates.any_equal({ "phase_1", { scope = "speaker", key = "recruit_general_Nunez_Tacoma" } })),
+        },
+        {
+            text = ccb.content.text("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_PROSPECTUS",
+    line = ccb.content.gendered_line("I was starting to wonder if they were really interested in the project or were just trying to get rid of me.", { "interlocutor" }),
+    replies = {
+        {
+            text = ccb.content.text("Thanks."),
+            next_topic = "TALK_RANCH_FOREMAN",
+            actions = { actions.handler("dlg_a_dda_0d12bbe84a7a"), actions.add_effect("speaker", "has_prospectus", { permanent = true }) },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_ANESTHETIC_FOR_DOCTOR",
+    line = {
+        when = predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped" } }),
+        yes = {
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } }),
+            yes = ccb.content.text("I'm afraid I don't have anything to offer."),
+            no = ccb.content.text("I don't have anything to offer, but maybe the scrappers could help find some materials."),
+        },
+        no = {
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } }),
+            yes = ccb.content.text("I don't have anything to offer, but maybe the scavenger boss could help find some materials."),
+            no = ccb.content.text("I don't have anything to offer, but you could talk to the scavenger boss and the scrappers; They might be able to help."),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Thanks."),
+            next_topic = "TALK_RANCH_FOREMAN",
+            when = predicates.any({ predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped" } })), predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } })) }),
+        },
+        {
+            text = ccb.content.text("Thanks anyway."),
+            next_topic = "TALK_RANCH_FOREMAN",
+            when = predicates.all({ predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scavengers_helped" } }), predicates.any_equal({ "yes", { scope = "speaker", key = "mission_tacoma_ranch_doctor_anesthetic_scrappers_helped" } }) }),
+        },
+        {
+            text = ccb.content.text_without_extraction("<end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_OUTPOST",
+    line = ccb.content.text("Ya, that representative from the Old Guard asked the two of us to come out here and begin fortifying this place as a refugee camp.  I'm not sure how fast he expects the two of us to get setup, but we were assured additional men were coming out here to assist us. "),
+    replies = {
+        {
+            text = ccb.content.text("How many refugees are you expecting?"),
+            next_topic = "TALK_RANCH_FOREMAN_REFUGEES",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_REFUGEES",
+    line = ccb.content.gendered_line("Could easily be hundreds as far as I know.  They chose this ranch because of its rather remote location, decent fence, and huge cleared field.  With as much land as we have fenced off we could build a village if we had the materials.  We would have tried to secure a small town or something, but the lack of good farmland and number of undead makes it more practical for us to build from scratch.  The refugee center I came from is constantly facing starvation and undead assaults.", { "interlocutor" }),
+    replies = {
+        {
+            text = ccb.content.text("Hopefully moving out here was worth it…"),
+            next_topic = "TALK_RANCH_FOREMAN",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_JOB",
+    line = ccb.content.text("I'm the engineer in charge of turning this place into a working camp.  This is going to be an uphill battle, we used most of our initial supplies getting here and boarding up the windows.  I've got a huge list of tasks that need to get done, so if you could help us keep supplied I'd appreciate it.  If you have material to drop off you can just back your vehicle into here and dump it on the ground, we'll sort it."),
+    replies = { { text = ccb.content.text("I'll keep that in mind."), next_topic = "TALK_RANCH_FOREMAN" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_Nunez",
+    line = ccb.content.text("We're still in early stages of getting set up, but we're not overly flush for hands, that's for sure.  If they're willing to put in a hard day's work, we can get them busy."),
+    on_enter = {
+        {
+            actions = { actions.set_actor_value("speaker", "recruit_general_Nunez_Tacoma", "phase_2") },
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("I'll tell them that, but they seemed good for a bit of hard labor."),
+            next_topic = "TALK_RANCH_FOREMAN",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_Nunez_Clue",
+    line = ccb.content.text("we're still in early stages of getting set up, but we're not overly flush for hands, that's for sure.  I don't think we'd turn many people away, of course, but besides strong hands and willing labor, we could really use someone who could cook.  I can't tell you what it'd do for morale.  You could try asking some of the people staying on the surface in the refugee center maybe, I don't think they were part of most of the original discussions about the ranch."),
+    replies = { { text = ccb.content.text("I'll keep an eye out."), next_topic = "TALK_RANCH_FOREMAN" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_reward",
+    line = ccb.content.text("You've done a lot for the ranch, by generally helping the community with both wellness and trade.  As the project lead, I want to make sure these efforts don't go unnoticed."),
+    replies = {
+        {
+            text = ccb.content.text("You mean setting up the doctor's office?"),
+            next_topic = "TALK_RANCH_FOREMAN_Doctor_done",
+            when = predicates.any_equal({ "no", { scope = "speaker", key = "mission_flag_Doctor_rewarded" } }),
+        },
+        {
+            text = ccb.content.text("Is this about bootstrapping the trade relating to the bar?"),
+            next_topic = "TALK_RANCH_FOREMAN_Bartender_done",
+            when = predicates.any_equal({ "no", { scope = "speaker", key = "mission_flag_Bartender_rewarded" } }),
+        },
+        {
+            text = ccb.content.text("Understood.  Back to business."),
+            next_topic = "TALK_RANCH_FOREMAN",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_Bartender_done",
+    line = ccb.content.text("Ever since you got the bartender set up, our liquor business has been running so much better!  As thanks for your efforts, I wanted to reward you with a portion of recent profits."),
+    on_enter = {
+        { actions = { actions.handler("dlg_a_dda_74a06dbaf8f4"), actions.clear_actor_value("speaker", "mission_flag_Bartender_rewarded") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Thanks."),
+            next_topic = "TALK_RANCH_FOREMAN_reward",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_RANCH_FOREMAN_Doctor_done",
+    line = ccb.content.text("I heard you helped jumpstart our local medical services.  With that basic need covered, everyone has been able to focus on their work a lot more, so to thank you for your efforts, I wanted to reward you."),
+    on_enter = {
+        { actions = { actions.handler("dlg_a_dda_b97e0f4a1de0"), actions.clear_actor_value("speaker", "mission_flag_Doctor_rewarded") } },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Thanks."),
+            next_topic = "TALK_RANCH_FOREMAN_reward",
+        },
+    },
+}
+
+ccb.content.define_mission {
+    id = "MISSION_RANCH_FOREMAN_1",
+    name = ccb.content.text("Cut 200 planks"),
+    goal = "MGOAL_FIND_ITEM",
+    difficulty = 5,
+    value = 50000,
+    item = "2x4",
+    item_count = 200,
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    followup = "MISSION_RANCH_FOREMAN_2",
+    dialogue = {
+        describe = ccb.content.text("We need help…"),
+        offer = ccb.content.text("Our first project is to enclose the barn so that new refugees have a safe place to sleep.  Before we can begin serious improvements, we need lumber to work with.  Enclosing the four barn entrances will take nearly 400 planks… if you could provide half of that, we should be able to take care of the other half and construction.  If you don't have a truck, I'd make finding one your first priority."),
+        accepted = ccb.content.text("The more men we can bring to the camp, the quicker improvements can be made."),
+        rejected = ccb.content.text("Come back when you get a chance.  We need skilled survivors."),
+        advice = ccb.content.text("Avoid destroying the furniture, we'll be needing it."),
+        inquire = ccb.content.text("Do you have them?"),
+        success = ccb.content.text("Great, I'll send word that we could use another set of hands or two to help out here."),
+        success_lie = ccb.content.text("What good does this do us?"),
+        failure = ccb.content.text("It was a lost cause anyways…"),
+    },
+    finish = {
+        map_updates = {
+            {
+                terrain = "ranch_camp_65",
+                layout = {
+                    nested = { { x = 22, y = 0, id = "tacoma_commune_west_wall_door" } },
+                    transform_placements = { { id = "cut_foliage", x = { 0, 23 }, y = { 0, 23 } } },
+                },
+            },
+            {
+                terrain = "ranch_camp_66",
+                layout = {
+                    nested = {
+                        { x = 0, y = 0, id = "tacoma_commune_east_wall_door" },
+                        { x = 13, y = 0, id = "tacoma_commune_west_wall_door" },
+                        { x = 15, y = 0, id = "tacoma_commune_east_wall_door" },
+                    },
+                    transform_placements = { { id = "cut_foliage", x = { 0, 23 }, y = { 0, 23 } } },
+                },
+            },
+            {
+                terrain = "ranch_camp_74",
+                layout = {
+                    nested = { { x = 22, y = 0, id = "tacoma_commune_west_wall_door" } },
+                    transform_placements = { { id = "cut_foliage", x = { 0, 23 }, y = { 0, 23 } } },
+                },
+            },
+            {
+                terrain = "ranch_camp_75",
+                layout = {
+                    nested = {
+                        { x = 0, y = 0, id = "tacoma_commune_east_wall_door" },
+                        { x = 13, y = 0, id = "tacoma_commune_west_wall_door" },
+                        { x = 15, y = 0, id = "tacoma_commune_east_wall_door" },
+                    },
+                    transform_placements = { { id = "cut_foliage", x = { 0, 23 }, y = { 0, 23 } } },
+                },
+            },
+        },
+    },
+}
+
+-- Beds in the barn
+-- Beds in the barn
+ccb.content.define_mission {
+    id = "MISSION_RANCH_FOREMAN_2",
+    name = ccb.content.text("Find 25 Blankets"),
+    goal = "MGOAL_CONDITION",
+    difficulty = 5,
+    value = 50000,
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    followup = "MISSION_RANCH_FOREMAN_3",
+    dialogue = {
+        describe = ccb.content.text("We need help…"),
+        offer = ccb.content.text("With the barn entrances enclosed, the refugees moving in there should feel safer, but the weather can be bitter here.  We're going to need to build makeshift beds in the stalls to ward off disease and frostbite.  We can take care of the frames, but will need your help looting blankets.  We'd need 25 blankets to provide the most basic sleeping accommodations."),
+        accepted = ccb.content.text("I'd start with looting hotels or you could sew them together… but that would be a last resort."),
+        rejected = ccb.content.text("Come back when you get a chance.  We need skilled survivors."),
+        advice = ccb.content.text("Avoid destroying the furniture here, we'll be needing it."),
+        inquire = ccb.content.text("Do you have them?"),
+        success = ccb.content.text("Your assistance is always appreciated."),
+        success_lie = ccb.content.text("What good does this do us?"),
+        failure = ccb.content.text("It was a lost cause anyways…"),
+    },
+    finish = {
+        map_updates = {
+            {
+                terrain = "ranch_camp_65",
+                layout = {
+                    nested = {
+                        { x = 18, y = 1, id = "tacoma_commune_makeshift_bed" },
+                        { x = 18, y = 5, id = "tacoma_commune_makeshift_bed" },
+                        { x = 18, y = 7, id = "tacoma_commune_makeshift_bed" },
+                        { x = 18, y = 11, id = "tacoma_commune_makeshift_bed" },
+                        { x = 18, y = 13, id = "tacoma_commune_makeshift_bed" },
+                        { x = 18, y = 17, id = "tacoma_commune_makeshift_bed" },
+                        { x = 18, y = 19, id = "tacoma_commune_makeshift_bed" },
+                        { x = 18, y = 23, id = "tacoma_commune_makeshift_bed" },
+                    },
+                },
+            },
+            {
+                terrain = "ranch_camp_66",
+                layout = {
+                    nested = {
+                        { x = 19, y = 1, id = "tacoma_commune_makeshift_bed" },
+                        { x = 19, y = 5, id = "tacoma_commune_makeshift_bed" },
+                        { x = 19, y = 7, id = "tacoma_commune_makeshift_bed" },
+                        { x = 19, y = 11, id = "tacoma_commune_makeshift_bed" },
+                        { x = 19, y = 13, id = "tacoma_commune_makeshift_bed" },
+                        { x = 19, y = 17, id = "tacoma_commune_makeshift_bed" },
+                        { x = 19, y = 19, id = "tacoma_commune_makeshift_bed" },
+                        { x = 19, y = 23, id = "tacoma_commune_makeshift_bed" },
+                        { x = 9, y = 1, id = "tacoma_commune_makeshift_bed" },
+                        { x = 9, y = 5, id = "tacoma_commune_makeshift_bed" },
+                        { x = 9, y = 19, id = "tacoma_commune_makeshift_bed" },
+                        { x = 9, y = 23, id = "tacoma_commune_makeshift_bed" },
+                        { x = 4, y = 1, id = "tacoma_commune_makeshift_bed" },
+                        { x = 4, y = 5, id = "tacoma_commune_makeshift_bed" },
+                        { x = 4, y = 19, id = "tacoma_commune_makeshift_bed" },
+                        { x = 4, y = 23, id = "tacoma_commune_makeshift_bed" },
+                    },
+                    npc_placements = { { id = "ranch_construction_2", x = 19, y = 8 } },
+                },
+            },
+        },
+        handler = "deliver_mission_ranch_foreman_2",
+    },
+    complete_when = "complete_mission_ranch_foreman_2",
+}
 
 -- tilled soil in the fields
 -- tilled soil in the fields

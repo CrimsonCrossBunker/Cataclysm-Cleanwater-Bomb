@@ -2,6 +2,17 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+-- Flavor
+ccb.content.define_npc {
+    id = "ranch_construction_1",
+    suffix = ccb.content.text("Carpenter"),
+    class = "NC_HUNTER",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_RANCH_CONSTRUCTION_1",
+    faction = "tacoma_commune",
+}
+
 ccb.content.define_dialogue_topic {
     id = "TALK_RANCH_CONSTRUCTION_1",
     line = ccb.content.text("My partner is in charge of fortifying this place, you should ask him about what needs to be done."),
