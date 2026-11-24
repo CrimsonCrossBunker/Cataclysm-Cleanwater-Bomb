@@ -1,5 +1,1014 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation {
+    id = "ARVORE_SKIN_1",
+    name = ccb.content.text("Viridian Skin"),
+    points = 0,
+    visibility = 2,
+    ugliness = 0,
+    description = ccb.content.text("Your skin has turned the color of spring growth.  Your skin is now a viridian green.  This has no gameplay effects."),
+    types = { "SKIN" },
+    additions = { "ARVORE_SKIN_2" },
+    categories = { "ARVORE" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_SKIN_2",
+    name = ccb.content.text("Vegetal Cuticle"),
+    points = 2,
+    visibility = 2,
+    ugliness = 1,
+    description = ccb.content.text("Your skin has turned into a type of plant matter, which in addition to any armoring slows your loss of fluids."),
+    types = { "SKIN" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    prerequisites = { "ARVORE_SKIN_1" },
+    replacements = { "ARVORE_SKIN_3" },
+    enchantments = { "INLINE_ENCH_ARVORE_SKIN_2_0" },
+    integrated_armor = { "integrated_vegital_cuticle" },
+    flags = { "TOUGH_FEET" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_SKIN_3",
+    name = ccb.content.text("Bark Skin"),
+    points = 3,
+    visibility = 8,
+    ugliness = 4,
+    mixed_effect = true,
+    description = ccb.content.text("The skin on your body has grown into a barklike state.  This provides significantly more armor but reduces flexibility."),
+    types = { "SKIN" },
+    prerequisites = { "ARVORE_SKIN_2" },
+    threshold_requirements = { "THRESH_ARVORE" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    wet_protection = {
+        { part = "head", ignored = 5 },
+        { part = "leg_l", ignored = 16 },
+        { part = "leg_r", ignored = 16 },
+        { part = "foot_l", ignored = 5 },
+        { part = "foot_r", ignored = 5 },
+        { part = "arm_l", ignored = 14 },
+        { part = "arm_r", ignored = 14 },
+        { part = "hand_l", ignored = 4 },
+        { part = "hand_r", ignored = 4 },
+        { part = "torso", ignored = 30 },
+    },
+    integrated_armor = { "integrated_bark_skin" },
+    flags = { "TOUGH_FEET", "BARKY" },
+}
+
+-- This needs its own ID to be only a type SKIN mutation
+ccb.content.define_mutation {
+    id = "JAUNDICE_ARVORE_ALCHEMY",
+    name = ccb.content.text("Jaundice"),
+    points = 0,
+    vitamin_cost = 60,
+    visibility = 1,
+    ugliness = 1,
+    purifiable = false,
+    description = ccb.content.text("It's subtle, but your skin has definitely taken on a sickly yellow-green hue."),
+    types = { "SKIN" },
+    categories = { "ARVORE_ALCHEMY" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_MOSS",
+    name = ccb.content.text("Patches of Moss"),
+    points = 1,
+    purifiable = false,
+    visibility = 5,
+    ugliness = 3,
+    body_temperature = { 250, 600 },
+    enchantments = { "INLINE_ENCH_ARVORE_MOSS_0" },
+    wet_protection = {
+        { part = "head", neutral = 4, good = 5 },
+        { part = "leg_l", neutral = 8, good = 15 },
+        { part = "leg_r", neutral = 8, good = 15 },
+        { part = "foot_l", neutral = 3, good = 5 },
+        { part = "foot_r", neutral = 3, good = 5 },
+        { part = "arm_l", neutral = 8, good = 14 },
+        { part = "arm_r", neutral = 8, good = 14 },
+        { part = "hand_l", neutral = 3, good = 4 },
+        { part = "hand_r", neutral = 3, good = 4 },
+        { part = "torso", neutral = 15, good = 27 },
+    },
+    description = ccb.content.text("A viridian moss has grown on your skin, forming whorls and eldritch patterns, providing some protection from the cold and the wet.  It also provides a small amount of armor against acid or fire."),
+    armor = { { part_types = { "ALL" }, resistances = { acid = 2, heat = 4 } } },
+    prerequisites = { "ARVORE_SKIN_2", "ARVORE_SKIN_3" },
+    categories = { "ARVORE" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_TRIFFID_NEUTRALITY",
+    name = ccb.content.text("Pact of the Green"),
+    description = ccb.content.text("You are in tune with the forest and the triffids will allow you safe passage in their lands, so long as you do not harm them."),
+    valid = false,
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    species_anger = { PLANT = -100 },
+}
+
+ccb.content.define_mutation {
+    id = "GREENSTRIDE",
+    name = ccb.content.text("Greenstride"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("The trees recognize you as one of their own and allow you to pass easily beneath their boughs.  The grass moves under your feet to speed your passage, and shrubs bend out of the way.  When walking on grass, trees, or other natural foliage, your movement speed is increased."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    additions = { "ARVORE_DEX_BONUS" },
+    replacements = { "GREENSTRIDE_UPGRADE" },
+    enchantments = { "INLINE_ENCH_GREENSTRIDE_0" },
+}
+
+ccb.content.define_mutation {
+    id = "GREENSTRIDE_UPGRADE",
+    name = ccb.content.text("Forestwalker"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("The trees recognize you as one of their own and allow you to pass easily beneath their boughs.  The grass moves under your feet to speed your passage, and shrubs bend out of the way.  When walking on grass, trees, or other natural foliage, your movement speed is increased.  In addition, when in a forest, the trees bend out of your way, allowing you to pass"),
+    categories = { "ARVORE" },
+    purifiable = false,
+    prerequisites = { "ARVORE_DEX_BONUS" },
+    secondary_prerequisites = { "ARVORE_FOREST_DETECT_AND_OVERMAP" },
+    enchantments = { "INLINE_ENCH_GREENSTRIDE_UPGRADE_0", "INLINE_ENCH_GREENSTRIDE_UPGRADE_1" },
+}
+
+-- This only causes growth in existing plants.  Growing new plants from nothing should be advanced mutations/spells.
+ccb.content.define_mutation {
+    id = "ARVORE_NURTURING_THE_GREEN",
+    name = ccb.content.text("Nurturing the Green"),
+    points = 2,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Arvore may greatly speed plant growth.  With enough practice, you will even be able to bring forth mighty trees from the dry earth."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_nurture_the_green = 1 },
+}
+
+-- This is currently character creation only, ideally there will be ways to get this later in game.
+ccb.content.define_mutation {
+    id = "ARVORE_SEED_BEARER",
+    name = ccb.content.text("Seed Bearer"),
+    points = 2,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Arvore with this ability have a seed pocket on their body that over time fills with a set of from this region of the world.  Each time new seeds appear they will all be of the same type, but the types will vary at random."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    active = true,
+    consumes_mana = true,
+    cost = 500,
+    activation_message = "",
+    on_activate = "arvore_seed_bearer",
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_SUMMON_WOOD_WALL",
+    name = ccb.content.text("The Forest Offers Shelter"),
+    points = 4,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Arvore may create structures of living wood on natural terrain."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    prerequisites = { "ARVORE_NURTURING_THE_GREEN" },
+    spells_learned = { arvore_growing_wood_walls = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_COMMUNE_WITH_NATURE",
+    name = ccb.content.text("Commune with Nature"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to draw on the peace and strength of nature while standing in a wild area."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_commune_with_nature = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_SUMMON_BRIARS",
+    name = ccb.content.text("Briarwall"),
+    points = 5,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to summon thick tangles of briars to form walls or entrap their enemies."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_summon_briars = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_FOREST_TELEPORT",
+    name = ccb.content.text("Traverse the Wilds"),
+    points = 6,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to transport themselves from tree to nearby tree while within a forest."),
+    prerequisites = { "GREENSTRIDE_UPGRADE", "FALSE_ARVORE_HATRED", "FAE_ENMITY" },
+    secondary_prerequisites = { "ARVORE_FOREST_STEALTH", "FALSE_ARVORE_HATRED", "FAE_ENMITY" },
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_traverse_the_wilds = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_CAUSE_DECAY",
+    name = ccb.content.text("Fallen Trees Decay to Soil"),
+    points = 8,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to induce decay and dissolution in the surrounding area."),
+    prerequisites = { "ARVORE_VERDANT_INFUSION" },
+    secondary_prerequisites = { "ARVORE_TURN_INTO_TREE" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    spells_learned = { arvore_cause_decay = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_SUMMON_WOOD_SPIRIT",
+    name = ccb.content.text("Call the Children of the Roots"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to summon a wood spirit."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    spells_learned = { arvore_summon_wood_spirit = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_TERRAIN_BASH_SPELL",
+    name = ccb.content.text("Roots Crack the Foundation"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_SUMMON_GRASS_FIELD" },
+    additions = { "ARVORE_ANTI_PLANT_SPELL" },
+    description = ccb.content.text("Upon gaining this ability, the Arvore gains the ability to summon semitangible roots that will shatter walls and furniture."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_roots_crack_the_foundation = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_FOREST_TRANSLOCATION",
+    name = ccb.content.text("From Root to Root the Forest Is Joined"),
+    points = 9,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_FOREST_TELEPORT" },
+    description = ccb.content.text("Upon gaining this ability, the Arvore gains the ability to travel great distances, even dozens of miles, in moments, as long as they start and end their journey within the depths of a forest."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    spells_learned = { arvore_forest_translocate = 1, arvore_forest_translocate_attune = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_TURN_INTO_TREE",
+    name = ccb.content.text("Overgrowth"),
+    points = 9,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_SUMMON_BRIARS" },
+    secondary_prerequisites = { "ARVORE_SUMMON_WOOD_WALL" },
+    description = ccb.content.text("Upon gaining this ability, the Arvore gains the ability to cause rapid plant growth in a radius around themselves."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    spells_learned = { arvore_overgrowth_spell = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_PERENNIAL_REBIRTH",
+    name = ccb.content.text("Perennial Rebirth"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_SUN_NUTRIENTS_AND_MANA", "ARVORE_SUN_MANA_BONUS", "ARVORE_SUN_POWER_MANA_STATS" },
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to bind their soul to the heart of the forest, rebirthing themselves when on the verge of death."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    spells_learned = { arvore_perennial_rebirth_spell = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_PERENNIAL_REBIRTH_CASTED",
+    name = ccb.content.text("Perennial Rebirth (bound)"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    valid = false,
+    description = ccb.content.text("You have bound your soul to the forest, and death will merely be a momentary inconvenience."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_VERDANT_INFUSION",
+    name = ccb.content.text("Verdant Infusion"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_COMMUNE_WITH_NATURE" },
+    secondary_prerequisites = {
+        "ARVORE_SUN_NUTRIENTS", "ARVORE_SUN_NUTRIENTS_AND_MANA", "ARVORE_SUN_MANA_BONUS",
+        "ARVORE_SUN_POWER_MANA_STATS",
+    },
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to infuse their companions with the vitality of the forest."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_verdant_infusion = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_SUMMON_GRASS_FIELD",
+    name = ccb.content.text("Commanding the Grasses"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    additions = { "ARVORE_TERRAIN_BASH_SPELL" },
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to cause grass to rapidly grow on fertile terrain, slowing their enemies."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_summon_grass_field_spell = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_CLIMBING_VINE_SPELL",
+    name = ccb.content.text("Creeper Ascends the Wall"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_NURTURING_THE_GREEN" },
+    secondary_prerequisites = { "ARVORE_SUMMON_GRASS_FIELD" },
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to summon a thick climbing vine from diggable ground."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_climbing_vine_spell = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_ANTI_PLANT_SPELL",
+    name = ccb.content.text("Tending the Garden"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_TERRAIN_BASH_SPELL" },
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to damage plant and fungal entities, including others of their own kind."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    spells_learned = { arvore_anti_plant_spell = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_CULTIVATE_GOBLIN_FRUIT",
+    name = ccb.content.text("Cultivate Goblin Fruit"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_COMMUNE_WITH_NATURE" },
+    description = ccb.content.text("Upon gaining this ability the Arvore gains the ability to grow a goblin fruit when in natural areas away from civilization."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    spells_learned = { arvore_cultivate_goblin_fruit = 1 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_FOREST_MAPPING",
+    name = ccb.content.text("Commune with the Ancient Oaks"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = {
+        "ARVORE_FOREST_DETECT",
+        "ARVORE_FOREST_DETECT_AND_OVERMAP",
+        "FALSE_ARVORE_HATRED",
+        "FAE_ENMITY",
+    },
+    description = ccb.content.text("The Arvore are closely tied with the forests and may commune with the trees to learn the layout of the land.  Activate this ability to enter the communion."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    active = true,
+    cost = 0,
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_WOOD_WEAPON_DAMAGE",
+    name = ccb.content.text("Bramble's Bite"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_NURTURING_THE_GREEN", "ARVORE_SUMMON_BRIARS" },
+    secondary_prerequisites = { "JAUNDICE_ARVORE_ALCHEMY", "ARVORE_SKIN_1", "ARVORE_SKIN_2", "ARVORE_SKIN_3" },
+    description = ccb.content.text("Drawing out the power inherent in growing wood makes weapons composed of it more deadly in your hands.  You do increased damage when wielding a weapon primarily made of wood."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    enchantments = { "INLINE_ENCH_ARVORE_WOOD_WEAPON_DAMAGE_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_TOXIC_FLESH",
+    name = ccb.content.text("Essence of Hemlock"),
+    points = 8,
+    description = ccb.content.text("With a brief effort of will, the Arvore may infuse their blood with a poison that harms any who bite them."),
+    prerequisites = { "ARVORE_BLOOD" },
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    active = true,
+    activation_setup_only = true,
+    cooldown = 15,
+    consumes_mana = true,
+    cost = 1,
+    activation_message = ccb.content.text("Your skin itches."),
+    on_activate = "enable_trait_form",
+    on_deactivate = "disable_trait_form",
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_POISON_POLLEN",
+    name = ccb.content.text("Scent of Night-Blooming Flowers"),
+    points = 5,
+    description = ccb.content.text("The Arvore may release clouds of pollen that ruin the coordination of their enemies when breathed in."),
+    prerequisites = { "ARVORE_FLORAL_SCENT", "ARVORE_MIND_CONTROL_POLLEN" },
+    secondary_prerequisites = { "ARVORE_TOXIC_FLESH" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    active = true,
+    activation_setup_only = true,
+    cooldown = 5,
+    consumes_mana = true,
+    cost = 1,
+    activation_message = ccb.content.text("The air fills with clouds of pollen."),
+    on_activate = "enable_form_effect",
+    on_deactivate = "disable_form_effect",
+}
+
+-- No messages so you aren't constantly spammed while you're walking in and out of buildings.  Being a fae spirit, the arvore doesn't need uncovered arms or head or anything--simply being in the sun is enough.
+ccb.content.define_mutation {
+    id = "ARVORE_SUN_NUTRIENTS",
+    name = ccb.content.text("Solar Rejuvenation"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Like a tree, you are fueled by the sun.  When standing in the sunlight, you will absorb its energy as nutrients and heal slightly faster."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    types = { "METABOLISM" },
+    replacements = { "ARVORE_SUN_NUTRIENTS_AND_MANA" },
+    enchantments = { "INLINE_ENCH_ARVORE_SUN_NUTRIENTS_0" },
+}
+
+-- No messages so you aren't constantly spammed while you're walking in and out of buildings.  Being a fae spirit, the arvore doesn't need uncovered arms or head or anything--simply being in the sun is enough.
+ccb.content.define_mutation {
+    id = "ARVORE_SUN_NUTRIENTS_AND_MANA",
+    name = ccb.content.text("Solar Revitalization"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Like a tree, you are fueled by the sun.  When standing in the sunlight, you will absorb its energy as nutrients, heal slightly faster, and your mana regenerates much quicker."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    types = { "METABOLISM" },
+    prerequisites = { "ARVORE_SUN_NUTRIENTS" },
+    replacements = { "ARVORE_SUN_MANA_BONUS" },
+    enchantments = { "INLINE_ENCH_ARVORE_SUN_NUTRIENTS_AND_MANA_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_MOOD_CHANGES_WITH_SEASONS",
+    name = ccb.content.text("The Eternal Cycle"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    mixed_effect = true,
+    description = ccb.content.text("Your energy changes with the seasons: in spring and summer, you're more awake and need less sleep, and the reverse is true in autumn and winter."),
+    prerequisites = {
+        "ARVORE_SUN_NUTRIENTS", "ARVORE_SUN_NUTRIENTS_AND_MANA", "ARVORE_SUN_MANA_BONUS",
+        "ARVORE_SUN_POWER_MANA_STATS",
+    },
+    categories = { "ARVORE" },
+    purifiable = false,
+    enchantments = {
+        "INLINE_ENCH_ARVORE_MOOD_CHANGES_WITH_SEASONS_0",
+        "INLINE_ENCH_ARVORE_MOOD_CHANGES_WITH_SEASONS_1",
+        "INLINE_ENCH_ARVORE_MOOD_CHANGES_WITH_SEASONS_2",
+        "INLINE_ENCH_ARVORE_MOOD_CHANGES_WITH_SEASONS_3",
+    },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_SUN_FOODS",
+    name = ccb.content.text("Solar Repast"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_SUN_NUTRIENTS_AND_MANA", "ARVORE_SUN_MANA_BONUS", "ARVORE_SUN_POWER_MANA_STATS" },
+    description = ccb.content.text("Like a tree, you draw nourishment from the sun and the soil.  When standing in the sunlight and on natural terrain, you absorb its energy as food.  You still need to drink water and you will still get hungry."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    types = { "DIET" },
+    enchantments = { "ench_arvore_sun_foods_on" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_PAIN_RESISTANCE",
+    name = ccb.content.text("The Fallen Branch Suffers Not"),
+    points = 5,
+    visibility = 1,
+    types = { "PAIN" },
+    description = ccb.content.text("Filled with the energy of life, pain does not affect you as strongly."),
+    prerequisites = { "JAUNDICE_ARVORE_ALCHEMY", "ARVORE_SKIN_1", "ARVORE_SKIN_2", "ARVORE_SKIN_3" },
+    secondary_prerequisites = { "ARVORE_NURTURING_THE_GREEN" },
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    enchantments = { "INLINE_ENCH_ARVORE_PAIN_RESISTANCE_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_VINE_DRAG",
+    name = ccb.content.text("Entangling Vines"),
+    points = 6,
+    description = ccb.content.text("At will, you can extend a cluster of grasping vines to grab one target and drag them in.  They have a range equal to 1/2 your Dexterity."),
+    prerequisites = { "ARVORE_CLIMBING_VINE_SPELL" },
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    activation_setup_only = false,
+    active = true,
+    consumes_mana = true,
+    cost = 25,
+    activation_message = ccb.content.text("Vines lash out toward your target."),
+    on_activate = "arvore_vine_drag",
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_WOOD_CLAWS",
+    name = ccb.content.text("Jagged Wooden Claws"),
+    points = 2,
+    description = ccb.content.text("At will, you can transform your hands into jagged wooden claws.  They are potent weapons but make anything other than combat more difficult."),
+    types = { "CLAWS" },
+    prerequisites = { "JAUNDICE_ARVORE_ALCHEMY", "ARVORE_SKIN_2", "ARVORE_SKIN_3" },
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    activation_setup_only = true,
+    active = true,
+    activation_message = ccb.content.text("Your fingers itch as jagged wood rapidly covers them."),
+    on_activate = "toggle_trait_form",
+    on_deactivate = "toggle_trait_form",
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_WOOD_CLAWS_active",
+    name = ccb.content.text_without_extraction("Jagged Wooden Claws Extended"),
+    points = 2,
+    visibility = 3,
+    ugliness = 2,
+    description = ccb.content.text_without_extraction("Your hands are transformed into jagged wooden claws.  You can use them to attack, but performing mundane tasks will be harder."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    cost = 0,
+    player_display = false,
+    valid = false,
+    integrated_armor = { "integrated_arvore_claws" },
+    enchantments = { "INLINE_ENCH_ARVORE_WOOD_CLAWS_active_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_RESIST_CHILL",
+    name = ccb.content.text("Resist Winter's Chill"),
+    points = 2,
+    visibility = 0,
+    ugliness = 0,
+    replacements = { "ARVORE_IGNORE_WINTER_CHILL" },
+    description = ccb.content.text("Plants lose their leaves in winter, but that does not kill them, they simply sleep until the spring comes.  The cold bothers you less now."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    types = { "ACCLIMATIZATION" },
+    enchantments = { "arvore_resist_chill" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_IGNORE_WINTER_CHILL",
+    name = ccb.content.text("Ignore Winter's Chill"),
+    points = 6,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_RESIST_CHILL" },
+    description = ccb.content.text("Pine trees keep their leaves even in the coldest winter.  The cold bothers you now not at all."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    types = { "ACCLIMATIZATION" },
+    enchantments = { "arvore_ignore_chill" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_KNOW_TIME",
+    name = ccb.content.text("Sensing the Sun"),
+    points = 1,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("By the places of the sun and the moon, you can always tell exactly what time it is, as long as you're not underground."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    enchantments = { "ench_arvore_sense_sun" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_SURVIVAL_BONUS",
+    name = ccb.content.text("Among the Wilds"),
+    points = 4,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "GREENSTRIDE", "GREENSTRIDE_UPGRADE" },
+    secondary_prerequisites = {
+        "ARVORE_SUN_NUTRIENTS", "ARVORE_SUN_NUTRIENTS_AND_MANA", "ARVORE_SUN_MANA_BONUS",
+        "ARVORE_SUN_POWER_MANA_STATS",
+    },
+    description = ccb.content.text("The wilderness welcomes you as one of its own, and you have an easier time surviving there and making things from its bounty.  +1.5 Survival skill."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    craft_skill_bonuses = { survival = 6 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_DEX_BONUS",
+    name = ccb.content.text("Supple As a Reed"),
+    points = 2,
+    visibility = 3,
+    ugliness = 1,
+    prerequisites = { "GREENSTRIDE" },
+    secondary_prerequisites = { "WIND_BLOWS_WILLOW_BENDS_ARVORE" },
+    description = ccb.content.text("Like green wood, you can bend your limbs easily.  You gain a +4 bonus to Dexterity."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    types = { "DEX" },
+    enchantments = { "INLINE_ENCH_ARVORE_DEX_BONUS_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_STR_BONUS_1",
+    name = ccb.content.text("Might of the Seedling"),
+    points = 1,
+    visibility = 0,
+    ugliness = 0,
+    replacements = { "ARVORE_STR_BONUS_2" },
+    description = ccb.content.text("Like the seedling poking through the soil, you have great strength hidden within you.  +1 Strength."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    types = { "STR" },
+    enchantments = { "INLINE_ENCH_ARVORE_STR_BONUS_1_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_STR_BONUS_2",
+    name = ccb.content.text("Might of the Sapling"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_STR_BONUS_1" },
+    secondary_prerequisites = { "ARVORE_SKIN_1", "ARVORE_SKIN_2", "ARVORE_SKIN_3" },
+    replacements = { "ARVORE_STR_BONUS_3" },
+    description = ccb.content.text("Like the young tree reaching for the sun, your limbs are filled with power.  +3 Strength."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    types = { "STR" },
+    enchantments = { "INLINE_ENCH_ARVORE_STR_BONUS_2_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_STR_BONUS_3",
+    name = ccb.content.text("Might of the Ancient Tree"),
+    points = 5,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_STR_BONUS_2" },
+    secondary_prerequisites = { "ARVORE_SKIN_2", "ARVORE_SKIN_3" },
+    description = ccb.content.text("Like forest giants that have stood for a hundred years, you are unshakeable.  +5 Strength."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    types = { "STR" },
+    enchantments = { "INLINE_ENCH_ARVORE_STR_BONUS_3_0", "INLINE_ENCH_ARVORE_STR_BONUS_3_1" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_PER_BONUS",
+    name = ccb.content.text("Insight of the Grove"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("When one tree in a grove is attacked by insects, soon all trees will produce the deterrent.  +3 Perception."),
+    prerequisites = { "ARVORE_COMMUNE_WITH_NATURE" },
+    secondary_prerequisites = { "ARVORE_FOREST_DETECT", "ARVORE_FOREST_DETECT_AND_OVERMAP" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    types = { "PER" },
+    enchantments = { "INLINE_ENCH_ARVORE_PER_BONUS_0" },
+}
+
+-- Ideally there'd be some way to detect what sort of terrain was nearby and you'd need a critical mass of foliage, but the below will work for now.
+ccb.content.define_mutation {
+    id = "ARVORE_FOREST_STEALTH",
+    name = ccb.content.text("Shadow of the Trees"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("The forest recognizes your kinship and will hide you beneath its boughs.  When in a forest or in thick foliage, enemies will have a harder time spotting you."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    enchantments = { "ench_arvore_forest_stealth" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_EYES",
+    name = ccb.content.text("Arvore Eyes"),
+    points = 1,
+    visibility = 2,
+    ugliness = 0,
+    description = ccb.content.text("Upon gaining this ability the Arvore's eyes begin reflecting the seasons: a bright yellow-green in spring; verdant green in summer; red, yellow, or orange in autumn, and dark brown in winter.  Glare no longer impacts them, and they have slightly better daytime vision and reaction times."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    types = { "EYES" },
+    enchantments = { "INLINE_ENCH_ARVORE_EYES_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_EARS",
+    name = ccb.content.text("Arvore Ears"),
+    points = 1,
+    visibility = 2,
+    ugliness = 0,
+    description = ccb.content.text("The Arvore's ears are longer and pointed, more \"leaf-shaped.\"  While they cannot hear any better, like the trees in the deep forest, they are unphased by loud sounds."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    types = { "EARS" },
+    flags = { "IMMUNE_HEARING_DAMAGE" },
+}
+
+-- Visibility here because the Arvore's skin flushes a different color when the blood isn't red.
+ccb.content.define_mutation {
+    id = "ARVORE_BLOOD",
+    name = ccb.content.text("Vegetal Blood"),
+    points = 1,
+    visibility = 1,
+    ugliness = 0,
+    description = ccb.content.text("The Arvore's blood is now composed of sap and vegetable matter.  This does not benefit or harm them in any ways, but humans will be discomfited by it."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    flags = { "PLANTBLOOD" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_BLOOD_2",
+    name = ccb.content.text("Sap Seals the Wound"),
+    points = 7,
+    visibility = 2,
+    ugliness = 1,
+    description = ccb.content.text("The Arvore's blood is a sticky sap that oozes rather than gushes from their wounds.  They will bleed more slowly than normal."),
+    prerequisites = { "ARVORE_BLOOD" },
+    replacements = { "ARVORE_BLOOD_3" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    types = { "BLOOD" },
+    enchantments = { "INLINE_ENCH_ARVORE_BLOOD_2_0" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_BLOOD_3",
+    name = ccb.content.text("Sap Defends the Trunk"),
+    points = 10,
+    visibility = 2,
+    ugliness = 1,
+    description = ccb.content.text("The Arvore's blood is a sticky sap that oozes rather than gushes from their wounds and has potent defensive properties.  They will bleed more slowly than normal and are immune to parasites and infection."),
+    prerequisites = { "ARVORE_BLOOD_2" },
+    replacements = { "ARVORE_BLOOD_4" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    types = { "BLOOD" },
+    enchantments = { "INLINE_ENCH_ARVORE_BLOOD_3_0" },
+    flags = { "PARAIMMUNE", "INFECTION_IMMUNE" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_BLOOD_4",
+    name = ccb.content.text("Sap Maintains the Heartwood"),
+    points = 13,
+    visibility = 2,
+    ugliness = 1,
+    description = ccb.content.text("The Arvore's blood is a sticky sap that oozes rather than gushes from their wounds and aggressively fights back against invading organisms.  They will bleed much more slowly than normal, are immune to parasites and infection, and cannot be transformed by the Mycus."),
+    prerequisites = { "ARVORE_BLOOD_3" },
+    secondary_prerequisites = { "ARVORE_ANTI_PLANT_SPELL" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    types = { "BLOOD" },
+    enchantments = { "INLINE_ENCH_ARVORE_BLOOD_4_0" },
+    flags = { "PARAIMMUNE", "INFECTION_IMMUNE", "MYCUS_IMMUNE" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_VINES",
+    name = ccb.content.text("Writhing Vines"),
+    points = 2,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("At will, the Arvore can grow long vines from their shoulders and back.  They can be used to climb or to lash at enemies, and can also be detached to serve as a rope if necessary.  Activate to toggle vines on and off."),
+    prerequisites = { "ARVORE_VINE_DRAG" },
+    threshold_requirements = { "THRESH_ARVORE" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    activation_setup_only = true,
+    active = true,
+    cooldown = 2,
+    consumes_mana = true,
+    cost = 1,
+    activation_message = ccb.content.text("Lashing vines grow from your shoulders."),
+    on_activate = "enable_trait_form",
+    on_deactivate = "disable_trait_form",
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_FOREST_DETECT",
+    name = ccb.content.text("The Forests' Warning"),
+    points = 2,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_EYES" },
+    replacements = { "ARVORE_FOREST_DETECT_AND_OVERMAP" },
+    additions = { "ARVORE_FOREST_MAPPING" },
+    description = ccb.content.text("In the whispers of the leaves and the movement of the grasses, the forest warns you of nearby creatures.  While the forest can distinguish between a bird and a zombie, some fine distinctions are still lost to it."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    enchantments = { "arvore_forest_detect_enemies" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_FOREST_DETECT_AND_OVERMAP",
+    name = ccb.content.text("The Whispers of the Leaves"),
+    points = 4,
+    visibility = 0,
+    ugliness = 0,
+    prerequisites = { "ARVORE_FOREST_DETECT" },
+    additions = { "ARVORE_FOREST_MAPPING" },
+    description = ccb.content.text("In the whispers of the leaves and the movement of the grasses, the forest warns you of nearby creatures.  While the forest can distinguish between a bird and a zombie, some fine distinctions are still lost to it.  Also, you can see further when you're standing in a forest."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    enchantments = { "arvore_forest_detect_enemies", "arvore_forest_see_overmap" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_VERDANT_HAIR",
+    name = ccb.content.text("Verdant Hair"),
+    points = 2,
+    purifiable = false,
+    visibility = 6,
+    ugliness = -3,
+    description = ccb.content.text("Your hair now has flowers and small vines and leaves growing in it.  It's pleasant to look at but has no further game effect."),
+    categories = { "ARVORE" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_FLORAL_SCENT",
+    name = ccb.content.text("Floral Scent"),
+    points = 4,
+    visibility = 0,
+    ugliness = -2,
+    types = { "SCENT" },
+    prerequisites = { "ARVORE_VERDANT_HAIR" },
+    replacements = { "ARVORE_MIND_CONTROL_POLLEN" },
+    cancels = { "SMELLY", "SMELLY2" },
+    description = ccb.content.text("The flowers in your hair produce a pleasant smell, obvious without being overpowering.  You no longer smell anything like a human and other beings will react to you appropriately."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    scent_type = "sc_flower",
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_THORN_SKIN",
+    name = ccb.content.text("Hidden Thorns"),
+    points = 7,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("Every rose has its thorn and so do you.  With a moment's concentration, you can exude thorns through your skin that have a chance of damaging attackers while increasing the damage of your unarmed attacks.  However, you cannot wear rigid armor over your thorns."),
+    categories = { "ARVORE", "ARVORE_ALCHEMY" },
+    purifiable = false,
+    types = { "ARMOR" },
+    active = true,
+    activation_setup_only = true,
+    activation_message = ccb.content.text("Stiff wooden thorns push out from your skin."),
+    on_activate = "toggle_trait_form",
+    on_deactivate = "toggle_trait_form",
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_THORN_SKIN_ON",
+    name = ccb.content.text_without_extraction("Unveiled Thorns Extended"),
+    points = 7,
+    visibility = 8,
+    ugliness = 4,
+    description = ccb.content.text_without_extraction("You are exuding thorns through your skin that have a chance of damaging attackers while increasing the damage of your unarmed attacks.  However, you cannot wear rigid armor over your thorns."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    player_display = false,
+    valid = false,
+    restricts_gear = { "head", "torso", "arm_l", "arm_r", "leg_r", "leg_l" },
+    remove_rigid = { "head", "torso", "arm_l", "arm_r", "leg_r", "leg_l" },
+    allow_soft_gear = true,
+    integrated_armor = { "integrated_arvore_thorns" },
+    enchantments = { "ench_arvore_thorns_mut" },
+    covered_encumbrance = { hand_l = 10, hand_r = 10 },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_MIND_CONTROL_POLLEN",
+    name = ccb.content.text("Enchanting Aroma"),
+    points = 4,
+    visibility = 0,
+    ugliness = -2,
+    types = { "SCENT" },
+    prerequisites = { "ARVORE_FLORAL_SCENT" },
+    cancels = { "SMELLY", "SMELLY2" },
+    description = ccb.content.text("The flowers in your hair produce an intoxicating smell.  You no longer smell anything like a human and other beings will react to you appropriately.  You can enhance this scent to an overpowering level, beguiling humans and making them more suggestible at the cost of greatly increasing the range at which others can smell you."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    scent_type = "sc_flower",
+    active = true,
+    activation_setup_only = true,
+    consumes_mana = true,
+    cost = 1,
+    cooldown = 10,
+    activation_message = ccb.content.text("A sweet scent fills the air."),
+    on_activate = "enable_trait_form",
+    on_deactivate = "disable_trait_form",
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_MIND_CONTROL_POLLEN_ON",
+    name = ccb.content.text_without_extraction("Enchanting Aroma (active)"),
+    points = 4,
+    visibility = 0,
+    ugliness = -8,
+    description = ccb.content.text_without_extraction("The active version of Enchanting Aroma.  Should not be player visible."),
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    scent_type = "sc_flower",
+    scent_intensity = 1200,
+    social_modifiers = { persuade = 25, lie = 10 },
+    valid = false,
+    player_display = false,
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_HEAL_LIMB_REGEN",
+    name = ccb.content.text("Leaves Return When Winter Ends"),
+    points = 3,
+    visibility = 0,
+    ugliness = 0,
+    description = ccb.content.text("When in wild areas, you can draw on the revitalizing power of the land to heal yourself.  When in natural areas, your limbs will heal much faster."),
+    prerequisites = { "ARVORE_SKIN_2", "ARVORE_SKIN_3" },
+    secondary_prerequisites = { "ARVORE_VERDANT_INFUSION" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    types = { "HEALING" },
+    flags = { "MEND_ALL" },
+    enchantments = { "ench_arvore_wilds_super_mending" },
+}
+
+ccb.content.define_mutation {
+    id = "ARVORE_TREE_FORM",
+    name = ccb.content.text("One with the Forest"),
+    points = 8,
+    description = ccb.content.text("You may transform into a tree, extending roots and spreading leaves out to the sun.  You will heal faster, gain more benefit from sleep, and almost all monsters will ignore you, but you will only be dimly aware of the outside world and will be nearly unable to move."),
+    prerequisites = { "ARVORE_HEAL_LIMB_REGEN" },
+    secondary_prerequisites = { "ARVORE_SUN_FOODS" },
+    categories = { "ARVORE" },
+    purifiable = false,
+    threshold_requirements = { "THRESH_ARVORE" },
+    active = true,
+    activation_setup_only = true,
+    activation_message = ccb.content.text("Your legs fuse together and your arms stretch toward the sky as you put down roots and transform into a towering tree."),
+    on_activate = "arvore_tree_form_on",
+    on_deactivate = "arvore_tree_form_off",
+}
+
 -- Healing values copied from the Regeneration mutation
 -- NETHER_EMANATION missing from the above list is deliberate--they hone in on mental activity and the transformed Arvore still thinks.
 ccb.content.define_mutation {
