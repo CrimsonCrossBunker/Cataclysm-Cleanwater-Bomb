@@ -1,5 +1,233 @@
 local ccb = require("ccb")
 
+-- spawned by EOC
+ccb.content.define_fixed_overmap_special {
+    id = "labyrinth_safehouse",
+    tiles = { { point = { 0, 0, 0 }, terrain = "labyrinth_safehouse" } },
+    city_distance = { 0, -1 },
+    occurrences = { 0, 0 },
+    locations = { "netherum_labyrinth_sparkling_chasm" },
+    flags = { "EXODII", "EXTRADIMENSIONAL", "NETHERUM_LABYRINTH_SAFEHOUSE", "GLOBALLY_UNIQUE" },
+}
+
+-- spawned by EOC
+ccb.content.define_fixed_overmap_special {
+    id = "labyrinth_string_dimension_tunnel",
+    tiles = {
+        { point = { 0, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 1, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 2, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 3, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 4, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 5, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 6, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 7, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 8, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 9, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 10, -1, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 0, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 1, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 2, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 3, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 4, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 5, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 6, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 7, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 8, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 9, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_over" },
+        { point = { 10, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 0, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_left" },
+        { point = { 1, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_start" },
+        { point = { 2, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_right" },
+        { point = { 3, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_right" },
+        { point = { 4, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_right" },
+        { point = { 5, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_right" },
+        { point = { 6, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_right" },
+        { point = { 7, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_right" },
+        { point = { 8, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_right" },
+        { point = { 9, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_end" },
+        { point = { 10, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 0, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 1, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 2, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 3, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 4, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 5, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 6, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 7, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 8, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 9, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 0, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 1, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 2, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 3, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 4, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 5, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 6, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 7, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 8, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 9, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_under" },
+        { point = { 10, 3, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 10, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 11, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 12, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 13, 0, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 11, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 12, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 13, 1, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 11, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 12, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+        { point = { 13, 2, 0 }, terrain = "labyrinth_string_dimension_tunnel_portal" },
+    },
+    city_distance = { 0, -1 },
+    occurrences = { 0, 0 },
+    rotate = false,
+    locations = { "netherum_labyrinth_sparkling_chasm" },
+    flags = { "EXTRADIMENSIONAL", "NETHERUM_LABYRINTH", "GLOBALLY_UNIQUE" },
+}
+
+ccb.content.define_mutable_overmap_special {
+    id = "labyrinthine_structure_flooded",
+    root = "entrance",
+    locations = { "netherum_labyrinth_sparkling_chasm" },
+    flags = { "EXODII", "EXTRADIMENSIONAL", "NETHERUM_LABYRINTH", "OVERMAP_UNIQUE" },
+    occurrences = { 0, 0 },
+    check_for_locations_area = {
+        {
+            from = { 10, 10, 0 },
+            to = { -10, -10, 0 },
+            locations = { "netherum_labyrinth_sparkling_chasm" },
+        },
+    },
+    joins = { "passage_to_passage" },
+    overmaps = {
+        entrance = {
+            overmap = "labyrinth_flooded_entrance_north",
+            north = "passage_to_passage",
+            south = "passage_to_passage",
+            east = "passage_to_passage",
+            west = "passage_to_passage",
+        },
+        crossroads = {
+            overmap = "labyrinth_flooded_hall_nesw",
+            north = "passage_to_passage",
+            south = "passage_to_passage",
+            east = "passage_to_passage",
+            west = "passage_to_passage",
+        },
+        tee = {
+            overmap = "labyrinth_flooded_hall_nes",
+            north = "passage_to_passage",
+            south = "passage_to_passage",
+            east = "passage_to_passage",
+        },
+        straight_passage = { overmap = "labyrinth_flooded_hall_ew", east = "passage_to_passage", west = "passage_to_passage" },
+        corner = {
+            overmap = "labyrinth_flooded_hall_ne",
+            north = "passage_to_passage",
+            east = "passage_to_passage",
+        },
+        dead_end = { overmap = "labyrinth_flooded_hall_end_west", west = "passage_to_passage" },
+    },
+    phases = {
+        {
+            {
+                overmap = "straight_passage",
+                max = { poisson = 20 },
+            },
+            {
+                overmap = "corner",
+                max = { poisson = 30 },
+            },
+            {
+                overmap = "tee",
+                max = { poisson = 20 },
+            },
+            { overmap = "dead_end", weight = 1 },
+        },
+        {
+            { overmap = "dead_end", weight = 2000 },
+            { overmap = "straight_passage", weight = 20 },
+            { overmap = "corner", weight = 100 },
+            { overmap = "tee", weight = 20 },
+            { overmap = "crossroads", weight = 1 },
+        },
+    },
+}
+
+ccb.content.define_mutable_overmap_special {
+    id = "labyrinthine_structure_overgrown",
+    root = "entrance",
+    locations = { "labyrinth2" },
+    flags = { "EXODII", "EXTRADIMENSIONAL", "NETHERUM_LABYRINTH2" },
+    occurrences = { 0, 20 },
+    check_for_locations_area = {
+        {
+            from = { 10, 10, 0 },
+            to = { -10, -10, 0 },
+            locations = { "labyrinth2" },
+        },
+    },
+    joins = { "passage_to_passage" },
+    overmaps = {
+        entrance = {
+            overmap = "labyrinth_overgrown_entrance_north",
+            north = "passage_to_passage",
+            south = "passage_to_passage",
+            east = "passage_to_passage",
+            west = "passage_to_passage",
+        },
+        crossroads = {
+            overmap = "labyrinth_overgrown_hall_nesw",
+            north = "passage_to_passage",
+            south = "passage_to_passage",
+            east = "passage_to_passage",
+            west = "passage_to_passage",
+        },
+        tee = {
+            overmap = "labyrinth_overgrown_hall_nes",
+            north = "passage_to_passage",
+            south = "passage_to_passage",
+            east = "passage_to_passage",
+        },
+        straight_passage = {
+            overmap = "labyrinth_overgrown_hall_ew",
+            east = "passage_to_passage",
+            west = "passage_to_passage",
+        },
+        corner = {
+            overmap = "labyrinth_overgrown_hall_ne",
+            north = "passage_to_passage",
+            east = "passage_to_passage",
+        },
+        dead_end = { overmap = "labyrinth_overgrown_hall_end_west", west = "passage_to_passage" },
+    },
+    phases = {
+        {
+            {
+                overmap = "straight_passage",
+                max = { poisson = 20 },
+            },
+            {
+                overmap = "corner",
+                max = { poisson = 30 },
+            },
+            {
+                overmap = "tee",
+                max = { poisson = 20 },
+            },
+            { overmap = "dead_end", weight = 1 },
+        },
+        {
+            { overmap = "dead_end", weight = 1500 },
+            { overmap = "straight_passage", weight = 20 },
+            { overmap = "corner", weight = 100 },
+            { overmap = "tee", weight = 20 },
+            { overmap = "crossroads", weight = 1 },
+        },
+    },
+}
+
 ccb.content.define_fixed_overmap_special {
     id = "labyrinth2_scarlet_sea_portal",
     tiles = {
