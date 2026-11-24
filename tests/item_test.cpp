@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <sstream>
 
 #include "avatar.h"
 #include "avatar_action.h"
@@ -46,6 +47,23 @@
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
+#include "input.h"
+#include "input_context.h"
+#include "input_enums.h"
+#include "character.h"
+#include "inventory.h"
+#include "item_components.h"
+#include "pimpl.h"
+#include "item_uid.h"
+#include "flat_set.h"
+#include "debug.h"
+#include "flexbuffer_json.h"
+#include "item_contents.h"
+#include "item_pocket.h"
+#include "json.h"
+#include "json_loader.h"
+#include "rng.h"
+#include "map.h"
 
 static const flag_id json_flag_COLD( "COLD" );
 static const flag_id json_flag_FILTHY( "FILTHY" );
@@ -345,7 +363,7 @@ static void assert_minimum_length_to_volume_ratio( const item &target )
     }
     // Minimum possible length is if the item is a sphere.
     const float minimal_diameter = std::cbrt( ( 3.0 * units::to_milliliter( target.base_volume() ) ) /
-                                   ( 4.0 * M_PI ) );
+        ( 4.0 * M_PI ) );
     CHECK( units::to_millimeter( target.length() ) >= minimal_diameter * 10.0 );
 }
 
@@ -1352,7 +1370,7 @@ TEST_CASE( "item_relative_rot_after_is_non_mutating", "[item][rot]" )
     const double initial_rot = butter.get_relative_rot();
 
     const double simulated_rot = butter.get_relative_rot_after( temperatures::normal, 1.0f,
-                                 1_hours );
+        1_hours );
 
     CHECK( butter.get_relative_rot() == initial_rot );
     CHECK( simulated_rot > initial_rot );
@@ -1482,3 +1500,229 @@ TEST_CASE( "uncraft_blacklist_is_pruned", "[item]" )
         }
     }
 }
+
+namespace merged_item_action_keybindings_test
+{
+
+TEST_CASE( "item_action_info_scroll_bindings", "[input][keybindings][upstream_ports]" )
+{
+    input_context ctxt( "UILIST" );
+    ctxt.register_action( "SCROLL_ITEM_INFO_UP" );
+    ctxt.register_action( "SCROLL_ITEM_INFO_DOWN" );
+    const bool down = GENERATE( false, true );
+    const std::string action = down ? "SCROLL_ITEM_INFO_DOWN" : "SCROLL_ITEM_INFO_UP";
+    CHECK( ctxt.input_to_action( input_event( down ? '}' : '{',
+            input_event_t::keyboard_char ) ) == action );
+    CHECK( ctxt.input_to_action( input_event( { keymod_t::shift }, down ? ']' : '[',
+            input_event_t::keyboard_code ) ) == action );
+    CHECK( ctxt.input_to_action( input_event( down ? JOY_ALT_DOWN : JOY_ALT_UP,
+            input_event_t::gamepad ) ) == action );
+}
+
+} // namespace merged_item_action_keybindings_test
+
+namespace merged_item_charge_merge_test
+{
+
+static const itype_id itype_copper( "copper" );
+static const itype_id itype_lead( "lead" );
+static const itype_id itype_string_6( "string_6" );
+
+TEST_CASE( "inventory_restack_preserves_unmergeable_charge_stacks", "[item][stacking][charges]" )
+{
+    clear_avatar();
+    Character &character = get_player_character();
+    inventory &inv = *character.inv;
+    item lhs( itype_string_6, calendar::turn, 10 );
+    item rhs = lhs;
+    SECTION( "different_damage_in_same_display_bucket" ) {
+        lhs.force_set_damage( 1001 );
+        rhs.force_set_damage( 1002 );
+    }
+    SECTION( "different_crafting_components" ) {
+        item lead( itype_lead, calendar::turn, 1 );
+        item copper( itype_copper, calendar::turn, 1 );
+        lhs.components.add( lead );
+        rhs.components.add( copper );
+    }
+    REQUIRE( lhs.stacks_with( rhs ) );
+    REQUIRE_FALSE( lhs.merge_charges( rhs ) );
+    inv.add_item( lhs, false, true, false );
+    inv.add_item( rhs, false, true, false );
+    REQUIRE( inv.size() == 2 );
+
+    inv.restack( character );
+
+    REQUIRE( inv.size() == 2 );
+    int total_charges = 0;
+    for( const std::list<item> *stack : inv.const_slice() ) {
+        REQUIRE( stack->size() == 1 );
+        const item &remaining = stack->front();
+        CHECK( remaining.charges == 10 );
+        CHECK( ( remaining.damage() == lhs.damage() || remaining.damage() == rhs.damage() ) );
+        total_charges += remaining.charges;
+    }
+    CHECK( total_charges == 20 );
+}
+
+TEST_CASE( "physical_stack_merging_preserves_item_state", "[item][stacking][charges]" )
+{
+    item lhs( itype_string_6, calendar::turn, 10 );
+    REQUIRE( lhs.count_by_charges() );
+    REQUIRE( lhs.max_damage() > 1002 );
+    item rhs = lhs;
+    SECTION( "different_damage_in_same_display_bucket" ) {
+        lhs.force_set_damage( 1001 );
+        rhs.force_set_damage( 1002 );
+        REQUIRE( lhs.damage() != rhs.damage() );
+        REQUIRE( lhs.damage_level() == rhs.damage_level() );
+    }
+    SECTION( "different_crafting_components" ) {
+        item lead( itype_lead, calendar::turn, 1 );
+        item copper( itype_copper, calendar::turn, 1 );
+        lhs.components.add( lead );
+        rhs.components.add( copper );
+        REQUIRE( lhs.get_uncraft_components() != rhs.get_uncraft_components() );
+    }
+    SECTION( "identical_items_split_and_merge_without_quantity_loss" ) {
+        item part = lhs.split( 3 );
+        REQUIRE( part.charges == 3 );
+        REQUIRE( lhs.charges == 7 );
+        REQUIRE( lhs.merge_charges( part ) );
+        CHECK( lhs.charges == 10 );
+        return;
+    }
+    REQUIRE( lhs.stacks_with( rhs ) );
+    CHECK_FALSE( lhs.merge_charges( rhs ) );
+    CHECK_FALSE( lhs.combine( rhs ) );
+    CHECK( lhs.charges == 10 );
+    CHECK( rhs.charges == 10 );
+}
+
+} // namespace merged_item_charge_merge_test
+
+namespace merged_item_pocket_restore_test
+{
+
+static const itype_id itype_battery( "battery" );
+static const itype_id itype_light_battery_cell( "light_battery_cell" );
+
+TEST_CASE( "battery_restore_remaps_pockets_without_losing_state", "[item][pocket][save]" )
+{
+    const itype_id battery_id( GENERATE( "heavy_battery_cell", "heavy_plus_battery_cell" ) );
+    pocket_data heavy( pocket_type::MAGAZINE_WELL );
+    heavy.item_id_restriction.insert( battery_id );
+    heavy.max_item_length = 1_meter;
+    const std::vector<pocket_data> old_pockets = { heavy };
+    item_contents original( old_pockets );
+    item battery( battery_id );
+    battery.ammo_set( itype_battery, 123 );
+    battery.set_var( "item_label", "saved battery" );
+    battery.set_favorite( true );
+    REQUIRE( original.insert_item( battery, pocket_type::MAGAZINE_WELL ).success() );
+    std::ostringstream stream;
+    JsonOut json( stream );
+    original.serialize( json );
+    item_contents loaded;
+    loaded.deserialize( json_loader::from_string( stream.str() ).get_object() );
+
+    pocket_data light( pocket_type::MAGAZINE_WELL );
+    light.item_id_restriction.insert( itype_light_battery_cell );
+    light.max_item_length = 1_meter;
+    std::vector<pocket_data> new_pockets;
+    bool compatible = false;
+    SECTION( "same_type_pockets_have_changed_order" ) {
+        new_pockets = { light, heavy };
+        compatible = true;
+    }
+    SECTION( "removed_battery_well_preserves_the_battery_for_migration" ) {
+        new_pockets = { pocket_data( pocket_type::CONTAINER ) };
+    }
+    new_pockets.emplace_back( pocket_type::MIGRATION );
+    item_contents restored( new_pockets );
+    const std::string diagnostics = capture_debugmsg_during( [&restored, &loaded]() {
+        restored.combine( std::move( loaded ), false, true, false, true );
+    } );
+    CHECK( diagnostics.empty() );
+    const auto batteries = restored.all_items_top( compatible ? pocket_type::MAGAZINE_WELL :
+        pocket_type::MIGRATION );
+    REQUIRE( batteries.size() == 1 );
+    CHECK( batteries.front()->typeId() == battery_id );
+    CHECK( batteries.front()->ammo_remaining() == 123 );
+    CHECK( batteries.front()->get_var( "item_label" ) == "saved battery" );
+    CHECK( batteries.front()->is_favorite );
+    CHECK( batteries.front()->uid() ==
+           original.all_items_top( pocket_type::MAGAZINE_WELL ).front()->uid() );
+    CHECK( restored.all_items_top( pocket_type::MAGAZINE_WELL ).size() +
+           restored.all_items_top( pocket_type::MIGRATION ).size() == 1 );
+}
+
+} // namespace merged_item_pocket_restore_test
+
+namespace merged_item_rng_test
+{
+
+TEST_CASE( "item_reconstruction_does_not_advance_gameplay_rng", "[item_rng][regression]" )
+{
+    const item source( itype_id( "rock" ) );
+    std::ostringstream text;
+    JsonOut out( text );
+    source.serialize( out );
+    const auto before = rng_get_engine();
+    item replica;
+    CHECK( rng_get_engine() == before );
+    JsonValue value = json_loader::from_string( text.str() );
+    replica.deserialize( value.get_object() );
+    CHECK( rng_get_engine() == before );
+    CHECK( replica.typeId() == source.typeId() );
+    CHECK( replica.uid().get_value() == source.uid().get_value() );
+    CHECK( replica.charges == source.charges );
+}
+
+TEST_CASE( "visual_choices_do_not_advance_gameplay_rng", "[item_rng][regression]" )
+{
+    const auto before = rng_get_engine();
+    for( int i = 0; i < 16; ++i ) {
+        const int choice = rng_visual( 7, -2 );
+        CHECK( ( choice >= -2 && choice <= 7 ) );
+    }
+    CHECK( rng_visual( 11, 11 ) == 11 );
+    CHECK( rng_get_engine() == before );
+}
+
+} // namespace merged_item_rng_test
+
+namespace merged_item_stackable_test
+{
+
+TEST_CASE( "non-solid-comestibles-are-stackable", "[item]" )
+{
+    for( const itype *t :  item_controller->all() ) {
+        if( t->comestible && t->phase != phase_id::SOLID ) {
+            INFO( "liquid: " << t->get_id().str() )
+            CHECK( t->count_by_charges() );
+        }
+    }
+}
+
+} // namespace merged_item_stackable_test
+
+namespace merged_item_tick_action_test
+{
+
+static const itype_id itype_chainsaw_off( "chainsaw_off" );
+static const itype_id itype_chainsaw_on( "chainsaw_on" );
+
+TEST_CASE( "tick_action_triggering", "[item]" )
+{
+    item chainsaw( itype_chainsaw_on );
+    chainsaw.active = true;
+
+    // The chainsaw has no fuel and turns off via its tick_action
+
+    chainsaw.process( get_map(), nullptr, tripoint_bub_ms::zero );
+    CHECK( chainsaw.typeId() == itype_chainsaw_off );
+    CHECK( chainsaw.active == false );
+}
+
+} // namespace merged_item_tick_action_test
