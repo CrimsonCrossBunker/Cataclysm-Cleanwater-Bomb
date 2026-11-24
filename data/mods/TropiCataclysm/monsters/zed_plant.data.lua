@@ -1,6 +1,143 @@
 local ccb = require("ccb")
 
 ccb.content.define_monster {
+    id = "mon_zombie_garden",
+    name = ccb.content.plural_text("garden zombie", "garden zombies"),
+    description = ccb.content.text("A zombie wearing some kind of gardening or botanic attire and is smeared full of vines, thorns, pollen and sap.  The triffids have it controlled somehow but its purpose remains unclear."),
+    copy_from = "mon_beekeeper",
+    default_faction = "triffid",
+    harvest = "zombie_thorny",
+    species = { "ZOMBIE", "PLANT" },
+    materials = { "veggy" },
+    symbol = "Z",
+    color = "light_green",
+    attack_effects = { { id = "paralyzepoison", duration = 33 } },
+    attacks = {
+        {
+            spell = { id = "pollen_breath", min_level = 1 },
+            cooldown = 15,
+            casting_message = ccb.content.text("The zombie spews a cloud of pollen!"),
+            kind = "spell",
+        },
+    },
+    upgrade = { half_life = 80, monster_group = "GROUP_GARDEN_ZOMBIE_UPGRADE" },
+    flags = {
+        "SEES", "HEARS", "SMELLS", "STUMBLES", "WARM", "BASHES", "GROUP_BASH", "POISON", "NO_BREATHE",
+        "REVIVES", "PUSH_MON", "FILTHY", "PARALYZEVENOM",
+    },
+    death = { drops = "mon_zombie_thorny_death_drops" },
+}
+
+-- default zombie children clothing (always), additional items from child_items (sometimes)
+ccb.content.define_monster {
+    id = "mon_zombie_seedling",
+    name = ccb.content.plural_text("garden child", "garden children"),
+    description = ccb.content.text("This child zombie seems to have been adopted by plants.  It has several thorny vines and sprouts covering its head and body."),
+    default_faction = "triffid",
+    body_type = "human",
+    species = { "ZOMBIE", "PLANT" },
+    volume = "30000 ml",
+    mass = "40750 g",
+    hp = 40,
+    speed = 65,
+    materials = { "veggy" },
+    symbol = "z",
+    color = "light_green",
+    aggression = 60,
+    morale = 100,
+    melee_skill = 2,
+    melee_dice = 2,
+    melee_sides = 4,
+    melee_damage = { { type = "cut", amount = 2 } },
+    dodge = 2,
+    vision_day = 30,
+    vision_night = 3,
+    harvest = "zombie_thorny",
+    attacks = { { id = "scratch", attack_upper = false, cooldown = 15 } },
+    burn_into = "mon_zombie_child_scorched",
+    fungalize_into = "mon_zombie_child_fungus",
+    upgrade = { half_life = 80, monster = "mon_zombie_flowerchild" },
+    flags = {
+        "SEES", "HEARS", "SMELLS", "STUMBLES", "WARM", "BASHES", "POISON", "NO_BREATHE", "REVIVES",
+        "FILTHY", "PARALYZEVENOM", "GUILT_CHILD",
+    },
+    death = {
+        drops = {
+            kind = "collection",
+            groups = {
+                { id = "default_zombie_children_clothes", weight = 100 },
+                { id = "child_items", weight = 65 },
+            },
+        },
+        outcome = { spell = { id = "death_guilt", min_level = 4 } },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_zombie_flowerchild",
+    name = ccb.content.plural_text("spriteling", "spritelings"),
+    copy_from = "mon_zombie_seedling",
+    description = ccb.content.text("An undead child mutated by alien flora.  It has several colorful flowers on its scalp and an unsettling serene expression."),
+    attack_effects = { { id = "paralyzepoison", duration = 33 } },
+}
+
+ccb.content.define_monster {
+    id = "mon_boomer_moss",
+    name = ccb.content.plural_text("mossy boomer", "mossy boomers"),
+    description = ccb.content.text("A fat and slow zombie covered in plant growths of unknown origin.  Some vines seem to extend into its mouth and guts."),
+    default_faction = "triffid",
+    body_type = "human",
+    species = { "ZOMBIE", "PLANT" },
+    difficulty_adjustment = 5,
+    volume = "92500 ml",
+    mass = "120 kg",
+    hp = 40,
+    speed = 55,
+    materials = { "veggy" },
+    symbol = "Z",
+    color = "light_green",
+    aggression = 100,
+    morale = 100,
+    melee_skill = 3,
+    melee_dice = 2,
+    melee_sides = 4,
+    melee_damage = { { type = "cut", amount = 0 } },
+    vision_night = 3,
+    harvest = "exempt",
+    attacks = {
+        {
+            move_cost = 150,
+            cooldown = 5,
+            id = "boomer_bile",
+            kind = "gun",
+            gun = {
+                weapon = "boomer_head",
+                ammo = "boomer_bile",
+                skills = { { id = "gun", level = 3 }, { id = "rifle", level = 3 } },
+                dexterity = 10,
+                empty_sound = ccb.content.text("The boomer tries to vomit more, but only droplets are thrown."),
+                ranges = { { minimum = 0, maximum = 2, mode = "DEFAULT" } },
+            },
+        },
+        { reference = "scratch", cooldown = 20 },
+    },
+    upgrade = { half_life = 56, monster_group = "GROUP_MOSSY_BOOMER_UPGRADE" },
+    fungalize_into = "mon_boomer_fungus",
+    flags = {
+        "SEES", "HEARS", "SMELLS", "STUMBLES", "WARM", "BASHES", "GROUP_BASH", "POISON", "NO_BREATHE",
+        "REVIVES", "BILE_BLOOD", "PUSH_MON", "PATH_AVOID_DANGER", "FILTHY", "PARALYZEVENOM",
+    },
+    death = {
+        drops = "mon_zombie_thorny_death_drops",
+        outcome = {
+            spell = { id = "death_boomer", hit_self = true },
+            message = ccb.content.text("The %s explodes!"),
+            corpse = "NO_CORPSE",
+        },
+    },
+}
+
+ccb.content.define_monster {
     id = "mon_boomer_sap",
     name = ccb.content.plural_text("sap belcher", "sap belchers"),
     description = ccb.content.text("This big and bloated zombie seems full of sap.  Its already overgrown body shows several flowering plants growing over it."),
@@ -267,5 +404,69 @@ ccb.content.define_monster {
         "SEES", "HEARS", "SMELLS", "STUMBLES", "WARM", "GRABS", "BASHES", "GROUP_BASH", "POISON",
         "NO_BREATHE", "SWIMS", "REVIVES", "PUSH_MON", "FILTHY", "PARALYZEVENOM",
     },
+    death = { drops = "mon_zombie_swimmer_death_drops" },
+}
+
+ccb.content.define_monster {
+    id = "mon_swimmer_swampbiter",
+    name = ccb.content.plural_text("mangrove lurker", "mangrove lurkers"),
+    description = ccb.content.text("This zombie seems to have adapted to hunt in the water.  It uses the aquatic plants on its body to hide before hitting with its teeth."),
+    default_faction = "triffid",
+    body_type = "human",
+    species = { "ZOMBIE", "PLANT" },
+    volume = "62500 ml",
+    mass = "81500 g",
+    hp = 100,
+    speed = 110,
+    materials = { "veggy" },
+    symbol = "Z",
+    color = "light_green",
+    aggression = 100,
+    morale = 100,
+    melee_skill = 6,
+    melee_dice = 4,
+    melee_sides = 6,
+    melee_damage = { { type = "cut", amount = 4 } },
+    dodge = 3,
+    weakpoints = {
+        {
+            name = ccb.content.text("the inside of its mouth"),
+            head = true,
+            armor_multiplier = { physical = 0 },
+            coverage = 2,
+            id = "the inside of its mouth",
+        },
+        {
+            name = ccb.content.text("the eye"),
+            head = true,
+            armor_multiplier = { physical = 0 },
+            coverage = 1,
+            id = "the eye",
+        },
+    },
+    bleed_rate = 0,
+    vision_day = 15,
+    vision_night = 3,
+    harvest = "zombie_thorny",
+    attack_effects = { { id = "paralyzepoison", duration = 33 } },
+    grab_strength = 30,
+    attacks = {
+        {
+            id = "bite_humanoid",
+            cooldown = 4,
+            accuracy = 5,
+            damage = {
+                { type = "stab", amount = 10, armor_multiplier = 0.3 },
+                { type = "bash", amount = 10, armor_multiplier = 0.3 },
+            },
+        },
+        { id = "grab", cooldown = 4 },
+    },
+    burn_into = "mon_zombie_scorched",
+    flags = {
+        "SEES", "HEARS", "SMELLS", "STUMBLES", "WARM", "GRABS", "BASHES", "GROUP_BASH", "POISON",
+        "NO_BREATHE", "SWIMS", "REVIVES", "PUSH_MON", "FILTHY", "WATER_CAMOUFLAGE", "PARALYZEVENOM",
+    },
+    armor = { bash = 5, cut = 2, bullet = 2 },
     death = { drops = "mon_zombie_swimmer_death_drops" },
 }
