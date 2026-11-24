@@ -87,14 +87,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [
-          "frame#cross",
-          "reclining_seat#windshield_front",
-          "seatbelt",
-          "controls",
-          "atlas_cabin_hvac",
-          "integrated_cooler"
-        ]
+        "parts": [ "frame#cross", "reclining_seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac", "integrated_cooler" ]
       },
       { "x": 0, "y": 0, "parts": [ "stereo", "dashboard", "vehicle_alarm" ] },
       { "x": 0, "y": 0, "parts": [ "horn_car", "roof" ] },

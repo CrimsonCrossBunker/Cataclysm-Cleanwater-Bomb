@@ -104,7 +104,11 @@
       ],
       "terrain": { "q": "t_door_c", "J": "t_floor", "C": "t_floor", "D": "t_floor", "T": "t_floor", "K": "t_floor", "P": "t_floor" },
       "furniture": { "J": "f_desk", "C": "f_chair", "D": "f_desk", "T": "f_table", "K": "f_bookcase", "P": "f_counter" },
-      "items": { "J": { "item": "office", "chance": 65 }, "D": { "item": "school", "chance": 18 }, "K": { "item": "textbooks", "chance": 45 } },
+      "items": {
+        "J": { "item": "office", "chance": 65 },
+        "D": { "item": "school", "chance": 18 },
+        "K": { "item": "textbooks", "chance": 45 }
+      },
       "palettes": [ "campus_common" ]
     }
   }

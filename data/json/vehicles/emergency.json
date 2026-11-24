@@ -93,14 +93,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [
-          "frame#cross",
-          "seat#windshield_front",
-          "seatbelt",
-          "controls",
-          "atlas_cabin_hvac",
-          "stereo"
-        ]
+        "parts": [ "frame#cross", "seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac", "stereo" ]
       },
       { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm", "horn_car" ] },
       { "x": 0, "y": 0, "parts": [ "roof" ] },
@@ -285,11 +278,7 @@
       [ "        o" ]
     ],
     "parts": [
-      {
-        "x": 0,
-        "y": 0,
-        "parts": [ "hdframe#cross", "seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac" ]
-      },
+      { "x": 0, "y": 0, "parts": [ "hdframe#cross", "seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac" ] },
       { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm", "horn_big" ] },
       { "x": 0, "y": 0, "parts": [ "roof" ] },
       { "x": 0, "y": -1, "parts": [ "hdframe#vertical_left", "door#front_left", "atlas_roll_down_window", "roof" ] },
@@ -419,14 +408,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [
-          "frame#cross",
-          "seat#windshield_front",
-          "seatbelt",
-          "controls",
-          "atlas_cabin_hvac",
-          "stereo"
-        ]
+        "parts": [ "frame#cross", "seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac", "stereo" ]
       },
       { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm", "horn_car" ] },
       { "x": 0, "y": 0, "parts": [ "roof" ] },
@@ -482,14 +464,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [
-          "frame#cross",
-          "seat#windshield_front",
-          "seatbelt",
-          "controls",
-          "atlas_cabin_hvac",
-          "stereo"
-        ]
+        "parts": [ "frame#cross", "seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac", "stereo" ]
       },
       { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm", "horn_car" ] },
       { "x": 0, "y": 0, "parts": [ "roof" ] },
@@ -544,14 +519,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [
-          "frame#cross",
-          "seat#windshield_front",
-          "seatbelt",
-          "controls",
-          "atlas_cabin_hvac",
-          "stereo"
-        ]
+        "parts": [ "frame#cross", "seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac", "stereo" ]
       },
       { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm", "horn_car" ] },
       { "x": 0, "y": 0, "parts": [ "roof" ] },
@@ -613,14 +581,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [
-          "frame#cross",
-          "seat#windshield_front",
-          "seatbelt",
-          "controls",
-          "atlas_cabin_hvac",
-          "stereo"
-        ]
+        "parts": [ "frame#cross", "seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac", "stereo" ]
       },
       { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm", "horn_car" ] },
       { "x": 0, "y": 0, "parts": [ "roof" ] },
@@ -684,14 +645,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [
-          "frame#cross",
-          "seat#windshield_front",
-          "seatbelt",
-          "controls",
-          "atlas_cabin_hvac",
-          "stereo"
-        ]
+        "parts": [ "frame#cross", "seat#windshield_front", "seatbelt", "controls", "atlas_cabin_hvac", "stereo" ]
       },
       { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm", "horn_car" ] },
       { "x": 0, "y": 0, "parts": [ "roof" ] },
@@ -755,17 +709,21 @@
       [ "     o " ]
     ],
     "parts": [
-      {
-        "x": 0,
-        "y": 0,
-        "parts": [ "hdframe#cross", "seat", "seatbelt", "controls", "atlas_cabin_hvac" ]
-      },
+      { "x": 0, "y": 0, "parts": [ "hdframe#cross", "seat", "seatbelt", "controls", "atlas_cabin_hvac" ] },
       { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm" ] },
       { "x": 0, "y": 0, "parts": [ "light_blue", "horn_car", "hdroof" ] },
-      { "x": 0, "y": -1, "parts": [ "hdframe#vertical_left", "hddoor#left", "atlas_roll_down_window", "plating_steel" ] },
+      {
+        "x": 0,
+        "y": -1,
+        "parts": [ "hdframe#vertical_left", "hddoor#left", "atlas_roll_down_window", "plating_steel" ]
+      },
       { "x": 0, "y": 1, "parts": [ "hdframe#cross", "hdroof", "aisle#vertical" ] },
       { "x": 0, "y": 2, "parts": [ "hdframe#cross", "seat", "seatbelt", "hdroof", "light_red" ] },
-      { "x": 0, "y": 3, "parts": [ "hdframe#vertical_right", "hddoor#right", "atlas_roll_down_window", "plating_steel" ] },
+      {
+        "x": 0,
+        "y": 3,
+        "parts": [ "hdframe#vertical_right", "hddoor#right", "atlas_roll_down_window", "plating_steel" ]
+      },
       { "x": 1, "y": -1, "parts": [ "hdframe#vertical_T_left", "plating_steel" ] },
       { "x": 1, "y": -1, "parts": [ "reinforced_windshield#nw" ] },
       { "x": 1, "y": -2, "parts": [ "wing_mirror#left" ] },
