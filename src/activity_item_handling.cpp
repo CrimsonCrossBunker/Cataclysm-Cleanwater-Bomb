@@ -99,6 +99,7 @@
 #include "vehicle_selector.h"
 #include "vehicle_uid.h"
 #include "visitable.h"
+#include "vehicle_appliance.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "weather.h"
@@ -4414,7 +4415,8 @@ static std::optional<tripoint_bub_ms> find_best_fire( const std::vector<tripoint
             best_fire_age = fire_age;
         }
         // If a contained fire exists, ignore any other fires
-        if( here.has_flag_furn( ter_furn_flag::TFLAG_FIRE_CONTAINER, pt ) ) {
+        if( here.has_flag_furn( ter_furn_flag::TFLAG_FIRE_CONTAINER, pt ) ||
+            has_wood_boiler( here, pt ) ) {
             return pt;
         }
     }
@@ -4695,7 +4697,8 @@ bool try_fuel_fire( Character &you, std::optional<tripoint_bub_ms> fire_target )
     }
 
     // Special case: fire containers allow burning logs, so use them as fuel if fire is contained
-    bool contained = here.has_flag_furn( ter_furn_flag::TFLAG_FIRE_CONTAINER, *best_fire );
+    const bool contained = here.has_flag_furn( ter_furn_flag::TFLAG_FIRE_CONTAINER, *best_fire ) ||
+                           has_wood_boiler( here, *best_fire );
     fire_data fd( 1, contained );
     time_duration fire_age = here.get_field_age( *best_fire, fd_fire );
 

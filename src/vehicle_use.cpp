@@ -1244,7 +1244,7 @@ void vehicle::open_all_at( map &here, int p )
 {
     for( const int elem : parts_at_relative( parts[p].mount_pos3(), true, true ) ) {
         const vehicle_part &vp = parts[elem];
-        if( vp.info().has_flag( VPFLAG_OPENABLE ) ) {
+        if( vp.info().has_flag( VPFLAG_OPENABLE ) && !vp.info().has_flag( "CABIN_WINDOW" ) ) {
             // Note that this will open multi-square and non-multipart parts in the tile. This
             // means that adjacent open multi-square openables can still have closed stuff
             // on same tile after this function returns

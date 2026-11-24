@@ -44,6 +44,7 @@
 #include "veh_type.h"
 #include "veh_utils.h"
 #include "vehicle.h"
+#include "vehicle_appliance.h"
 #include "vehicle_power_connection.h"
 #include "vehicle_control.h"
 #include "vpart_position.h"
@@ -88,8 +89,8 @@ vpart_id vpart_appliance_from_item( const itype_id &item_id )
     return vpart_ap_standing_lamp;
 }
 
-bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
-                      const Character &owner, const std::optional<item> &base,
+static bool place_appliance_impl( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
+                      const Character *owner, const std::optional<item> &base,
                       std::optional<units::angle> direction )
 {
 
@@ -133,14 +134,15 @@ bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart
     here.add_vehicle_to_cache( veh );
 
     // Connect to any neighbouring appliances or wires once
-    std::unordered_set<const vehicle *> connected_vehicles;
-    for( const tripoint_bub_ms &trip : here.points_in_radius( p, 1 ) ) {
-        const optional_vpart_position vp = here.veh_at( trip );
-        if( !vp ) {
-            continue;
-        }
-        vehicle &veh_target = vp->vehicle();
-        if( veh_target.has_tag( flag_APPLIANCE ) ) {
+    if( veh->avail_linkable_part( point_rel_ms::zero, true ) >= 0 ) {
+        std::unordered_set<const vehicle *> connected_vehicles;
+        for( const tripoint_bub_ms &trip : here.points_in_radius( p, 1 ) ) {
+            const optional_vpart_position vp = here.veh_at( trip );
+            if( !vp || &vp->vehicle() == veh || !vp->vehicle().has_tag( flag_APPLIANCE ) ||
+                vp->vehicle().avail_linkable_part( vp->mount_pos3(), true ) < 0 ) {
+                continue;
+            }
+            vehicle &veh_target = vp->vehicle();
             if( veh->is_powergrid() && veh_target.is_powergrid() &&
                 veh->merge_appliance_into_grid( &here, veh_target ) ) {
                 add_msg( _( "You merge it into the adjacent power grid." ) );
@@ -162,8 +164,23 @@ bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart
             orient_part( here, veh, vpinfo, partnum );
         }
     }
-    veh->set_owner( owner );
+    if( owner ) {
+        veh->set_owner( *owner );
+    }
     return true;
+}
+
+bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
+                      const Character &owner, const std::optional<item> &base,
+                      std::optional<units::angle> direction )
+{
+    return place_appliance_impl( here, p, vpart, &owner, base, direction );
+}
+
+bool place_unowned_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
+                              const std::optional<item> &base )
+{
+    return place_appliance_impl( here, p, vpart, nullptr, base, std::nullopt );
 }
 
 void veh_app_interact::run( map &here, vehicle &veh, const point_rel_ms &p )
@@ -309,11 +326,31 @@ static void draw_appliance_connections( vehicle *veh )
 }
 #endif
 
-std::string veh_app_interact::draw_info_imgui_header( map &here )
+std::string veh_app_interact::draw_info_imgui_header( map &here, const vehicle_part &part )
 {
-    // Always print this warning and only this warning if we don't have a grid.
-    // We should not pretend anything is functional without a battery, because it's not!
+    if( part.info().has_flag( "NO_POWER_CONNECTION" ) ) {
+        if( part.info().has_flag( "HYDRONIC_BOILER" ) ) {
+            return _( "Drop fuel on the boiler's tile, then start a fire." );
+        }
+        return _( "Connect the radiator to a boiler to circulate hot water." );
+    }
+    std::string climate_status;
+    if( part.info().has_flag( "SPLIT_HVAC_INDOOR" ) ) {
+        const int index = veh->index_of_part( &part );
+        if( index >= 0 ) {
+            const units::power input = split_hvac_input_power( here, vpart_reference( *veh, index ) );
+            climate_status = string_format( _( "Air conditioner input: %d W" ),
+                                            static_cast<int>( units::to_watt( input ) ) );
+        }
+    }
     if( !has_battery_in_grid( here, veh ) ) {
+        if( part.info().has_flag( "SPLIT_HVAC_INDOOR" ) ) {
+            return climate_status + "\n" +
+                   _( "The air conditioner can draw power through its linked outdoor unit." );
+        }
+        if( part.info().has_flag( "SPLIT_HVAC_OUTDOOR" ) ) {
+            return _( "The air conditioner can draw power through its linked indoor unit." );
+        }
         return colorize( _( "Appliance has no connection to a battery." ), c_light_red );
     }
 
@@ -352,10 +389,14 @@ std::string veh_app_interact::draw_info_imgui_header( map &here )
     // Battery power output
     units::power grid_flow = 0_W;
     for( const std::pair<vehicle *const, float> &pair : veh->search_connected_vehicles( here ) ) {
-        grid_flow += pair.first->net_battery_charge_rate( here, /* include_reactors = */ true );
+        grid_flow += pair.first->net_battery_charge_rate( here, /* include_reactors = */ true ) -
+                     room_appliance_power_draw( *pair.first );
     }
     // Always start printing this on its own line
     ret += "\n";
+    if( !climate_status.empty() ) {
+        ret += climate_status + "\n";
+    }
     print_charge( _( "Grid battery power flow: " ), grid_flow, ret );
 
     // Reactor power output
@@ -389,8 +430,10 @@ std::string veh_app_interact::draw_info_imgui_header( map &here )
     }
 
     // Other power output
-    if( !veh->accessories.empty() || veh->has_part( "RECHARGE" ) ) {
-        units::power rate = veh->total_accessory_epower() + veh->recharge_epower_this_turn;
+    const units::power climate_draw = room_appliance_power_draw( *veh );
+    if( !veh->accessories.empty() || veh->has_part( "RECHARGE" ) || climate_draw > 0_W ) {
+        const units::power rate = veh->total_accessory_epower() + veh->recharge_epower_this_turn -
+                                  climate_draw;
         print_charge( _( "Appliance power consumption: " ), rate, ret );
     }
 
@@ -669,7 +712,7 @@ void veh_app_interact::populate_app_actions( map &here )
     const std::string ctxt_letters = ctxt.get_available_single_char_hotkeys();
     imenu.entries.clear();
     imenu.title = veh->name;
-    imenu.text = draw_info_imgui_header( here );
+    imenu.text = draw_info_imgui_header( here, *vp );
     app_actions.clear();
 
     /******************** General actions ********************/
@@ -697,21 +740,24 @@ void veh_app_interact::populate_app_actions( map &here )
     } );
     imenu.addentry( -1, veh->can_unmount( *vp, true ).success(), ctxt.keys_bound_to( "REMOVE" ).front(),
                     ctxt.get_action_name( "REMOVE" ) );
-    // Plug
-    app_actions.emplace_back( [&here, this]() {
-        plug( here );
-    } );
-    imenu.addentry( -1, true, ctxt.keys_bound_to( "PLUG" ).front(),
-                    string_format( "%s%s", ctxt.get_action_name( "PLUG" ),
-                                   //~ An addendum to Plug In's description, as in: Plug in appliance / merge power grid".
-                                   veh->is_powergrid() ? _( " / merge power grid" ) : "" ) );
+    if( veh->avail_linkable_part( a_point, true ) >= 0 ) {
+        app_actions.emplace_back( [&here, this]() {
+            plug( here );
+        } );
+        imenu.addentry( -1, true, ctxt.keys_bound_to( "PLUG" ).front(),
+                        string_format( "%s%s", ctxt.get_action_name( "PLUG" ),
+                                       //~ An addendum to Plug In's description, as in: Plug in appliance / merge power grid".
+                                       veh->is_powergrid() ? _( " / merge power grid" ) : "" ) );
+    }
 #if defined(TILES)
     // Hide connections
-    app_actions.emplace_back( []() {
-        toggle_connections_visibility();
-    } );
-    imenu.addentry( -1, true, ctxt.keys_bound_to( "TOGGLE_CONNECTION_VISIBILITY" ).front(),
-                    ctxt.get_action_name( "TOGGLE_CONNECTION_VISIBILITY" ) );
+    if( !vp->info().has_flag( "NO_POWER_CONNECTION" ) ) {
+        app_actions.emplace_back( []() {
+            toggle_connections_visibility();
+        } );
+        imenu.addentry( -1, true, ctxt.keys_bound_to( "TOGGLE_CONNECTION_VISIBILITY" ).front(),
+                        ctxt.get_action_name( "TOGGLE_CONNECTION_VISIBILITY" ) );
+    }
 
     // Hide wire vehicle parts
     if( use_tiles && vp->info().has_flag( flag_WIRING ) ) {

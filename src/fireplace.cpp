@@ -21,6 +21,7 @@
 #include "messages.h"
 #include "player_activity.h"
 #include "translations.h"
+#include "vehicle_appliance.h"
 #include "vpart_position.h"
 
 namespace
@@ -165,9 +166,13 @@ bool execute_fireplace_selection( Character &who, map &here, const fireplace_sel
     }
     const tripoint_bub_ms tile = here.get_bub( choice.target.position );
     if( !here.has_loaded_submap( tile ) || !here.has_loaded_submap( who.pos_bub( here ) ) ||
-        here.veh_at( tile ) || !choice.target.matches( here ) ||
-        !( here.has_furn( tile ) ? here.furn( tile )->has_examine( iexamine::fireplace ) :
-           here.ter( tile )->has_examine( iexamine::fireplace ) ) ) {
+        !choice.target.matches( here ) ) {
+        return false;
+    }
+    const bool wood_boiler = has_wood_boiler( here, tile );
+    if( !wood_boiler && ( here.veh_at( tile ) ||
+                          !( here.has_furn( tile ) ? here.furn( tile )->has_examine( iexamine::fireplace ) :
+                             here.ter( tile )->has_examine( iexamine::fireplace ) ) ) ) {
         return false;
     }
     if( choice.action != fireplace_action::light_with_tool && ( choice.tool || choice.tinder ) ) {
@@ -180,7 +185,7 @@ bool execute_fireplace_selection( Character &who, map &here, const fireplace_sel
         here.remove_field( tile, field_fd_fire );
         who.mod_moves( -200 );
         who.add_msg_if_player( m_info, _( "With a few determined moves you put out the fire in the %s." ),
-                               here.name( tile ) );
+                               wood_boiler ? _( "wood-fired boiler" ) : here.name( tile ) );
         return true;
     }
     if( here.has_nearby_fire( tile, 0 ) ) {

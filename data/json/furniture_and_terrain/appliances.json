@@ -1302,7 +1302,7 @@
     "color": "red",
     "broken_color": "light_gray",
     "durability": 60,
-    "description": "A huge, pot-bellied device that resembles something between a coal-burning stove and a boiler, with a wide, hinged cage covering the combustion chamber.  Three unmarked gauges sit like alien eyes upon its face.  A side-mounted crank is its only visible control.  In defiance of its apparent function, it has no exhaust vent; in its place is a hose twisted on itself several times, coiled in copper, and terminating in a bulbous back-mounted battery pack.",
+    "description": "A huge, pot-bellied device that resembles something between a coal-burning stove and a boiler, with a wide, hinged cage covering the combustion chamber.  Three unmarked gauges sit like alien eyes upon its face.  A side-mounted crank starts the combustion chamber.  In defiance of its apparent function, it has no exhaust vent; in its place is a hose twisted on itself several times, coiled in copper, and terminating in a bulbous back-mounted battery pack.  A separate reservoir stores water and has fittings for a radiator loop.",
     "breaks_into": [
       { "item": "scrap", "count": [ 8, 12 ] },
       { "item": "pipe", "count": [ 0, 3 ] },
@@ -1312,7 +1312,7 @@
       { "item": "power_supply", "count": [ 0, 1 ] },
       { "item": "cable", "count": [ 0, 2 ] }
     ],
-    "flags": [ "APPLIANCE", "NL_BOILER", "CTRL_ELECTRONIC", "CARGO", "OBSTACLE" ],
+    "flags": [ "APPLIANCE", "NL_BOILER", "HYDRONIC_BOILER", "CTRL_ELECTRONIC", "CARGO", "OBSTACLE" ],
     "size": "200 L",
     "requirements": { "removal": { "time": "5 s" } },
     "variants": [ { "symbols": "&", "symbols_broken": "-" } ]

@@ -6,13 +6,18 @@
 #include <optional>
 
 #include "craft_command.h"
+#include "type_id.h"
+#include "units_fwd.h"
 
 class Character;
 class JsonObject;
 class JsonOut;
 class map;
+class item;
 class vehicle;
 class veh_menu;
+class vpart_reference;
+struct vehicle_part;
 
 // Stable hardware identity and player choices, never client-computed costs.
 struct vehicle_appliance_selection {
@@ -33,5 +38,20 @@ bool execute_vehicle_appliance( Character &who, map &here, vehicle &target,
 void use_vehicle_appliance( Character &who, map &here, vehicle &target, int part );
 void add_vehicle_appliance_menu( veh_menu &menu, map &here, vehicle &target,
                                  const tripoint_abs_ms &position );
+
+bool is_hvac_indoors( const map &here, const tripoint_bub_ms &position );
+bool has_wood_boiler( const map &here, const tripoint_bub_ms &position );
+void record_wood_boiler_burn( map &here, const tripoint_bub_ms &position, double fuel_grams );
+void set_hvac_link( item &unit, const tripoint_abs_ms &destination, const itype_id &material,
+                    int quantity );
+void store_boiler_water( item &boiler, double liters, double temperature_c, bool clean );
+void update_vehicle_climate( map &here, vehicle &target );
+bool is_room_heat_source( const vpart_reference &part );
+double room_appliance_watts( map &here, const vpart_reference &part, double outside_c, double room_c );
+units::power split_hvac_epower( const vehicle_part &part );
+units::power split_hvac_input_power( map &here, const vpart_reference &indoor );
+units::power room_appliance_power_draw( const vehicle &target );
+double cabin_temperature_delta( const map &here, const tripoint_bub_ms &position );
+std::optional<int> use_hvac_remote( Character *who, item *remote, const tripoint_bub_ms &position );
 
 #endif // CATA_SRC_VEHICLE_APPLIANCE_H

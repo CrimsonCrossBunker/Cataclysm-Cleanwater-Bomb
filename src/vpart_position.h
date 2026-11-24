@@ -70,6 +70,8 @@ class vpart_position
          * @returns Movement difficulty. 0 for impassable.
          */
         int get_movecost() const;
+        static constexpr int window_climb_movecost = 12;
+        bool can_climb_through_window() const;
 
         /**
          * Sets the label at this part of the vehicle. Removes the label if @p text is empty.

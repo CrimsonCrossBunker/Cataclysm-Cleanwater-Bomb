@@ -188,6 +188,7 @@ struct pathfinding_settings {
     bool allow_unlock_doors = false;
     bool avoid_traps = false;
     bool allow_climb_stairs = true;
+    bool allow_climb_vehicle_windows = false;
     bool avoid_rough_terrain = false;
     bool avoid_sharp = false;
     bool avoid_dangerous_fields = false;
