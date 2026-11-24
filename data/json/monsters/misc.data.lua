@@ -1,5 +1,331 @@
 local ccb = require("ccb")
 
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "pseudo_debug_mon",
+    name = ccb.content.text_without_extraction("debug monster"),
+    description = ccb.content.text_without_extraction("This monster exists only for testing purposes."),
+    default_faction = "",
+    species = { "ZOMBIE" },
+    volume = "62500 ml",
+    mass = "81500 g",
+    hp = 10000,
+    speed = 100,
+    materials = { "flesh" },
+    symbol = "X",
+    color = "white",
+    aggression = 100,
+    morale = 100,
+    melee_damage = { { type = "cut", amount = 0 } },
+    vision_day = 1,
+    weakpoints = {
+        {
+            name = ccb.content.text("the knee"),
+            armor_multiplier = { bullet = 0.5 },
+            armor_penalty = { bullet = 25 },
+            coverage = 25,
+            id = "the knee",
+        },
+        {
+            name = ccb.content.text("the bugs"),
+            armor_multiplier = { bullet = 0.0 },
+            armor_penalty = { bullet = 0 },
+            coverage = 25,
+            id = "the bugs",
+        },
+    },
+    harvest = "exempt",
+    regenerates = 50,
+    regeneration_modifiers = { onfire = -5, corroding = 5 },
+    flags = { "IMMOBILE", "NOT_HALLUCINATION", "FILTHY" },
+    armor = { bullet = 100 },
+    death = { outcome = { corpse = "NO_CORPSE", message = ccb.content.text("The %s melts away.") } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "pseudo_debug_bullet_sponge",
+    copy_from = "pseudo_debug_mon",
+    name = ccb.content.text_without_extraction("debug bullet sponge"),
+    description = ccb.content.text_without_extraction("This monster exists only for testing purposes"),
+    aggression = 0,
+    morale = 0,
+    regenerates = 5000,
+}
+
+-- NO_I18N
+-- NO_I18N
+-- Basic zombie strength
+ccb.content.define_monster {
+    id = "mon_debug_grabber",
+    name = ccb.content.text_without_extraction("weak debug grabber"),
+    description = ccb.content.text_without_extraction("This monster exists only for grab testing purposes.  Same grab strength as a basic zombie."),
+    looks_like = "mon_thing",
+    default_faction = "",
+    species = { "ZOMBIE" },
+    volume = "62500 ml",
+    mass = "300000 g",
+    hp = 1,
+    speed = 100,
+    materials = { "flesh" },
+    symbol = "X",
+    color = "white",
+    aggression = 100,
+    morale = 100,
+    melee_skill = 100,
+    grab_strength = 20,
+    melee_damage = { { type = "cut", amount = 0 } },
+    vision_day = 50,
+    attacks = { { id = "grab", cooldown = 0, move_cost = 0 } },
+    harvest = "exempt",
+    regeneration_modifiers = { onfire = -5, corroding = 5 },
+    flags = { "IMMOBILE", "SEES", "NOT_HALLUCINATION" },
+    death = { outcome = { corpse = "NO_CORPSE", message = ccb.content.text("The %s melts away.") } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "mon_debug_grabber_mid",
+    copy_from = "mon_debug_grabber",
+    name = ccb.content.text_without_extraction("middle-strength debug grabber"),
+    description = ccb.content.text_without_extraction("This monster exists only for grab testing purposes.  Same grab strength as a Tier 2 grabbing zombie."),
+    grab_strength = 50,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "mon_debug_grabber_strong",
+    copy_from = "mon_debug_grabber",
+    name = ccb.content.text_without_extraction("strong debug grabber"),
+    description = ccb.content.text_without_extraction("This monster exists only for grab testing purposes.  Same grab strength as a Tier 3 grabbing zombie."),
+    grab_strength = 100,
+}
+
+-- NO_I18N
+ccb.content.define_monster {
+    id = "mon_debug_grabber_head",
+    copy_from = "mon_debug_grabber",
+    description = ccb.content.text_without_extraction("This grab testing monster has a strange fascination with your head."),
+    attacks = {
+        {
+            id = "grab",
+            cooldown = 0,
+            move_cost = 0,
+            body_part_types = { { id = "head", weight = 3 } },
+        },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "mon_debug_puller_weak",
+    copy_from = "mon_debug_grabber",
+    mass = "100 kg",
+    name = ccb.content.text_without_extraction("weak debug puller"),
+    description = ccb.content.text_without_extraction("This 100kg monster exists only to test ranged pulls using the base 0.5 pull weight ratio."),
+    attacks = {
+        {
+            id = "ranged_pull",
+            grab_settings = { pull_weight_ratio = 0.5 },
+            cooldown = 0,
+            move_cost = 0,
+        },
+    },
+    inheritance = { add = { flags = { "ALL_SEEING" } } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "mon_debug_puller_strong",
+    copy_from = "mon_debug_puller_weak",
+    name = ccb.content.text_without_extraction("strong debug puller"),
+    description = ccb.content.text_without_extraction("This 100kg monster is strong enough to pull 250kg targets."),
+    attacks = {
+        {
+            id = "ranged_pull",
+            grab_settings = { pull_weight_ratio = 2.5 },
+            cooldown = 0,
+            move_cost = 0,
+        },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "mon_debug_puller_incompetent",
+    copy_from = "mon_debug_puller_strong",
+    name = ccb.content.text_without_extraction("incompetent debug puller"),
+    description = ccb.content.text_without_extraction("This monster exists only to fail pulling its target despite technically being able to.  Truly a cursed existence."),
+    attacks = {
+        {
+            id = "ranged_pull",
+            grab_settings = { pull_weight_ratio = 2.5, pull_chance = 0 },
+            cooldown = 0,
+            move_cost = 0,
+        },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "mon_debug_dragger",
+    copy_from = "mon_debug_grabber",
+    mass = "100 kg",
+    name = ccb.content.text_without_extraction("debug dragger"),
+    description = ccb.content.text_without_extraction("This monster exists to drag you behind it briefly."),
+    attacks = {
+        {
+            id = "grab_drag",
+            cooldown = 0,
+            move_cost = 0,
+            grab_settings = { break_distance = 999, move_cost_multiplier = 0.001 },
+        },
+        {
+            id = "drag_followup",
+            move_cost = 0,
+            cooldown = 0,
+            grab_settings = { break_distance = 999 },
+            when = "allow_jabberwock_bite_jabberwock_1",
+        },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_monster {
+    id = "pseudo_weakpoint_mon",
+    name = ccb.content.text_without_extraction("weakpoint monster"),
+    description = ccb.content.text_without_extraction("This monster exists only for weakpoint testing purposes."),
+    default_faction = "",
+    species = { "ZOMBIE" },
+    volume = "62500 ml",
+    mass = "81500 g",
+    hp = 10000,
+    speed = 100,
+    materials = { "flesh" },
+    symbol = "X",
+    color = "white",
+    aggression = 100,
+    morale = 100,
+    melee_damage = { { type = "cut", amount = 0 } },
+    vision_day = 1,
+    families = { "prof_debug_weakpoint", { proficiency = "prof_debug_weakpoint_expert", bonus = 100 } },
+    weakpoints = {
+        {
+            name = ccb.content.text("the belly"),
+            armor_multiplier = { bullet = 0.5 },
+            armor_penalty = { bullet = 25 },
+            coverage = 50,
+            attack_coverage = { all = 0.5 },
+            target_effect = "stunned",
+            id = "the belly",
+        },
+        {
+            name = ccb.content.text("impossible to hit"),
+            coverage = 100,
+            difficulty = { all = 100.0 },
+            id = "impossible to hit",
+        },
+        {
+            name = ccb.content.text("the knee"),
+            armor_multiplier = { bullet = 0.0 },
+            armor_penalty = { bullet = 0 },
+            damage_multiplier = { all = 2.0 },
+            coverage = 25,
+            effects = {
+                {
+                    effect = "stunned",
+                    duration = { "1 seconds", "3 seconds" },
+                    permanent = false,
+                    intensity = { 0, 0 },
+                    damage_percent = { 0, 100 },
+                    chance = 50,
+                    message = ccb.content.text("The %s is disorientated."),
+                },
+            },
+            id = "the knee",
+        },
+    },
+    harvest = "zombie_humanoid",
+    flags = { "IMMOBILE", "NOT_HALLUCINATION", "FILTHY" },
+    armor = { bullet = 100 },
+}
+
+-- Zombie faction so they don't attack a clear prop
+-- ahh! it sees you!
+ccb.content.define_monster {
+    id = "mon_dragon_dummy",
+    name = ccb.content.plural_text("ancient red dragon", "ancient red dragons"),
+    description = ccb.content.text("A towering, hulking dragon, with tremendous, curving horns and shining red scales, its glowing maw peeled back in a hateful grimace as its eyes bore into yours."),
+    body_type = "dog",
+    default_faction = "zombie",
+    difficulty_adjustment = 50,
+    volume = "875000 ml",
+    mass = "4535 g",
+    hp = 1,
+    materials = { "paper" },
+    symbol = "D",
+    color = "red",
+    luminance = 8,
+    aggression = 100,
+    morale = 100,
+    vision_day = 50,
+    vision_night = 50,
+    harvest = "exempt",
+    flags = { "SEES" },
+    death = {
+        drops = "mon_dragon_dummy_drops",
+        outcome = { message = ccb.content.text("The %s disintegrates!"), corpse = "NO_CORPSE" },
+    },
+}
+
+-- Zombie faction so they don't attack a clear prop
+-- ahh! it sees you!
+ccb.content.define_monster {
+    id = "mon_poly_special_test",
+    name = ccb.content.plural_text("ancient red dragon", "ancient red dragons"),
+    description = ccb.content.text("A towering, hulking dragon, with tremendous, curving horns and shining red scales, its glowing maw peeled back in a hateful grimace as its eyes bore into yours."),
+    body_type = "dog",
+    default_faction = "zombie",
+    difficulty_adjustment = 50,
+    volume = "875000 ml",
+    mass = "4535 g",
+    hp = 1,
+    materials = { "paper" },
+    symbol = "D",
+    color = "red",
+    luminance = 8,
+    aggression = 100,
+    morale = 100,
+    vision_day = 50,
+    vision_night = 50,
+    harvest = "exempt",
+    attacks = {
+        {
+            id = "debug_self_poly",
+            cooldown = 50,
+            kind = "polymorph_special",
+            form = "mon_fungaloid",
+            keep_speed = true,
+            keep_hp = true,
+            keep_anger = true,
+        },
+    },
+    flags = { "SEES" },
+    death = {
+        drops = "mon_dragon_dummy_drops",
+        outcome = { message = ccb.content.text("The %s disintegrates!"), corpse = "NO_CORPSE" },
+    },
+}
+
 ccb.content.define_monster {
     id = "mon_generator",
     name = ccb.content.plural_text("generator", "generators"),

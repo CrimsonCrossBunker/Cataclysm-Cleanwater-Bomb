@@ -1,5 +1,230 @@
 local ccb = require("ccb")
 
+-- Slowed and weakened by light of sufficient brightness. (It lurks outside of flashlight range) Luring it into a trap is a viable path to killing it.
+-- Unfortunately, we do need some melee damage so that it can bash through terrain and the like.
+-- Blob bullshit laughs at concepts like armor. This is basically just here as anti-cheese. It should rarely if ever directly attack you.
+-- Try to stay this far away from the player with your regular moves, very important
+-- TODO? Upgrade doesn't actually work because amalgamations do not have evolutions. Ideally this would upgrade them one step *and also remove their timed lifespan*. If this is added/resolved the spell cooldowns probably need to be nerfed.
+-- Explicitly resistant to bullets, meant to be lured into a close encounter(if you can see/engage it at all)
+ccb.content.define_monster {
+    id = "mon_lieutenant_shadow",
+    name = ccb.content.plural_text("A shadow?", "A shadow?"),
+    description = ccb.content.text("Something is there!  Against all reason, this shadow lurks at the corners of your vision.  You close your eyes, but still, it is there.  No matter how far you run, it is there.  In pitchest black, it is there.  Now you will know why you fear the night."),
+    default_faction = "attack_player_only",
+    body_type = "human",
+    species = { "ZOMBIE", "HUMAN" },
+    difficulty_adjustment = 500,
+    volume = "108500 ml",
+    mass = "100 kg",
+    phase = "GAS",
+    hp = 250,
+    speed = 200,
+    move_skills = { climb = 10 },
+    attack_cost = 200,
+    regenerates = 1,
+    symbol = "L",
+    color = "red_white",
+    scents_tracked = { "sc_human", "sc_fetid" },
+    aggression = 100,
+    morale = 300,
+    melee_skill = 10,
+    melee_dice = 2,
+    melee_sides = 2,
+    melee_damage = { { type = "pure", amount = 1, penetration = 999 } },
+    dodge = 10,
+    bleed_rate = 0,
+    vision_day = 50,
+    vision_night = 50,
+    melee_training_cap = 0,
+    tracking_distance = 10,
+    pathing = {
+        max_distance = 10,
+        open_doors = true,
+        avoid_traps = true,
+        avoid_dangerous_fields = true,
+        avoid_sharp = true,
+        climb_stairs = true,
+    },
+    attacks = {
+        { reference = "UPGRADE", cooldown = 20 },
+        {
+            id = "LTNT_ILLUMINATE_YOU",
+            range = 30,
+            dodgeable = false,
+            blockable = false,
+            effects_require_damage = false,
+            effects = { { id = "Shadow_Reveal", duration = 60, chance = 100 } },
+            damage = { { type = "pure", amount = 0.0 } },
+            avatar_no_damage = ccb.content.text_without_extraction("The shadows recede, leaving you with nowhere to hide!"),
+            npc_no_damage = ccb.content.text_without_extraction("The shadows recede from <npcname>, and now they stand out like a floodlight!"),
+            cooldown = 10,
+            kind = "melee",
+            when = "allow_lieutenant_shadow_ltnt_illuminate_you",
+        },
+        {
+            id = "LTNT_LIFE_DRAIN",
+            spell = { id = "LTNT_LIFE_DRAIN", min_level = 1 },
+            casting_message = ccb.content.text("The ground blackens before you."),
+            cooldown = 20,
+            kind = "spell",
+            when = "allow_lieutenant_shadow_ltnt_life_drain",
+        },
+        {
+            id = "LTNT_attract_nearby",
+            spell = { id = "LTNT_attract_nearby", min_level = 1 },
+            casting_message = ccb.content.text("Your hearing is overwhelmed by a booming sound!"),
+            cooldown = 30,
+            kind = "spell",
+            when = "monster_attack_character_target",
+        },
+    },
+    anger_triggers = { "HURT", "PLAYER_CLOSE", "PLAYER_WEAK" },
+    flags = {
+        "SEES", "HEARS", "SMELLS", "WARM", "BASHES", "NO_BREATHE", "HARDTOSHOOT", "CAN_OPEN_DOORS",
+        "BORES", "DESTROYS", "ALL_SEEING", "ALWAYS_SEES_YOU", "HAS_MIND", "ALWAYS_VISIBLE",
+        "NO_FUNG_DMG", "FILTHY", "STUN_IMMUNE", "KEEP_DISTANCE", "PHOTOPHOBIC", "NOT_HALLUCINATION",
+        "PATH_AVOID_DANGER",
+    },
+    armor = { cut = 25, stab = 25, bash = 25, bullet = 100 },
+    death = { outcome = { corpse = "NO_CORPSE" } },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "LTNT_attract_nearby",
+    name = ccb.content.text_without_extraction("Visual Sundering"),
+    description = ccb.content.text_without_extraction("The fact a shadow can make such an awful, loud sound makes your head want to split in two."),
+    flags = { "NO_EXPLOSION_SFX" },
+    valid_targets = { "ground", "hostile" },
+    shape = "blast",
+    min_accuracy = 20,
+    max_accuracy = 20,
+    min_range = 30,
+    max_range = 30,
+    max_level = 1,
+    min_damage = 120,
+    max_damage = 120,
+    effect = "noise",
+}
+
+-- This is a hack because npc_die is not working(?!) for EOC_KILL_SHADOW
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "BEGONE_SHADOW",
+    name = ccb.content.text_without_extraction("BEGONE_SHADOW"),
+    description = ccb.content.text_without_extraction("BEGONE_SHADOW."),
+    valid_targets = { "ground", "self" },
+    base_casting_time = 0,
+    min_damage = 9999,
+    max_damage = 9999,
+    shape = "blast",
+    effect = "banishment",
+}
+
+-- When enough zombies are killed in a short timespan and many still remain, the reclaimer can appear once 50 days have passed since the cataclysm if it hasn't been killed.
+-- It creates a few reclaimer spawns when it appears and creates more if severely injured.  It doesn't move or attack, as its role is to recycle dead zombies and interfere with those powerful enough to kill many zombies in a short time.
+-- It doesn't appear if there's not enough standing zombies, as it relies on them for its protection.
+ccb.content.define_monster {
+    id = "mon_singularity_reclaimer",
+    name = ccb.content.plural_text("Reclaimer", "Reclaimer"),
+    description = ccb.content.text("A titanic, featureless mass of writhing flesh anchored to the ground and stretching as if invisible hands are trying to tear it apart.  It relentlessly reaches towards nearby corpses with its appendages, as if trying to take hold of them."),
+    default_faction = "zombie",
+    body_type = "blob",
+    species = { "ZOMBIE" },
+    difficulty_adjustment = 500,
+    volume = "950 L",
+    mass = "1000 kg",
+    hp = 3000,
+    speed = 100,
+    regenerates = 1,
+    symbol = "O",
+    color = "red",
+    aggression = 100,
+    morale = 300,
+    melee_skill = 0,
+    melee_dice = 0,
+    melee_sides = 0,
+    dodge = 0,
+    bleed_rate = 0,
+    vision_day = 50,
+    vision_night = 50,
+    melee_training_cap = 0,
+    attacks = {
+        {
+            id = "mon_singularity_reclaimer_summon_1",
+            spell = { id = "mon_singularity_reclaimer_summon", min_level = 1, hit_self = true },
+            cooldown = 1,
+            allow_no_target = true,
+            casting_message = ccb.content.text("A mass of flesh emerges from the ground near %1$s!"),
+            kind = "spell",
+            when = "allow_singularity_reclaimer_mon_singularity_reclaimer_summon_1",
+        },
+        {
+            id = "mon_singularity_reclaimer_summon_2",
+            spell = { id = "mon_singularity_reclaimer_summon", min_level = 1, hit_self = true },
+            cooldown = 1,
+            allow_no_target = true,
+            casting_message = ccb.content.text("A mass of bruised flesh emerges from the ground near %1$s!"),
+            kind = "spell",
+            when = "allow_singularity_reclaimer_mon_singularity_reclaimer_summon_2",
+        },
+        {
+            id = "mon_singularity_reclaimer_summon_3",
+            spell = { id = "mon_singularity_reclaimer_summon", min_level = 1, hit_self = true },
+            cooldown = 1,
+            allow_no_target = true,
+            casting_message = ccb.content.text("A mass of bruised flesh emerges from the ground near %1$s!"),
+            kind = "spell",
+            when = "allow_singularity_reclaimer_mon_singularity_reclaimer_summon_3",
+        },
+        {
+            id = "mon_singularity_reclaimer_summon_4",
+            spell = { id = "mon_singularity_reclaimer_summon", min_level = 1, hit_self = true },
+            cooldown = 1,
+            allow_no_target = true,
+            casting_message = ccb.content.text("A mass of badly damaged flesh emerges from the ground near %1$s!"),
+            kind = "spell",
+            when = "allow_singularity_reclaimer_mon_singularity_reclaimer_summon_4",
+        },
+        {
+            id = "mon_singularity_reclaimer_summon_5",
+            spell = { id = "mon_singularity_reclaimer_summon", min_level = 1, hit_self = true },
+            cooldown = 1,
+            allow_no_target = true,
+            casting_message = ccb.content.text("A mass of tattered flesh emerges from the ground near %1$s!"),
+            kind = "spell",
+            when = "allow_singularity_reclaimer_mon_singularity_reclaimer_summon_5",
+        },
+        {
+            id = "mon_singularity_reclaimer_summon_6",
+            spell = { id = "mon_singularity_reclaimer_summon", min_level = 1, hit_self = true },
+            cooldown = 1,
+            allow_no_target = true,
+            casting_message = ccb.content.text("A mass of almost-destroyed flesh emerges from the ground near %1$s!"),
+            kind = "spell",
+            when = "allow_singularity_reclaimer_mon_singularity_reclaimer_summon_6",
+        },
+    },
+    flags = {
+        "WARM", "NO_BREATHE", "NOHEAD", "IMMOBILE", "ALL_SEEING", "ALWAYS_SEES_YOU", "HAS_MIND",
+        "NO_FUNG_DMG", "FILTHY", "STUN_IMMUNE", "NOT_HALLUCINATION",
+    },
+    armor = { bash = 3, cut = 3, bullet = 2, electric = 1 },
+    death = { outcome = { corpse = "NO_CORPSE" } },
+}
+
+ccb.content.define_spell {
+    id = "mon_singularity_reclaimer_summon",
+    shape = "blast",
+    name = ccb.content.text_without_extraction("Summon Reclaimer Spawn"),
+    description = ccb.content.text_without_extraction("Summons a reclaimer spawn and makes the reclaimer keep track of how many it has spawned this time."),
+    flags = { "NO_EXPLOSION_SFX" },
+    valid_targets = { "self" },
+    impact_handler = "w16b_sp_imp_dda_4b201e0f6068",
+}
+
 -- A weaker, limbless, quicker devourer that can absorb nearby flesh and bone to make more of itself.  Becomes a regular devourer after a half-life of a day.
 ccb.content.define_monster {
     id = "mon_singularity_reclaimer_spawn",
