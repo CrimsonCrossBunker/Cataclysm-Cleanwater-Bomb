@@ -1,6 +1,79 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "helmet_full_carbide",
+    category = "armor",
+    name = ccb.content.text("raider's breaching helmet"),
+    description = ccb.content.text("This helmet is designed for the individual that is worried about catching heavy weapons fire to the face.  It is unwieldy and heavy, and lacks basic environmental protection features, but it just might stop even the largest of ballistic rounds."),
+    mass = "3175 g",
+    volume = "2750 ml",
+    price = "400 USD",
+    survival_price = "2 kUSD 850 USD",
+    materials = { "vacuum_carbide_hard" },
+    faults = { { group = "carbide_armor" } },
+    symbol = "[",
+    looks_like = "helmet_barbute",
+    color = "light_gray",
+    techniques = { "WBLOCK_1" },
+    flags = { "VARSIZE", "STURDY", "PADDED" },
+    melee_damage = { bash = 10 },
+    armor = {
+        portions = {
+            { covers = { "head" }, coverage = 100, encumbrance = 40 },
+            { covers = { "mouth" }, coverage = 100, encumbrance = 30 },
+            { covers = { "eyes" }, coverage = 80, encumbrance = 20 },
+        },
+        warmth = 10,
+        thickness = 1,
+        environmental_protection = 1,
+    },
+}
+
+ccb.content.define_item {
+    id = "tac_fullhelmet_uicas",
+    repair_like = "xlkevlar",
+    category = "armor",
+    name = ccb.content.plural_text("UICAS Tip of the Spear helmet", "UICAS Tip of the Spear helmets"),
+    description = ccb.content.text("An all-environment combat helmet issued to UICA espatiers.  Commonly known as 'the jar' due to its unusual clear polymer canopy that leaves its wearer's face visible."),
+    mass = "1324 g",
+    volume = "2 L",
+    price = "500 USD",
+    survival_price = "1 kUSD 500 USD",
+    accuracy = -1,
+    materials = { "vacuum_carbide_hard" },
+    faults = { { group = "carbide_armor" } },
+    symbol = "[",
+    looks_like = "helmet_motor",
+    color = "dark_gray",
+    techniques = { "WBLOCK_1" },
+    flags = { "VARSIZE", "PADDED", "SUN_GLASSES", "FRAGILE" },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            rigid = true,
+            allowed_flags = { "GASFILTER_MED" },
+            default_magazine = "gasfilter_med",
+        },
+    },
+    melee_damage = { bash = 10 },
+    subtype_order = { "tool", "armor" },
+    tool = { ammo_types = "gasfilter_m" },
+    armor = {
+        portions = {
+            { covers = { "head" }, coverage = 100, encumbrance = 20 },
+            { covers = { "eyes" }, rigid_only = true, coverage = 100, encumbrance = 5 },
+            { covers = { "mouth" }, rigid_only = true, coverage = 100, encumbrance = 8 },
+        },
+        warmth = 15,
+        thickness = 5,
+        environmental_protection = 2,
+        filtered_protection = 16,
+    },
+    use_actions = { "GASMASK_ACTIVATE" },
+    tick_actions = { "GASMASK" },
+}
+
+ccb.content.define_item {
     id = "tac_helmet_uicas",
     repair_like = "xlkevlar",
     category = "armor",
