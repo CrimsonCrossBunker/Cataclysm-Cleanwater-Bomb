@@ -1,5 +1,58 @@
 local ccb = require("ccb")
 
+-- attack based on xiphos
+ccb.content.define_monster {
+    id = "mon_skeleton_animated",
+    looks_like = "mon_skeleton",
+    name = ccb.content.plural_text("animated skeleton", "animated skeletons"),
+    description = ccb.content.text("A skeleton bare of flesh, a fell red light in its empty eye sockets.  In one bony head it clutches a rusted and pitted bronze sword."),
+    default_faction = "undead",
+    body_type = "human",
+    species = { "UNDEAD" },
+    volume = "62500 ml",
+    mass = "21500 g",
+    hp = 50,
+    speed = 60,
+    materials = { "bone" },
+    symbol = "Z",
+    color = "white",
+    aggression = 100,
+    morale = 100,
+    melee_skill = 4,
+    melee_dice = 1,
+    melee_sides = 6,
+    vision_night = 5,
+    harvest = "mr_bones",
+    decay = "zombie_decay_bone_human_skull",
+    attacks = {
+        {
+            id = "undead_skeleton_bronze_sword",
+            cooldown = 1,
+            move_cost = 71,
+            range = 1,
+            damage = { { type = "cut", amount = 25 }, { type = "bash", amount = 6 } },
+            avatar_hit = ccb.content.text("%1$s hits your %2$s with their blade!"),
+            npc_hit = ccb.content.text("%1$s hits <npcname>'s %2$s with their blade!"),
+            avatar_miss = ccb.content.text("%1$s tries to hit you, but you dodge!"),
+            npc_miss = ccb.content.text("%1$s tries to hit <npcname>, but they dodge!"),
+            avatar_no_damage = ccb.content.text("%1$s hits your %2$s without penetrating your armor."),
+            npc_no_damage = ccb.content.text("%1$s hits <npcname>'s %2$s without penetrating their armor."),
+            kind = "melee",
+            when = "monster_attack_armed",
+        },
+        { id = "scratch", when = "allow_skeleton_animated_scratch" },
+    },
+    upgrade = false,
+    flags = {
+        "SEES", "HEARS", "GRABS", "BASHES", "GROUP_BASH", "POISON", "NO_BREATHE", "PUSH_MON",
+        "UNBREAKABLE_MORALE", "BULLETPROOF", "FIREPROOF",
+    },
+    armor = { bash = -15, cut = 15, stab = 30, acid = 3, electric = 3 },
+    bleed_rate = 0,
+    vision_day = 30,
+    death = { drops = "default_skeleton_death_drops" },
+}
+
 ccb.content.define_monster {
     id = "mon_ghostly_warrior",
     copy_from = "mon_shadow",
