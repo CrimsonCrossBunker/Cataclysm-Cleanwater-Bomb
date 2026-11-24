@@ -2,6 +2,13 @@
 #ifndef CATA_SRC_JSON_LOADER_H
 #define CATA_SRC_JSON_LOADER_H
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
 #include "path_info.h"
 #include "flexbuffer_json.h"
 
@@ -23,6 +30,11 @@ class json_loader
         // Like json_loader::from_path, except instead of parsing data from a file, will parse data from a string in memory.
         static JsonValue from_string( std::string data ) noexcept( false );
         static std::optional<JsonValue> from_string_opt( std::string const &data ) noexcept( false );
+
+        // Wrap an already-built binary FlexBuffer without JSON serialization or text parsing.
+        static JsonValue from_flexbuffer( std::vector<uint8_t> buffer ) noexcept( false );
+        static JsonValue from_flexbuffer_slice( std::shared_ptr<const std::string> owner,
+                                                size_t offset, size_t size ) noexcept( false );
 
 };
 

@@ -160,6 +160,24 @@ struct flexbuffer_mmap_storage : flexbuffer_storage {
         return mmap_handle_->len();
     }
 };
+
+struct flexbuffer_slice_storage : flexbuffer_storage {
+    std::shared_ptr<const std::string> owner_;
+    size_t offset_ = 0;
+    size_t size_ = 0;
+
+    flexbuffer_slice_storage( std::shared_ptr<const std::string> owner, size_t offset,
+                              size_t size ) noexcept
+        : owner_( std::move( owner ) ), offset_( offset ), size_( size ) {}
+
+    const uint8_t *data() const override {
+        return reinterpret_cast<const uint8_t *>( owner_->data() + offset_ );
+    }
+
+    size_t size() const override {
+        return size_;
+    }
+};
 } // namespace
 
 parsed_flexbuffer::parsed_flexbuffer( std::shared_ptr<flexbuffer_storage> storage )
@@ -258,6 +276,23 @@ struct owned_buffer_flexbuffer : parsed_flexbuffer {
     }
 
     std::shared_ptr<const char[]> source_;
+};
+
+struct direct_flexbuffer : parsed_flexbuffer {
+    explicit direct_flexbuffer( std::shared_ptr<flexbuffer_storage> storage ) :
+        parsed_flexbuffer( std::move( storage ) ) {}
+
+    bool is_stale() const override {
+        return false;
+    }
+
+    std::unique_ptr<std::istream> get_source_stream() const override {
+        return nullptr;
+    }
+
+    std::filesystem::path get_source_path() const noexcept override {
+        return {};
+    }
 };
 } // namespace
 
@@ -538,6 +573,22 @@ std::shared_ptr<parsed_flexbuffer> flexbuffer_cache::parse_buffer( std::string b
     std::vector<uint8_t> fb = parse_json_to_flexbuffer_( buffer.c_str(), nullptr );
     auto storage = std::make_shared<flexbuffer_vector_storage>( std::move( fb ) );
     return std::make_shared<string_flexbuffer>( std::move( storage ), std::move( buffer ) );
+}
+
+std::shared_ptr<parsed_flexbuffer> flexbuffer_cache::wrap_flexbuffer( std::vector<uint8_t> buffer ) noexcept
+{
+    auto storage = std::make_shared<flexbuffer_vector_storage>( std::move( buffer ) );
+    return std::make_shared<direct_flexbuffer>( std::move( storage ) );
+}
+
+std::shared_ptr<parsed_flexbuffer> flexbuffer_cache::wrap_flexbuffer_slice(
+    std::shared_ptr<const std::string> owner, size_t offset, size_t size ) noexcept
+{
+    if( !owner || size == 0 || offset > owner->size() || size > owner->size() - offset ) {
+        return nullptr;
+    }
+    auto storage = std::make_shared<flexbuffer_slice_storage>( std::move( owner ), offset, size );
+    return std::make_shared<direct_flexbuffer>( std::move( storage ) );
 }
 
 JsonValue json_from_owned_buffer( std::shared_ptr<const char[]> buffer )

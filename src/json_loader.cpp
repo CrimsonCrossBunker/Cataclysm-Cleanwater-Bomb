@@ -171,3 +171,26 @@ std::optional<JsonValue> json_loader::from_string_opt( std::string const &data )
     }
     return ret;
 }
+
+JsonValue json_loader::from_flexbuffer( std::vector<uint8_t> buffer ) noexcept( false )
+{
+    std::shared_ptr<parsed_flexbuffer> parsed =
+        flexbuffer_cache::wrap_flexbuffer( std::move( buffer ) );
+    if( !parsed ) {
+        throw JsonError( "Failed to wrap direct flexbuffer" );
+    }
+    flexbuffers::Reference buffer_root = flexbuffer_root_from_storage( parsed->get_storage() );
+    return JsonValue( std::move( parsed ), buffer_root, nullptr, 0 );
+}
+
+JsonValue json_loader::from_flexbuffer_slice( std::shared_ptr<const std::string> owner,
+        size_t offset, size_t size ) noexcept( false )
+{
+    std::shared_ptr<parsed_flexbuffer> parsed =
+        flexbuffer_cache::wrap_flexbuffer_slice( std::move( owner ), offset, size );
+    if( !parsed ) {
+        throw JsonError( "Failed to wrap direct flexbuffer slice" );
+    }
+    flexbuffers::Reference buffer_root = flexbuffer_root_from_storage( parsed->get_storage() );
+    return JsonValue( std::move( parsed ), buffer_root, nullptr, 0 );
+}

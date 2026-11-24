@@ -7,6 +7,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 
@@ -17,6 +18,18 @@
 namespace
 {
 std::atomic_bool report_unvisited_members{true};
+
+std::unique_ptr<std::istream> source_stream_for_error(
+    const std::shared_ptr<parsed_flexbuffer> &root )
+{
+    std::unique_ptr<std::istream> original = root->get_source_stream();
+    if( original ) {
+        return original;
+    }
+    std::string rendered;
+    flexbuffer_root_from_storage( root->get_storage() ).ToString( false, true, rendered );
+    return std::make_unique<std::istringstream>( std::move( rendered ) );
+}
 } // namespace
 
 bool Json::globally_report_unvisited_members( bool do_report )
@@ -97,7 +110,7 @@ std::string Json::get_root_source_path() const
 
 void Json::throw_error( const JsonPath &path, int offset, const std::string &message ) const
 {
-    std::unique_ptr<std::istream> original_json = root_->get_source_stream();
+    std::unique_ptr<std::istream> original_json = source_stream_for_error( root_ );
     std::string source_path = get_root_source_path();
     if( original_json ) {
         TextJsonIn jsin( *original_json, source_path );
@@ -114,7 +127,7 @@ void Json::throw_error( const JsonPath &path, int offset, const std::string &mes
 
 void Json::throw_error_after( const JsonPath &path, const std::string &message ) const
 {
-    std::unique_ptr<std::istream> original_json = root_->get_source_stream();
+    std::unique_ptr<std::istream> original_json = source_stream_for_error( root_ );
     std::string source_path = get_root_source_path();
     TextJsonIn jsin( *original_json, source_path );
 
@@ -126,7 +139,7 @@ void Json::throw_error_after( const JsonPath &path, const std::string &message )
 
 void Json::string_error( const JsonPath &path, int offset, const std::string &message ) const
 {
-    std::unique_ptr<std::istream> original_json = root_->get_source_stream();
+    std::unique_ptr<std::istream> original_json = source_stream_for_error( root_ );
     std::string source_path = get_root_source_path();
     TextJsonIn jsin( *original_json, source_path );
 
@@ -330,7 +343,7 @@ void JsonObject::report_unvisited() const
 
 void JsonObject::error_no_member( std::string_view member ) const
 {
-    std::unique_ptr<std::istream> original_json = root_->get_source_stream();
+    std::unique_ptr<std::istream> original_json = source_stream_for_error( root_ );
     std::string source_path = get_root_source_path();
     TextJsonIn jsin( *original_json, source_path );
 
@@ -345,7 +358,7 @@ void JsonObject::error_no_member( std::string_view member ) const
 
 void JsonObject::error_skipped_members( const std::vector<size_t> &skipped_members ) const
 {
-    std::unique_ptr<std::istream> original_json = root_->get_source_stream();
+    std::unique_ptr<std::istream> original_json = source_stream_for_error( root_ );
     std::string source_path = get_root_source_path();
     TextJsonIn jsin( *original_json, source_path );
 

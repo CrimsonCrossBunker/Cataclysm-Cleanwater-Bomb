@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <iosfwd>
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 #include <flatbuffers/flexbuffers.h>
@@ -63,6 +64,9 @@ class flexbuffer_cache
                                            size_t offset = 0 ) noexcept( false ) ;
 
         static shared_flexbuffer parse_buffer( std::string buffer ) noexcept( false );
+        static shared_flexbuffer wrap_flexbuffer( std::vector<uint8_t> buffer ) noexcept;
+        static shared_flexbuffer wrap_flexbuffer_slice( std::shared_ptr<const std::string> owner,
+                size_t offset, size_t size ) noexcept;
 
     private:
         flexbuffer_cache( flexbuffer_cache && ) noexcept = default;
