@@ -1,5 +1,31 @@
 local ccb = require("ccb")
 
+ccb.content.define_trap {
+    id = "tr_light_on_res_8_SW_2",
+    name = ccb.content.text("overhead light"),
+    color = "white",
+    symbol = ".",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "map_regen",
+    map_regen = "light_on_res_8_SW_2",
+    benign = false,
+}
+
+ccb.content.define_trap {
+    id = "tr_light_on_MUT_SE_2",
+    name = ccb.content.text("overhead light"),
+    color = "white",
+    symbol = ".",
+    visibility = 99,
+    avoidance = 99,
+    difficulty = 99,
+    action = "map_regen",
+    map_regen = "light_on_MUT_SE_2",
+    benign = false,
+}
+
 -- variant for a 6 floor lab (removed stairs down)
 ccb.content.define_mapgen {
     kind = "overmap",
