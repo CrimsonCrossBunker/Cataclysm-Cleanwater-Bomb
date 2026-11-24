@@ -1,6 +1,361 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "arrow_fire_hardened_fletched",
+    copy_from = "arrow_field_point_fletched",
+    price = "0 cent",
+    survival_price = "10 cent",
+    name = ccb.content.text("crude wooden arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A crude pointed wooden shaft with a notch at the back."),
+    materials = { "wood" },
+    inheritance = { offset = { dispersion = 100 } },
+    ammunition = { damage = { type = "stab", constant_damage_multiplier = 0.75 }, recovery_chance = 50 },
+}
+
+ccb.content.define_item {
+    id = "arrow_field_point_fletched",
+    name = ccb.content.text("wooden bodkin arrow"),
+    symbol = "=",
+    color = "green",
+    looks_like = "arrow_fire_hardened_fletched",
+    description = ccb.content.text("A fletched wooden arrow shaft with a pointed tip."),
+    materials = { { id = "wood", portions = 81 }, { id = "steel", portions = 19 } },
+    flags = { "NONCONDUCTIVE" },
+    volume = "90 ml",
+    price = "10 USD",
+    survival_price = "30 cent",
+    mass = "32 g",
+    length = "76 cm",
+    melee_damage = { bash = 3 },
+    ammunition = {
+        type = "arrow",
+        damage = { type = "stab", penetration = 3 },
+        dispersion = 150,
+        loudness = 0,
+        critical_multiplier = 10,
+        recovery_chance = 97,
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_plastic",
+    symbol = "=",
+    color = "green",
+    name = ccb.content.text("wooden rubber blunt arrow"),
+    description = ccb.content.text("A fletched wooden arrow shaft with a blunt rubber tip.  Can stun weaker enemies."),
+    copy_from = "arrow_field_point_fletched",
+    price = "5 USD",
+    survival_price = "2 cent",
+    materials = { { id = "wood", portions = 81 }, { id = "rubber", portions = 19 } },
+    inheritance = { offset = { dispersion = 100 } },
+    ammunition = {
+        damage = { type = "stab", constant_damage_multiplier = 0.2 },
+        critical_multiplier = 1,
+        recovery_chance = 97,
+        effects = { "BEANBAG" },
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_small_game_fletched",
+    name = ccb.content.text("simple wooden small game arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A simple fletched wooden arrow shaft with a blunted tip.  Useful for hunting small woodland creatures without splattering them all over the ground."),
+    materials = { "wood" },
+    copy_from = "arrow_field_point_fletched",
+    survival_price = "15 cent",
+    ammunition = {
+        damage = { type = "stab", constant_damage_multiplier = 0.5 },
+        recovery_chance = 90,
+        effects = { "NOGIB" },
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_wood",
+    name = ccb.content.text("wooden broadhead arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A fletched wooden arrow shaft with a bladed tip."),
+    copy_from = "arrow_field_point_fletched",
+    price = "20 USD",
+    melee_damage = { bash = 2, cut = 1 },
+    inheritance = { offset = { dispersion = -40 } },
+    ammunition = {
+        damage = { type = "stab", penetration = 1, constant_damage_multiplier = 1.5 },
+        recovery_chance = 96,
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_heavy_fire_hardened_fletched",
+    price = "3 USD",
+    name = ccb.content.text("simple wooden arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A simple fletched wooden arrow shaft with a fire-hardened and sharpened tip."),
+    materials = { "wood" },
+    copy_from = "arrow_field_point_fletched",
+    ammunition = { damage = { type = "stab", constant_damage_multiplier = 0.75 }, recovery_chance = 83 },
+}
+
+ccb.content.define_item {
+    id = "arrow_heavy_field_point_fletched",
+    price = "10 USD",
+    name = ccb.content.text("wooden small game arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A fletched wooden arrow shaft with a blunt tip.  Useful for hunting small woodland creatures without splattering them all over the ground."),
+    copy_from = "arrow_field_point_fletched",
+    survival_price = "25 cent",
+    ammunition = {
+        damage = { type = "stab", constant_damage_multiplier = 0.5 },
+        recovery_chance = 97,
+        effects = { "NOGIB" },
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_wood_heavy",
+    name = ccb.content.text("makeshift wooden arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A simple fletched wooden arrow shaft with a makeshift arrowhead."),
+    materials = { "wood" },
+    copy_from = "arrow_field_point_fletched",
+    price = "0 cent",
+    survival_price = "15 cent",
+    ammunition = {
+        damage = { type = "stab", constant_damage_multiplier = 1.25 },
+        show_stats = true,
+        recovery_chance = 87,
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_metal_sharpened_fletched",
+    name = ccb.content.text("makeshift metal arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A simple fletched wooden arrow shaft with a sharpened makeshift tip."),
+    copy_from = "arrow_field_point_fletched",
+    price = "0 cent",
+    survival_price = "20 cent",
+    melee_damage = { bash = 2 },
+    ammunition = { damage = { type = "stab", penetration = 1 }, show_stats = true, recovery_chance = 95 },
+}
+
+ccb.content.define_item {
+    id = "arrow_metal",
+    name = ccb.content.text("aluminum broadhead arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A fletched aluminum arrow shaft with a bladed tip.  Useful for maximizing damage to the target."),
+    materials = { { id = "aluminum", portions = 81 }, { id = "steel", portions = 19 } },
+    copy_from = "arrow_field_point_fletched",
+    survival_price = "40 cent",
+    melee_damage = { bash = 3, cut = 2 },
+    inheritance = { remove = { flags = { "NONCONDUCTIVE" } }, offset = { dispersion = -75 } },
+    ammunition = {
+        damage = { type = "stab", penetration = 1, constant_damage_multiplier = 1.5 },
+        range = 2,
+        recovery_chance = 97,
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_metal_bodkin",
+    name = ccb.content.text("aluminum field point arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A fletched aluminum arrow shaft with a pointed tip.  Useful for piercing armor."),
+    materials = { { id = "aluminum", portions = 81 }, { id = "steel", portions = 19 } },
+    copy_from = "arrow_field_point_fletched",
+    survival_price = "40 cent",
+    melee_damage = { bash = 3, cut = 2 },
+    inheritance = { remove = { flags = { "NONCONDUCTIVE" } }, offset = { dispersion = -75 } },
+    ammunition = { damage = { type = "stab", penetration = 3 }, range = 2, recovery_chance = 97 },
+}
+
+ccb.content.define_item {
+    id = "arrow_metal_target",
+    price = "12 USD",
+    name = ccb.content.text("aluminum small game arrow"),
+    symbol = "=",
+    color = "green",
+    looks_like = "arrow_fire_hardened_fletched",
+    description = ccb.content.text("A fletched aluminum arrow shaft with a blunt tip.  Useful for hunting small woodland creatures without splattering them all over the ground."),
+    materials = { { id = "aluminum", portions = 81 }, { id = "steel", portions = 19 } },
+    copy_from = "arrow_field_point_fletched",
+    inheritance = { remove = { flags = { "NONCONDUCTIVE" } }, offset = { dispersion = -75 } },
+    ammunition = {
+        damage = { type = "stab", constant_damage_multiplier = 0.5 },
+        range = 2,
+        recovery_chance = 98,
+        effects = { "NOGIB" },
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_cf",
+    name = ccb.content.text("carbon fiber hunting arrow"),
+    symbol = "=",
+    color = "green",
+    description = ccb.content.text("A fletched carbon fiber arrow shaft with an expanding broadhead tip.  Deals impressive damage to targets."),
+    materials = { { id = "kevlar_rigid", portions = 81 }, { id = "steel", portions = 19 } },
+    copy_from = "arrow_field_point_fletched",
+    price = "16 USD",
+    survival_price = "50 cent",
+    melee_damage = { bash = 1 },
+    inheritance = { remove = { flags = { "NONCONDUCTIVE" } }, offset = { dispersion = -100 } },
+    ammunition = {
+        damage = { type = "stab", constant_damage_multiplier = 1.75 },
+        range = 4,
+        recovery_chance = 97,
+    },
+}
+
+ccb.content.define_item {
+    id = "arrow_meteor",
+    price = "20 USD",
+    name = ccb.content.text("emerald arrow"),
+    symbol = "=",
+    color = "light_green",
+    looks_like = "arrow_fire_hardened_fletched",
+    description = ccb.content.text("A fletched lance carved from inscrutable green stone.  Impractically heavy, its difficult to imagine who or what could have fired it from a bow."),
+    materials = { "monolith_heavy" },
+    volume = "100 ml",
+    survival_price = "10 USD",
+    mass = "27 kg",
+    length = "105 cm",
+    accuracy = { grip = "solid", length = "long", surface = "point", balance = "good" },
+    flags = { "UNBREAKABLE_MELEE", "NONCONDUCTIVE" },
+    melee_damage = { bash = 10, stab = 26 },
+    ammunition = {
+        type = "strange_arrow",
+        damage = { type = "stab", constant_damage_multiplier = 2.25, penetration = 55 },
+        range = 4,
+        dispersion = 120,
+        loudness = 0,
+        critical_multiplier = 6,
+        recovery_chance = 100,
+    },
+}
+
+-- 120 lb draw weight, very efficient, 0.5 slugs of momentum with a 30g arrow.
+ccb.content.define_item {
+    id = "compgreatbow",
+    looks_like = "longbow",
+    symbol = "(",
+    color = "yellow",
+    name = ccb.content.text("compound greatbow"),
+    description = ccb.content.text("An extremely large, powerful compound bow, made with enormous limbs and a thick string to take an immense amount of energy.  Takes incredible strength to draw."),
+    price = "1 kUSD 600 USD",
+    materials = { "steel", "plastic" },
+    flags = {
+        "FIRE_TWOHAND", "FRAGILE_MELEE", "RELOAD_AND_SHOOT", "PRIMITIVE_RANGED_WEAPON", "SHEATH_BOW",
+        "WATERPROOF_GUN", "NEVER_JAMS",
+    },
+    min_strength = 15,
+    mass = "2000 g",
+    volume = "4 L",
+    length = "198 cm",
+    survival_price = "30 USD",
+    pockets = { { kind = "MAGAZINE", ammunition = { arrow = 1 }, open_container = true } },
+    melee_damage = { bash = 7 },
+    gun = {
+        skill = "archery",
+        ammunition = { "arrow" },
+        reload_noise_volume = 4,
+        loudness = 20,
+        durability = 8,
+        damage = { type = "stab", amount = 11 },
+        range = 22,
+        dispersion = 1000,
+        sight_dispersion = 3000,
+        clip_size = 1,
+        mod_locations = {
+            { id = "underbarrel", count = 1 },
+            { id = "sights", count = 1 },
+            { id = "stabilizer", count = 1 },
+            { id = "dampening", count = 1 },
+            { id = "arrow rest", count = 1 },
+        },
+        reload_time = 50,
+    },
+}
+
+ccb.content.define_item {
+    id = "reflexrecurvebow",
+    name = "Olympic style target bow",
+    description = "A highly refined, modern bow, but not all that useful, as the draw weight is very low.",
+    symbol = "(",
+    color = "yellow",
+    looks_like = "longbow",
+    mass = "450 g",
+    volume = "2 L",
+    length = "150 cm",
+    price = "720 USD",
+    survival_price = "60 USD",
+    min_strength = 8,
+    flags = {
+        "FIRE_TWOHAND",
+        "RELOAD_AND_SHOOT",
+        "PRIMITIVE_RANGED_WEAPON",
+        "BELTED",
+        "FRAGILE_MELEE",
+        "WATER_FRIENDLY",
+        "SHEATH_BOW",
+        "WATERPROOF_GUN",
+        "NEVER_JAMS",
+    },
+    materials = { "wood" },
+    melee_damage = { bash = 6 },
+    pockets = {
+        {
+            kind = "MAGAZINE",
+            open_container = true,
+            ammunition = { arrow = 1 },
+        },
+    },
+    armor = {
+        portions = {
+            {
+                covers = { "torso" },
+                subparts = { "torso_hanging_back" },
+                coverage = 10,
+                encumbrance = 14,
+                materials = {
+                    { id = "wood", thickness = 1.0, coverage = 100 },
+                },
+            },
+        },
+    },
+    gun = {
+        skill = "archery",
+        ammunition = { "arrow" },
+        range = 18,
+        dispersion = 950,
+        sight_dispersion = 3000,
+        durability = 6,
+        loudness = 8,
+        clip_size = 1,
+        reload_time = 50,
+        reload_noise_volume = 3,
+        damage = { type = "stab", amount = 5 },
+        mod_locations = {
+            { id = "sights", count = 1 },
+            { id = "dampening", count = 1 },
+            { id = "arrow rest", count = 1 },
+        },
+    },
+    subtype_order = { "armor", "gun" },
+}
+
+ccb.content.define_item {
     id = "flamable_arrow",
     name = "flammable arrow",
     description = "This arrow has a rag soaked in a flammable liquid wrapped around the shaft near the head.  You need to light it before shooting.",
