@@ -1,5 +1,135 @@
 local ccb = require("ccb")
 
+ccb.content.define_magic_type {
+    id = "xe_werewolf_powers",
+    energy_source = "MANA",
+    cannot_cast_flags = { "NO_WEREWOLF_POWERS" },
+    cannot_cast_message = ccb.content.text("You cannot draw on your lunar gifts!"),
+    failure_cost_fraction = 0.75,
+    max_book_level = 0,
+    failure_chance_formula = "werewolf_power_failure_chance",
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "xe_werewolf_argent_claws_damage",
+    name = ccb.content.text_without_extraction("Argent Claws Damage"),
+    description = ccb.content.text_without_extraction("The damage to Nether beings from argent claws.  Should not be visible"),
+    spell_class = "WEREWOLF_SPELLS",
+    magic_type = "xe_werewolf_powers",
+    skill = "deduction",
+    flags = { "SILENT", "NO_EXPLOSION_SFX", "RANDOM_DAMAGE" },
+    valid_targets = { "ally", "hostile" },
+    difficulty = 0,
+    effect = "attack",
+    shape = "blast",
+    damage_type = "pure",
+    min_damage = 3,
+    max_damage = 12,
+    min_range = 1,
+    max_range = 2,
+    targeted_species = { "NETHER", "NETHER_EMANATION", "NETHER_BURROWING" },
+}
+
+ccb.content.define_spell {
+    id = "xe_werewolf_close_tear_in_reality_spell",
+    name = ccb.content.text("Mending Rent Veils"),
+    description = ccb.content.text("The world is falling apart but that is no reason to cease the hunt.  You can close a tear in reality, if you can get close enough to it and have enough time."),
+    message = "",
+    teachable = false,
+    valid_targets = { "ground" },
+    spell_class = "WEREWOLF_SPELLS",
+    magic_type = "xe_werewolf_powers",
+    skill = "deduction",
+    effect = "ter_transform",
+    effect_data = "ter_werewolf_close_reality_tear",
+    shape = "blast",
+    flags = { "VERBAL", "NO_HANDS" },
+    difficulty = 10,
+    min_range = 1,
+    max_range = 1,
+    base_energy_cost = 1000,
+    base_casting_time = 3000,
+}
+
+ccb.content.define_spell {
+    id = "xe_werewolf_stun_machine_spell",
+    skill = "deduction",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "sensor_stun",
+    spell_class = "WEREWOLF_SPELLS",
+    magic_type = "xe_werewolf_powers",
+    name = "Gremlinize",
+    description = "You can cause just enough change in a machine to confuse the rigid requirements of its programming, stunning it.",
+    message = "The machine stops in its tracks.",
+    teachable = false,
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "ally", "hostile" },
+    targeted_species = { "ROBOT", "ROBOT_FLYING", "CYBORG" },
+    ignored_species = { "YRAX" },
+    min_range = { handler = "wave14a_xedra_evolved_stat_443", fallback = 0 },
+    max_range = { handler = "wave14a_xedra_evolved_stat_443", fallback = 0 },
+    min_duration = { handler = "wave14a_xedra_evolved_stat_450", fallback = 0 },
+    max_duration = { handler = "wave14a_xedra_evolved_stat_451", fallback = 0 },
+    base_energy_cost = 150,
+    difficulty = 4,
+    base_casting_time = 50,
+}
+
+ccb.content.define_spell {
+    id = "xe_werewolf_summon_fog_spell",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "WEREWOLF_SPELLS",
+    magic_type = "xe_werewolf_powers",
+    name = "Hunter's Haze",
+    description = "You can cause just enough change in a machine to confuse the rigid requirements of its programming, stunning it.",
+    message = "",
+    teachable = false,
+    flags = { "SILENT", "NO_HANDS", "NO_LEGS", "RANDOM_DURATION" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_xedra_evolved_300bb3476e92", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_xedra_evolved_db20dd32dc7f", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_xedra_evolved_b3e9da9751d9", fallback = 0 },
+    difficulty = 8,
+    base_casting_time = 250,
+    impact_handler = "w16b_sp_imp_xedra_evolved_5eb52b5006f4",
+}
+
+ccb.content.define_spell {
+    id = "xe_werewolf_summon_shadow_pack_spell",
+    skill = "deduction",
+    shape = "blast",
+    effect = "summon",
+    effect_data = "mon_werewolf_shadow_pack",
+    spell_class = "WEREWOLF_SPELLS",
+    magic_type = "xe_werewolf_powers",
+    name = "Summon the Shadow Pack",
+    description = "Even death cannot always stop the Hunt.  You may summon the spirits of werewolves long dead back to join you in the Hunt.  You may only call the Shadow Pack once per night.",
+    message = "",
+    teachable = false,
+    flags = { "VERBAL", "NO_HANDS", "RANDOM_DAMAGE", "RANDOM_DURATION" },
+    valid_targets = { "ground" },
+    min_damage = 3,
+    max_damage = 5,
+    min_aoe = 2,
+    max_aoe = 2,
+    min_duration = 173195,
+    max_duration = 318512,
+    base_energy_cost = 800,
+    difficulty = 9,
+    base_casting_time = 150,
+    caster_when = "wave14a_xedra_evolved_cond_14",
+    extra_spells = {
+        {
+            spell = "xe_werewolf_summon_shadow_pack_limiter_spell",
+            self = true,
+        },
+    },
+}
+
 -- NO_I18N
 -- NO_I18N
 ccb.content.define_spell {

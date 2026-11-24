@@ -1,5 +1,85 @@
 local ccb = require("ccb")
 
+ccb.content.define_magic_type {
+    id = "xe_vampire_blood_powers",
+    energy_source = { source = "VITAMIN", vitamin = "human_blood_vitamin", color = "c_red" },
+    cannot_cast_flags = { "NO_VAMPIRE_BLOOD_POWERS" },
+    cannot_cast_message = ccb.content.text("Your blood will not respond to you!"),
+    failure_cost_fraction = 0.75,
+    max_book_level = 0,
+}
+
+ccb.content.define_spell {
+    id = "dhampir_horse_familiar_spell",
+    name = ccb.content.text("Blacken the soul of Arion"),
+    description = ccb.content.text("Transform your horse into a steed worthy of the mightiest hunter.  Unfortunately it will require blood weekly or else it will either die or become a monster.  Theoretically a vampire could do this, but it never seems to be a priority for them."),
+    valid_targets = { "ally" },
+    flags = { "TRANSFORMATION_SPELL", "NO_LEGS", "NO_PROJECTILE" },
+    effect = "targeted_polymorph",
+    effect_data = "mon_beneficial_polymorph_arion",
+    targeted_monsters = { "mon_horse" },
+    shape = "blast",
+    skill = "deduction",
+    spell_class = "VAMPIRE_BLOOD_ARTS",
+    magic_type = "xe_vampire_blood_powers",
+    base_casting_time = 150,
+    base_energy_cost = 150,
+    difficulty = 5,
+    max_level = 1,
+    min_damage = 20,
+    max_damage = 20,
+    damage_type = "pure",
+    min_range = 6,
+    max_range = 6,
+}
+
+ccb.content.define_spell {
+    id = "blood_cost_familiar",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "VAMPIRE_BLOOD_ARTS",
+    magic_type = "xe_vampire_blood_powers",
+    name = "Blacken the soul of Arion",
+    description = "Transform your horse into a steed worthy of the mightiest hunter.  Unfortunately it will require blood weekly or else it will either die or become a monster.  Theoretically a vampire could do this, but it never seems to be a priority for them.",
+    teachable = false,
+    flags = { "NO_LEGS", "NO_FAIL" },
+    valid_targets = { "self" },
+    energy_source = "VITAMIN",
+    min_damage = 1,
+    max_damage = 1,
+    base_energy_cost = 0,
+    difficulty = 5,
+    max_level = 1,
+    base_casting_time = { handler = "w16b_sp_stat_xedra_evolved_dc6a6913b0e5", fallback = 0 },
+    final_casting_time = { handler = "w16b_sp_stat_xedra_evolved_dc6a6913b0e5", fallback = 0 },
+    impact_handler = "w16b_sp_imp_xedra_evolved_231b22f13248",
+    learned_spells = {
+        { spell = "spell_feed_arion", level = 1 },
+    },
+}
+
+ccb.content.define_spell {
+    id = "spell_feed_arion",
+    skill = "deduction",
+    shape = "blast",
+    spell_class = "VAMPIRE_BLOOD_ARTS",
+    magic_type = "xe_vampire_blood_powers",
+    name = "Blacken the soul of Arion",
+    description = "Transform your horse into a steed worthy of the mightiest hunter.  Unfortunately it will require blood weekly or else it will either die or become a monster.  Theoretically a vampire could do this, but it never seems to be a priority for them.",
+    teachable = false,
+    flags = { "NO_LEGS", "NO_FAIL" },
+    valid_targets = { "self" },
+    energy_source = "VITAMIN",
+    min_damage = 1,
+    max_damage = 1,
+    base_energy_cost = 0,
+    difficulty = 1,
+    max_level = 1,
+    base_casting_time = { handler = "w16b_sp_stat_xedra_evolved_dc6a6913b0e5", fallback = 0 },
+    final_casting_time = { handler = "w16b_sp_stat_xedra_evolved_dc6a6913b0e5", fallback = 0 },
+    impact_handler = "w16b_sp_imp_xedra_evolved_8432a61305e2",
+}
+
 ccb.content.define_spell {
     id = "dhampir_horse_blood_hungry_polymorph_spell",
     name = ccb.content.text("Hungry for your blood"),

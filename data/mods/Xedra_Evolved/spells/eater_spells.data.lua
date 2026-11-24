@@ -1,5 +1,69 @@
 local ccb = require("ccb")
 
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "eat_dreamdross_ingot_mana",
+    name = ccb.content.text_without_extraction("Eat dreamdross ingots mana"),
+    description = ccb.content.text_without_extraction("Restore some mana when you consume a whole dreamdross ingot."),
+    teachable = false,
+    valid_targets = { "self" },
+    min_damage = 5000,
+    max_damage = 5000,
+    effect = "recover_energy",
+    effect_data = "MANA",
+    shape = "blast",
+    flags = { "SILENT", "NO_EXPLOSION_SFX" },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "xedra_eater_erosion_attack",
+    name = ccb.content.text_without_extraction("Erosion - Attack"),
+    description = ccb.content.text_without_extraction("This causes the dot when attacking targets with the erosion buff.  Having the spell is a bug."),
+    valid_targets = { "hostile" },
+    flags = { "SILENT", "NO_PROJECTILE", "NO_EXPLOSION_SFX" },
+    effect = "attack",
+    shape = "blast",
+    min_dot = { handler = "scaled_xedra_eater_erosion_attack_min_dot", fallback = 1.0 },
+    max_dot = { handler = "scaled_xedra_eater_erosion_attack_min_dot", fallback = 1.0 },
+    min_range = 1,
+    max_range = 1,
+    min_duration = { handler = "scaled_xedra_eater_erosion_attack_min_duration", fallback = 0.0 },
+    max_duration = { handler = "scaled_xedra_eater_erosion_attack_min_duration", fallback = 0.0 },
+    damage_type = "biological",
+}
+
+ccb.content.define_spell {
+    id = "point_blank",
+    skill = "deduction",
+    shape = "blast",
+    effect = "attack",
+    spell_class = "EATER",
+    damage_type = "bash",
+    magic_type = "xedra_dream_magic",
+    name = "Point Blank",
+    description = "A straight hit with your arm.  Using additional energy you could probably break a wall with such a powerful strike.",
+    teachable = false,
+    flags = { "SILENT", "SOMATIC", "NO_EXPLOSION_SFX" },
+    valid_targets = { "hostile", "ground" },
+    min_damage = 20,
+    damage_increment = 6,
+    max_damage = 250,
+    min_range = 1,
+    max_range = 1,
+    min_bash_scaling = 2,
+    base_energy_cost = 350,
+    final_energy_cost = 100,
+    energy_increment = -15,
+    difficulty = 4,
+    max_level = { handler = "wave14a_xedra_evolved_stat_405", fallback = 0 },
+    base_casting_time = 125,
+    final_casting_time = 25,
+    casting_time_increment = -15,
+}
+
 ccb.content.define_spell {
     id = "blood_boil",
     skill = "deduction",

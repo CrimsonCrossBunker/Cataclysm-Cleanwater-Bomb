@@ -1,5 +1,293 @@
 local ccb = require("ccb")
 
+-- Summer magic should focus on: heat, light, athleticism, passionate/strong emotions, illusion, plenty.
+-- Make sure to add each new spell to the proper research EoC in the playable_changeling_seasonal_magic_research_eocs file.
+-- Seasonal magic can have direct damage spells, but they should always be relevantly themed to the season, accomplish some secondary effect (slowing, blinding, starting fires, terrain alteration, etc), have some limitation on targets, or otherwise be less efficient than 'Wizard casts fireball'
+ccb.content.define_magic_type {
+    id = "xe_fey_seasonal_magick_summer",
+    energy_source = "MANA",
+    cannot_cast_flags = { "NO_FEY_MAGIC", "NO_SPELLCASTING" },
+    cannot_cast_message = ccb.content.text("You can't use your glamours now!"),
+    failure_cost_fraction = 0.75,
+    max_book_level = 0,
+    failure_chance_formula = "xe_fey_seasonal_magick_summer_failure_chance",
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "changeling_summer_lightning_bolt_from_storm_spell_ter_transform",
+    name = ccb.content.text_without_extraction("Fist of Taranis Ter Transform 1"),
+    description = ccb.content.text_without_extraction("The actual spell that casts the Fist of Taranis crater.  It's a bug if you have it directly."),
+    message = "",
+    teachable = false,
+    valid_targets = { "ground" },
+    flags = { "LOUD" },
+    effect = "ter_transform",
+    effect_data = "ter_sylph_massive_lightning",
+    shape = "blast",
+    min_range = 25,
+    max_range = 25,
+    min_aoe = 1,
+    max_aoe = 1,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "changeling_summer_lightning_bolt_from_storm_spell_ter_transform_center",
+    name = ccb.content.text_without_extraction("Fist of Taranis Ter Transform 2"),
+    description = ccb.content.text_without_extraction("The actual spell that casts the Fist of Taranis crater.  It's a bug if you have it directly."),
+    message = "",
+    teachable = false,
+    valid_targets = { "ground" },
+    flags = { "LOUD" },
+    effect = "ter_transform",
+    effect_data = "ter_sylph_massive_lightning",
+    shape = "blast",
+    min_range = 25,
+    max_range = 25,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "changeling_summer_lightning_bolt_from_storm_spell_start_fire",
+    name = ccb.content.text_without_extraction("Fist of Taranis Monster Start Fire"),
+    description = ccb.content.text_without_extraction("The actual spell that Starts a fire at the impact point.  It's a bug if you have it."),
+    message = "",
+    teachable = false,
+    valid_targets = { "ground" },
+    flags = { "NO_EXPLOSION_SFX" },
+    effect = "area_pull",
+    shape = "blast",
+    min_range = 25,
+    max_range = 25,
+    field = "fd_fire",
+    min_field_intensity = 3,
+    max_field_intensity = 3,
+    field_chance = 1,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "changeling_summer_lightning_bolt_from_storm_spell_push_enemies",
+    name = ccb.content.text_without_extraction("Fist of Taranis Monster Push"),
+    description = ccb.content.text_without_extraction("The actual spell that casts the Fist of Heaven's Fury shove.  It's a bug if you have it."),
+    message = "",
+    teachable = false,
+    valid_targets = { "ground", "hostile" },
+    flags = { "NO_EXPLOSION_SFX", "RANDOM_AOE" },
+    effect = "area_push",
+    shape = "blast",
+    min_range = 25,
+    max_range = 25,
+    min_aoe = 1,
+    max_aoe = 4,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "changeling_summer_ring_of_flames_actual_flames_summer_spell",
+    name = ccb.content.text_without_extraction("Ring of Champions Summer Flames"),
+    description = ccb.content.text_without_extraction("The spell that creates the actual flames in summer"),
+    message = "",
+    teachable = false,
+    valid_targets = { "hostile", "ground", "ally" },
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    skill = "gramarye",
+    flags = { "SILENT" },
+    effect = "attack",
+    shape = "blast",
+    min_aoe = 6,
+    max_aoe = 6,
+    field = "fd_fire",
+    min_field_intensity = 3,
+    max_field_intensity = 3,
+    field_chance = 1,
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_spell {
+    id = "changeling_summer_ring_of_flames_actual_flames_non_summer_spell",
+    name = ccb.content.text_without_extraction("Ring of Champions Non_Summer Flames"),
+    description = ccb.content.text_without_extraction("The spell that creates the actual flames not in summer"),
+    message = "",
+    teachable = false,
+    valid_targets = { "hostile", "ground", "ally" },
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    skill = "gramarye",
+    flags = { "SILENT" },
+    effect = "attack",
+    shape = "blast",
+    min_aoe = 6,
+    max_aoe = 6,
+    field = "fd_fire",
+    min_field_intensity = 2,
+    max_field_intensity = 2,
+    field_chance = 1,
+}
+
+ccb.content.define_spell {
+    id = "changeling_summer_bonus_stamina_near_enemies_spell",
+    skill = "gramarye",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "effect_changeling_summer_bonus_stamina_near_enemies",
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    name = "A Fire in the Blood",
+    description = "Infuse the energy of the summer sun into your yourself, preparing for battle.  Your stamina will regenerate faster in proportion to the number of adjacent enemies, and you will have an easier time dodging enemy attacks.  In the winter the glamour <color_yellow>is less effective</color>.",
+    message = "",
+    teachable = false,
+    flags = { "SOMATIC", "VERBAL", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_duration = { handler = "wave14a_xedra_evolved_stat_312", fallback = 0 },
+    max_duration = { handler = "wave14a_xedra_evolved_stat_313", fallback = 0 },
+    base_energy_cost = { handler = "wave14a_xedra_evolved_stat_314", fallback = 0 },
+    difficulty = 6,
+    max_level = 1,
+    base_casting_time = 75,
+}
+
+ccb.content.define_spell {
+    id = "changeling_summer_stay_awake_in_sunlight_spell",
+    skill = "gramarye",
+    components = "spell_components_changeling_dreamsparks_2",
+    shape = "blast",
+    effect = "attack",
+    effect_data = "effect_changeling_summer_stay_awake_in_sunlight",
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    name = "Invigorating Sunlight",
+    description = "Absorb the energy of the sun, allaying sleep.  As long as the glamour is in effect and you remain outside in the light, your sleepiness will not increase.  In the winter the glamour <color_red>cannot be woven</color>.",
+    message = "You extend both hands upward and feel the warmth of the sun.",
+    caster_condition_fail_message = "The glamour must be woven outside and cannot be woven in the winter.",
+    teachable = false,
+    flags = { "SOMATIC", "VERBAL", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_duration = { handler = "wave14a_xedra_evolved_stat_315", fallback = 0 },
+    max_duration = { handler = "wave14a_xedra_evolved_stat_316", fallback = 0 },
+    base_energy_cost = { handler = "wave14a_xedra_evolved_stat_317", fallback = 0 },
+    difficulty = 8,
+    max_level = 1,
+    base_casting_time = 3000,
+    caster_when = "wave14a_xedra_evolved_cond_9",
+}
+
+ccb.content.define_spell {
+    id = "changeling_summer_create_thunderstorm_spell",
+    skill = "gramarye",
+    components = "spell_components_changeling_dreamsparks_3",
+    shape = "blast",
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    name = "Summer Thunder",
+    description = "Conjure up a thunderstorm, causing the sky to cloud over, rain to fall, and eventually lightning to flash.  You have no control over the storm once you set it in motion.  This glamour <color_red>will not work</color> if you are indoors or if the temperature is below freezing.",
+    message = "",
+    teachable = false,
+    flags = { "VERBAL", "RANDOM_DURATION", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_xedra_evolved_2dbfc47dae9c", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_xedra_evolved_eb6344bad394", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_xedra_evolved_851113ff483d", fallback = 0 },
+    difficulty = 7,
+    max_level = 1,
+    base_casting_time = { handler = "w16b_sp_stat_xedra_evolved_7c98fb1d682a", fallback = 0 },
+    impact_handler = "w16b_sp_imp_xedra_evolved_594eb6ea5cc4",
+}
+
+ccb.content.define_spell {
+    id = "changeling_summer_ring_of_flames_spell",
+    skill = "gramarye",
+    components = "spell_components_changeling_dreamsparks_3",
+    shape = "blast",
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    name = "Ring of Champions",
+    description = "Summon up a circle of flames around yourself and a nearby enemy, allowing you to fight undisturbed.  You will be immune to the heat of the flames while they last, though stepping into them will end this protection.  The death of the chosen enemy will end the glamour.  You must be <color_yellow>outdoors</color> for this glamour to have any effect.  In the summer, the flames are <color_green>even hotter</color>.  Reweave the glamour to dispel it.",
+    message = "",
+    teachable = false,
+    flags = { "VERBAL", "NO_LEGS" },
+    valid_targets = { "hostile" },
+    min_range = 3,
+    max_range = 3,
+    base_energy_cost = { handler = "w16b_sp_stat_xedra_evolved_1b990761fe8d", fallback = 0 },
+    difficulty = 8,
+    max_level = 1,
+    base_casting_time = 50,
+    impact_handler = "w16b_sp_imp_xedra_evolved_b227bd14d612",
+}
+
+ccb.content.define_spell {
+    id = "changeling_summer_combat_prowess_powerful_buff_spell",
+    skill = "gramarye",
+    components = "spell_components_changeling_dreamsparks_3",
+    shape = "blast",
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    name = "Ríastrad",
+    description = "Enter a focused battle fury, vastly increasing your combat prowess.  When it fades, however, you will suffer a bout of weariness.  The weariness you suffer <color_yellow>is doubled</color> in winter.",
+    message = "Your body warps and twists as you invoke the power of the Ríastrad.",
+    caster_condition_fail_message = "You are already in the Ríastrad.",
+    teachable = false,
+    flags = { "NO_HANDS", "RANDOM_DURATION", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_xedra_evolved_47de0db99828", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_xedra_evolved_1f63e26bc2b2", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_xedra_evolved_3d991f01fe84", fallback = 0 },
+    difficulty = 9,
+    max_level = 1,
+    base_casting_time = 75,
+    caster_when = "w16b_sp_cast_xedra_evolved_70838356a4cd",
+    impact_handler = "w16b_sp_imp_xedra_evolved_f7d5c1e1d6cd",
+}
+
+ccb.content.define_spell {
+    id = "changeling_summer_powerful_sunlight_spell",
+    skill = "gramarye",
+    components = "spell_components_changeling_dreamsparks_4",
+    shape = "blast",
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    name = "Helios's Wrath",
+    description = "Blaze with the blinding light of the sun, blinding anyone nearby capable of seeing you.  This is real sunlight and affects creatures harmed by it accordingly.",
+    message = "",
+    teachable = false,
+    flags = { "VERBAL", "RANDOM_DURATION", "NO_LEGS" },
+    valid_targets = { "self" },
+    min_duration = { handler = "w16b_sp_stat_xedra_evolved_1008bfb61065", fallback = 0 },
+    max_duration = { handler = "w16b_sp_stat_xedra_evolved_1d5e638a15e7", fallback = 0 },
+    base_energy_cost = { handler = "w16b_sp_stat_xedra_evolved_ee9b6bac1d49", fallback = 0 },
+    difficulty = 10,
+    max_level = 1,
+    base_casting_time = 50,
+    impact_handler = "w16b_sp_imp_xedra_evolved_f3593668a126",
+}
+
+ccb.content.define_spell {
+    id = "changeling_summer_powerful_sunlight_spell_aura_effects",
+    skill = "gramarye",
+    shape = "blast",
+    spell_class = "CHANGELING_SEASONAL_MAGIC_SUMMER",
+    magic_type = "xe_fey_seasonal_magick_summer",
+    name = ccb.content.text_without_extraction("Helios's Wrath Special effects"),
+    description = ccb.content.text_without_extraction("Used because auras are not currently possible.  Blind targets are harms those who die in sunlight."),
+    message = "",
+    teachable = false,
+    flags = { "SILENT", "NO_EXPLOSION_SFX", "NO_LEGS" },
+    valid_targets = { "ally", "hostile" },
+    min_aoe = 45,
+    max_aoe = 45,
+    max_level = 1,
+    impact_handler = "w16b_sp_imp_xedra_evolved_66fefa940647",
+}
+
 -- NO_I18N
 -- NO_I18N
 ccb.content.define_spell {
