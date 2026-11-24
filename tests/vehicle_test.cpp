@@ -10,6 +10,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <cstddef>
+#include <sstream>
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
@@ -43,6 +45,13 @@
 #include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "flexbuffer_json.h"
+#include "json.h"
+#include "json_loader.h"
+#include "skill.h"
+#include "veh_utils.h"
+#include "character_id.h"
+#include "npc.h"
 
 class activity_actor;
 
@@ -106,7 +115,7 @@ TEST_CASE( "assisted_turn_preserves_subtile_progress", "[vehicle][turning_assist
 {
     for( const int side : {
              -1, 1
-             } ) {
+         } ) {
         std::optional<vehicle_turning_arc> arc = vehicle_turning_arc::through( 40.0, side * 10.0 );
         REQUIRE( arc );
         tileray ray( 0_degrees );
@@ -761,8 +770,8 @@ static void rack_check( const rack_preset &preset )
         vehicle &racked_veh = *vehs[rack_act.racked_vehicle_index];
 
         const std::vector<vehicle_part *> rack_parts = racking_veh.get_parts_at( &m, rack_act.rack_pos,
-                "BIKE_RACK_VEH",
-                part_status_flag::available );
+            "BIKE_RACK_VEH",
+            part_status_flag::available );
         REQUIRE( rack_parts.size() == 1 );
         const int rack_idx = racking_veh.index_of_part( rack_parts[0] );
         REQUIRE( rack_idx >= 0 );
@@ -786,7 +795,7 @@ static void rack_check( const rack_preset &preset )
         } ) );
         std::string error = capture_debugmsg_during( [&u, &racking_veh, &this_rackable]() {
             bikerack_racking_activity_actor racking_actor( racking_veh,
-                    *this_rackable->veh, this_rackable->racks );
+                *this_rackable->veh, this_rackable->racks );
             // racked_veh, this_rackable->veh and vehs[] element are invalid past this point
             complete_activity( u, racking_actor );
         } );
@@ -799,7 +808,7 @@ static void rack_check( const rack_preset &preset )
         }
 
         const optional_vpart_position ovp_racked = m.veh_at(
-                    preset.positions[rack_act.racked_vehicle_index] );
+                preset.positions[rack_act.racked_vehicle_index] );
         REQUIRE( ovp_racked.has_value() );
         if( !rack_act.expect_failure ) {
             REQUIRE( &ovp_racked->vehicle() == &racking_veh );
@@ -813,7 +822,7 @@ static void rack_check( const rack_preset &preset )
         REQUIRE( ovp_racked.has_value() );
 
         const auto rack_parts = ovp_racked->vehicle().get_parts_at( &m, rack_act.rack_pos,
-                                "BIKE_RACK_VEH", part_status_flag::available );
+            "BIKE_RACK_VEH", part_status_flag::available );
         REQUIRE( rack_parts.size() == 1 );
         const int rack_idx = ovp_racked->vehicle().index_of_part( rack_parts[0] );
         REQUIRE( rack_idx >= 0 );
@@ -1162,7 +1171,7 @@ static vehicle_part *setup_squish_test_return_wheel( map &here, const tripoint_b
 {
     REQUIRE( here.veh_at( test_point ).avail_part_with_feature( "WHEEL" ) );
     std::vector<vehicle_part *> wheels_vector = veh_ptr->get_parts_at( &here, test_point, "WHEEL",
-            part_status_flag::available );
+        part_status_flag::available );
     REQUIRE( !wheels_vector.empty() );
     vehicle_part *vp_wheel = wheels_vector.front();
     REQUIRE( !here.has_items( test_point ) );
@@ -1319,3 +1328,274 @@ TEST_CASE( "vehicle_wheels_damaged_by_running_over_items", "[vehicle]" )
         run_squish_test( test_items, test_point, here, veh_ptr, vp_wheel );
     }
 }
+
+static bool operator==( const vehicle_item_spawn &l, const vehicle_item_spawn &r )
+{
+    return l.pos == r.pos && l.mount_level == r.mount_level && l.chance == r.chance &&
+           l.with_ammo == r.with_ammo && l.with_magazine == r.with_magazine && l.item_ids == r.item_ids &&
+           // NOLINTNEXTLINE(misc-redundant-expression)
+           l.item_groups == r.item_groups;
+}
+
+namespace merged_vehicle_airship_water_test
+{
+
+TEST_CASE( "buoyant_airship_stays_above_water_without_a_saved_flight_flag",
+           "[vehicle][airship][water]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms pos( 60, 60, 0 );
+    vehicle *veh = here.add_vehicle( vproto_id( "none" ), pos, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const bool balloon = GENERATE( false, true );
+    if( balloon ) {
+        REQUIRE( veh->install_part( here, point_rel_ms::zero,
+                                    vpart_id( "airship_balloon" ) ) >= 0 );
+    }
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    REQUIRE( veh->is_airship( here ) == balloon );
+    here.ter_set( pos, ter_id( "t_water_dp" ) );
+    veh->set_flying( false );
+
+    veh->check_falling_or_floating();
+
+    CHECK( veh->is_flying_in_air() == balloon );
+    CHECK( veh->is_in_water( true ) == !balloon );
+    if( balloon ) {
+        CHECK( veh->act_on_map( here ) == veh );
+    }
+}
+
+} // namespace merged_vehicle_airship_water_test
+
+namespace merged_vehicle_cache_test
+{
+
+static const vpart_location_id vpart_location_structure( "structure" );
+static const vproto_id vehicle_prototype_test_van( "test_van" );
+
+TEST_CASE( "removing_vehicle_part_clears_its_fake_from_map_cache",
+           "[vehicle][vehicle_fake][cache]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    build_test_map( ter_id( "t_pavement" ) );
+    map &here = get_map();
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_van, tripoint_bub_ms( 60, 60, 0 ),
+                                     45_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+
+    int fake_index = -1;
+    for( const vpart_reference &part : veh->get_all_parts_with_fakes() ) {
+        if( part.part().is_fake &&
+            veh->parts_at_relative( part.mount_pos(), true, true ).size() == 1 &&
+            veh->part( part.part().fake_part_to ).info().location != vpart_location_structure ) {
+            fake_index = part.part_index();
+            break;
+        }
+    }
+    REQUIRE( fake_index >= 0 );
+    const int real_index = veh->part( fake_index ).fake_part_to;
+    const tripoint_bub_ms fake_position = veh->bub_part_pos( here, fake_index );
+    const point_rel_ms fake_mount = veh->part( fake_index ).mount;
+    const std::string real_type = veh->part( real_index ).info().id.str();
+    REQUIRE( here.veh_at( fake_position ) );
+    REQUIRE( here.veh_at( fake_position )->part_index() == static_cast<size_t>( fake_index ) );
+
+    veh->remove_part( veh->part( real_index ) );
+    REQUIRE( veh->part( fake_index ).removed );
+    std::vector<std::string> remaining_parts;
+    for( const int index : veh->parts_at_relative( fake_mount, false, true ) ) {
+        const vehicle_part &part = veh->part( index );
+        remaining_parts.push_back( part.info().id.str() + " at " +
+                                   veh->bub_part_pos( here, part ).to_string() );
+    }
+    CAPTURE( real_type, fake_mount, fake_position, veh->part( fake_index ).mount, remaining_parts );
+    REQUIRE( veh->parts_at_relative( fake_mount, false, true ).empty() );
+
+    const std::string diagnostics = capture_debugmsg_during( [&]() {
+        const optional_vpart_position cached = here.veh_at( fake_position );
+        CHECK_FALSE( cached );
+        if( cached ) {
+            cached->vehicle().get_display_of_tile( cached->mount_pos() );
+        }
+    } );
+    CHECK( diagnostics.empty() );
+
+    veh->part_removal_cleanup( here );
+    CHECK_FALSE( here.veh_at( fake_position ) );
+}
+
+} // namespace merged_vehicle_cache_test
+
+namespace merged_vehicle_export_test
+{
+
+static const vproto_id vehicle_prototype_veh_export_test( "veh_export_test" );
+
+
+
+TEST_CASE( "export_vehicle_test" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    // Spawn the vehicle with fuel.
+    vehicle *veh_ptr = get_map().add_vehicle( vehicle_prototype_veh_export_test, tripoint_bub_ms::zero,
+        0_degrees, -1, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh_ptr != nullptr );
+
+    // To ensure the zones get placed.
+    veh_ptr->set_owner( get_player_character() );
+    veh_ptr->place_zones( here );
+    veh_ptr->refresh( );
+    veh_ptr->refresh_zones();
+
+    std::ostringstream os;
+    JsonOut jsout( os );
+    vehicle_prototype::save_vehicle_as_prototype( *veh_ptr, jsout );
+    const static std::string expected_veh_prototype =
+        R"({"//1":"Although this vehicle can be readily spawned in game without further tweaking,","//2":"this is auto-generated by program, so please check against it before proceeding.","//3":"Only simple top-level items can be exported by this function.  Do not rely on this for exporting comestibles, containers, etc.","id":"/TO_BE_REPLACED/","type":"vehicle","name":"/TO_BE_REPLACED/","blueprint":["t&"],"parts":[{"x":0,"y":0,"parts":["frame#vertical_T_left",{"part":"tank_medium","fuel":"diesel"},"diesel_engine_v6","alternator_car","turret_mount",{"part":"turret_m240","ammo":100,"ammo_types":"762_51","ammo_qty":[500,500]},"seat#swivel_chair_front"]},{"x":0,"y":1,"parts":["frame#vertical_T_right",{"part":"veh_tools_workshop","tools":["water_purifier","pot","pan"]}]}],"items":[{"x":0,"y":0,"chance":100,"items":["saw"]}],"zones":[{"x":0,"y":0,"type":"LOOT_GUNS"}]})";
+    CHECK( os.str() == expected_veh_prototype );
+
+    // To ensure the exported prototype can be readily loaded.
+    JsonValue jv = json_loader::from_string( os.str() );
+    JsonObject jo = jv.get_object();
+
+    // To suppress flexbuffer [error_skipped_members] error.
+    jo.get_string( "id" );
+    jo.get_string( "type" );
+
+    // To check the exported prototype has up-to-date format and is correct.
+    vehicle_prototype vpr;
+    vpr.load( jo, "" );
+    CHECK( vpr.item_spawns == ( *vehicle_prototype_veh_export_test ).item_spawns );
+    CHECK( vpr.zone_defs == ( *vehicle_prototype_veh_export_test ).zone_defs );
+    CHECK( vpr.parts == ( *vehicle_prototype_veh_export_test ).parts );
+}
+
+} // namespace merged_vehicle_export_test
+
+namespace merged_vehicle_repair_fault_test
+{
+
+static const fault_id fault_engine_immobiliser( "fault_engine_immobiliser" );
+static const fault_id fault_steel_pipe_bent( "fault_steel_pipe_bent" );
+static const fault_id fault_steel_pipe_bent_heavy( "fault_steel_pipe_bent_heavy" );
+static const skill_id skill_mechanics( "mechanics" );
+static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
+static const vpart_id vpart_frame_handle( "frame_handle" );
+static const vproto_id vehicle_prototype_none( "none" );
+
+TEST_CASE( "vehicle_handle_repair_removes_damage_faults_once", "[vehicle][repair][fault]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    // Exercise the real repair completion without interactive tool selection.
+    you.set_mutation( trait_DEBUG_HS );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, you.pos_bub(),
+                                     0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    const int index = veh->install_part( here, point_rel_ms::zero, vpart_frame_handle );
+    REQUIRE( index >= 0 );
+    vehicle_part &part = veh->part( index );
+    SECTION( "broken_parts_can_still_be_replaced" ) {
+        veh->set_hp( part, 0, false );
+        REQUIRE( part.is_broken() );
+        REQUIRE( veh_utils::repair_part( here, *veh, part, you ) );
+        REQUIRE( veh->part_count_real() == 1 );
+        CHECK_FALSE( veh->part( 0 ).is_broken() );
+        CHECK( veh->part( 0 ).get_base().damage() == 0 );
+        return;
+    }
+    SECTION( "damage_faults_do_not_leave_a_repair_loop" ) {
+        const int wear = GENERATE( 0, 100 );
+        const fault_id damage_fault = GENERATE( fault_steel_pipe_bent, fault_steel_pipe_bent_heavy );
+        item base = part.get_base();
+        base.set_degradation( wear );
+        base.force_set_damage( 1000 );
+        REQUIRE( base.set_fault( damage_fault, true, nullptr, true ) );
+        // A dedicated fault must survive a structural repair, even on an unusual part.
+        REQUIRE( base.set_fault( fault_engine_immobiliser, true, nullptr, true ) );
+        part.set_base( std::move( base ) );
+        REQUIRE( part.is_repairable() );
+
+        REQUIRE( veh_utils::repair_part( here, *veh, part, you ) );
+
+        CHECK_FALSE( part.get_base().has_fault_of_type( "mechanical_damage" ) );
+        CHECK( part.get_base().has_fault( fault_engine_immobiliser ) );
+        CHECK( part.get_base().degradation() == wear );
+        CHECK( part.get_base().damage() == wear );
+        CHECK_FALSE( part.is_repairable() );
+        const int experience = you.get_skill_level_object( skill_mechanics ).exercise( true );
+        CHECK_FALSE( veh_utils::repair_part( here, *veh, part, you ) );
+        CHECK( you.get_skill_level_object( skill_mechanics ).exercise( true ) == experience );
+    }
+}
+
+} // namespace merged_vehicle_repair_fault_test
+
+namespace merged_vehicle_unboard_state_test
+{
+
+static const vpart_id vpart_frame( "frame" );
+static const vpart_id vpart_seat( "seat" );
+
+static const vproto_id vehicle_prototype_none( "none" );
+
+TEST_CASE( "unboarding_repairs_stale_passenger_state", "[vehicle][character]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms location( 60, 60, 0 );
+    const bool npc_movement = GENERATE( false, true );
+    get_avatar().setpos( here, npc_movement ? location + tripoint::south : location );
+    Character &you = npc_movement ? static_cast<Character &>( spawn_npc( location.xy(),
+        "test_talker" ) ) :
+                     get_avatar();
+    const std::string state = GENERATE( "normal", "missing_flag", "missing_id", "missing_vehicle" );
+    std::optional<vpart_reference> seat;
+    if( state != "missing_vehicle" ) {
+        vehicle *veh = here.add_vehicle( vehicle_prototype_none, location, 0_degrees, 0 );
+        REQUIRE( veh != nullptr );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_seat ) >= 0 );
+        veh->refresh();
+        here.add_vehicle_to_cache( veh );
+        here.board_vehicle( location, &you );
+        REQUIRE( you.in_vehicle );
+        seat = here.veh_at( location ).part_with_feature( "BOARDABLE", true );
+        REQUIRE( seat );
+        if( state == "missing_flag" ) {
+            seat->part().remove_flag( vp_flag::passenger_flag );
+        } else if( state == "missing_id" ) {
+            seat->part().passenger_id = character_id( 999999 );
+        }
+    } else {
+        you.in_vehicle = true;
+    }
+    you.controlling_vehicle = true;
+    const std::string diagnostics = capture_debugmsg_during( [&here, &location, &you, npc_movement]() {
+        if( npc_movement ) {
+            you.as_npc()->move_to( location + tripoint::east );
+        } else {
+            here.unboard_vehicle( location );
+        }
+    } );
+    CHECK( diagnostics.empty() );
+    CHECK( you.pos_bub() == ( npc_movement ? location + tripoint::east : location ) );
+    CHECK_FALSE( you.in_vehicle );
+    CHECK_FALSE( you.controlling_vehicle );
+    if( seat ) {
+        CHECK_FALSE( seat->part().has_flag( vp_flag::passenger_flag ) );
+    }
+}
+
+} // namespace merged_vehicle_unboard_state_test
