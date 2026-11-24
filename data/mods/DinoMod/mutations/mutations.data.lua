@@ -1,6 +1,44 @@
 local ccb = require("ccb")
 
 ccb.content.define_mutation {
+    id = "THRESH_RAPTOR",
+    name = ccb.content.text("Raptor"),
+    points = 1,
+    description = ccb.content.text("The chance to undo not one but TWO extinction events.  You're confident you'll do fine."),
+    valid = false,
+    purifiable = false,
+    species_anger = { DINOSAUR = 20, REPTILE = 20, BIRD = 20, MAMMAL = 20 },
+    ignored_by = { "PLANT" },
+    threshold = true,
+}
+
+ccb.content.define_mutation {
+    id = "THRESH_TYRANT",
+    name = ccb.content.text("Tyrano Sapien"),
+    points = 1,
+    description = ccb.content.text("Thunder lizard, dragon, tyrant.  All these names pale before your majesty."),
+    valid = false,
+    profession = true,
+    purifiable = false,
+    species_anger = { DINOSAUR = 20, REPTILE = 20, BIRD = 20, MAMMAL = 20 },
+    ignored_by = { "PLANT" },
+    threshold = true,
+}
+
+ccb.content.define_mutation {
+    id = "THRESH_STEGO",
+    name = ccb.content.text("Stego"),
+    points = 1,
+    description = ccb.content.text("Slow, methodical, heavily armored.  A walking tank."),
+    valid = false,
+    profession = true,
+    purifiable = false,
+    species_anger = { DINOSAUR = -20, REPTILE = -20, PLANT = 20, MAMMAL = -20 },
+    ignored_by = { "BIRD" },
+    threshold = true,
+}
+
+ccb.content.define_mutation {
     id = "THRESH_HORNS",
     name = ccb.content.text("Horns"),
     points = 1,
