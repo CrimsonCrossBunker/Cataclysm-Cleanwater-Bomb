@@ -116,3 +116,55 @@ ccb.content.define_item {
         },
     },
 }
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_item {
+    id = "TANK",
+    looks_like = "m79",
+    symbol = "(",
+    color = "green",
+    name = ccb.content.text_without_extraction("Tankbot Main Gun", "Tankbot Main Gun"),
+    description = ccb.content.text_without_extraction("The 120mm cannon from a tankbot.  If you have this, you'd best be debugging!"),
+    price = "999 kUSD 999 USD 99 cent",
+    materials = { "steel" },
+    mass = "2500 g",
+    volume = "2500 ml",
+    accuracy = -3,
+    flags = { "NO_TURRET" },
+    pockets = { { kind = "MAGAZINE", ammunition = { ["120mm"] = 1 } } },
+    melee_damage = { bash = 6 },
+    gun = {
+        skill = "launcher",
+        ammunition = { "120mm" },
+        dispersion = 60,
+        durability = 9,
+        clip_size = 1,
+        loudness = 300,
+    },
+}
+
+ccb.content.define_item {
+    id = "bot_laserturret",
+    name = ccb.content.plural_text("inactive laser turret", "inactive laser turrets"),
+    description = ccb.content.text("This is an inactive laser turret.  Using this item involves turning it on and placing it on the ground, where it will attach itself.  If reprogrammed and rewired successfully the turret will identify you as a friendly, and attack all enemies with its revolving laser cannons.  It requires sunlight in order to fire."),
+    mass = "40750 g",
+    volume = "30 L",
+    price = "6 kUSD",
+    survival_price = "120 USD",
+    materials = { "steel", "plastic" },
+    symbol = ";",
+    color = "white",
+    flags = { "SINGLE_USE" },
+    melee_damage = { bash = 8 },
+    tool = {},
+    use_actions = {
+        {
+            kind = "place_monster",
+            monster = "mon_laserturret",
+            difficulty = 6,
+            moves = 100,
+            skills = { "electronics", "computer" },
+        },
+    },
+}
