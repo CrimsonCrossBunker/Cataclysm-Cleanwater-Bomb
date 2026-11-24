@@ -1,5 +1,94 @@
 local ccb = require("ccb")
 
+-- ["emit_bee_field"]
+ccb.content.define_monster {
+    id = "mon_utilibot_beehive",
+    copy_from = "mon_utilibot",
+    name = ccb.content.plural_text("bee bot", "bee bots"),
+    description = ccb.content.text("A salvaged utility robot converted into an AI monitored bee hive that periodically removes and delivers honey combs."),
+    color = "brown",
+    speed = 0,
+    aggression = 0,
+    morale = 20,
+    fear_triggers = { "HURT" },
+    revert_item = "bot_utilibot_beehive",
+    biosignature = { item = "honeycomb", interval = 3600 },
+    attacks = { { reference = "PARROT", cooldown = 10 } },
+    death = {
+        drops = { groups = { { id = "broken_robots", weight = 1 }, { id = "beehive", weight = 1 } } },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_light_hack",
+    copy_from = "base_drone",
+    name = ccb.content.plural_text("floating lantern", "floating lanterns"),
+    looks_like = "bot_manhack",
+    description = ccb.content.text("A salvaged drone repurposed into a mobile light source."),
+    speed = 250,
+    color = "yellow",
+    luminance = 100,
+    aggression = 0,
+    morale = 50,
+    dodge = 8,
+    revert_item = "bot_light_hack",
+    armor = { bash = 8, cut = 10, bullet = 15 },
+    inheritance = { add = { flags = { "STUMBLES", "HARDTOSHOOT" } } },
+}
+
+ccb.content.define_monster {
+    id = "mon_scavbot_needle",
+    copy_from = "mon_milbot_base",
+    name = ccb.content.plural_text("Scavbot Skorpion", "Scavbot Skorpions"),
+    description = ccb.content.text("The Scavbot Skorpion is a refurb of colonial perimeter defense bots found across many systems.  Because they are designed to defend against pirates, raiders, feral uplifts, hungry scavengers, rival mining clans, and any other enemy that is unlikely to attack with heavily armored units, these reprogrammed and refurbed versions are often found in the employ of the very types of people it was originally purposed to fight.  Often found as the core of a light patrol or attack squad."),
+    volume = "12500 ml",
+    mass = "10500 g",
+    hp = 40,
+    speed = 80,
+    materials = { "steel" },
+    symbol = "x",
+    color = "red_green",
+    aggression = 50,
+    morale = 100,
+    melee_skill = 3,
+    melee_dice = 4,
+    melee_sides = 3,
+    dodge = 2,
+    vision_day = 35,
+    difficulty_adjustment = 10,
+    melee_damage = { { type = "electric", amount = 3 } },
+    starting_ammo = { ["3x35dart"] = 100 },
+    attacks = {
+        {
+            move_cost = 150,
+            cooldown = 2,
+            kind = "gun",
+            gun = {
+                weapon = "wasp_gun",
+                ammo = "3x35dart",
+                skills = { { id = "gun", level = 3 }, { id = "rifle", level = 3 } },
+                dexterity = 10,
+                empty_sound = ccb.content.text("click!"),
+                ranges = {
+                    { minimum = 0, maximum = 4, mode = "BURST" },
+                    { minimum = 4, maximum = 8, mode = "AUTO" },
+                    { minimum = 9, maximum = 16, mode = "DEFAULT" },
+                },
+                lock_player = true,
+                lock_npc = true,
+                lock_monster = true,
+                target_moving_vehicles = true,
+                targeting_cost = 10,
+                targeting_extension = -1,
+                targeting_sound = ccb.content.text("\"Target acquired.\""),
+                targeting_volume = 10,
+            },
+        },
+    },
+    armor = { bash = 8, cut = 10, bullet = 15 },
+    inheritance = { add = { flags = { "DROPS_AMMO" } } },
+}
+
 ccb.content.define_monster {
     id = "mon_eyebot_heater",
     copy_from = "mon_afs_eyebot",
