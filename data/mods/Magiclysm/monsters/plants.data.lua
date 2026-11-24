@@ -1,5 +1,66 @@
 local ccb = require("ccb")
 
+-- armor penetration here represents that you'll literally surrounded by thorns
+ccb.content.define_monster {
+    id = "mon_tanglevine",
+    name = ccb.content.plural_text("tanglevine", "tanglevines"),
+    description = ccb.content.text("A thick mass of animated vine, lashing back and forth at anything that comes within reach.  Long thorns grow from its sides."),
+    species = { "PLANT" },
+    default_faction = "magical_plant",
+    volume = "92500 ml",
+    mass = "120 kg",
+    hp = 60,
+    speed = 80,
+    materials = { "veggy" },
+    symbol = "V",
+    color = "green",
+    aggression = 60,
+    morale = 200,
+    melee_skill = 5,
+    melee_dice = 1,
+    melee_sides = 1,
+    grab_strength = 70,
+    vision_day = 10,
+    vision_night = 10,
+    attacks = {
+        {
+            id = "ranged_pull",
+            cooldown = 6,
+            range = 4,
+            damage = { { type = "stab", amount = 2 } },
+            avatar_hit = ccb.content.text_without_extraction("%1$s lashes out and curls around your %2$s!"),
+            npc_hit = ccb.content.text_without_extraction("%1$s lashes out and curls around <npcname>'s %2$s!"),
+            avatar_miss = ccb.content.text_without_extraction("%s lashes out at you, but you dodge!"),
+            npc_miss = ccb.content.text_without_extraction("%s lashes out at <npcname>, but they dodge!"),
+            avatar_no_damage = ccb.content.text_without_extraction("%1$s lashes out at your %2$s!"),
+            npc_no_damage = ccb.content.text_without_extraction("%1$s lashes out and curls around <npcname>'s %2$s!"),
+        },
+        {
+            id = "thorn_squeeze",
+            cooldown = 3,
+            move_cost = 100,
+            damage = { { type = "stab", amount = 6, penetration = 30 } },
+            avatar_hit = ccb.content.text("%1$s squeezes and its thorns dig into your %2$s!"),
+            npc_hit = ccb.content.text("%1$s squeezes <npcname>!"),
+            avatar_miss = ccb.content.text("%1$s tries to squeeze you, but you fight back!"),
+            npc_miss = ccb.content.text("%1$s tries to squeeze <npcname>, but they fight back!"),
+            avatar_no_damage = ccb.content.text("%1$s squeezes your %2$s, but fails to penetrate your armor."),
+            npc_no_damage = ccb.content.text("%1$s squeezes <npcname>, but fails to penetrate their armor."),
+            kind = "melee",
+            when = "allow_jabberwock_bite_jabberwock_1",
+        },
+    },
+    dodge = 4,
+    flags = { "HEARS", "GOODHEARING", "IMMOBILE", "NOHEAD", "HARDTOSHOOT", "GRABS", "PLASTIC" },
+    armor = { bash = 18, stab = 10, electric = 3, bullet = 22 },
+    death = {
+        outcome = {
+            message = ccb.content.text("The %s rots into nothingness in moments."),
+            corpse = "NO_CORPSE",
+        },
+    },
+}
+
 ccb.content.define_monster {
     id = "mon_tanglevine_triffid",
     copy_from = "mon_tanglevine",

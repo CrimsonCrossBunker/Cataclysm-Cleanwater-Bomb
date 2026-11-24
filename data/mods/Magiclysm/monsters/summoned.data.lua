@@ -1,5 +1,106 @@
 local ccb = require("ccb")
 
+-- A buffed version for animist summons.
+ccb.content.define_monster {
+    id = "mon_magi_shadow",
+    copy_from = "mon_shadow",
+    name = ccb.content.plural_text("shadow", "shadows"),
+    description = ccb.content.text("This is an animate shadow.  Looking like nothing more than an errant patch of normal shadow, it draws your attention by the way it moves subtly and whispers softly in the back of your mind.  Strange intrusive thoughts accompany the quiet murmur, awakening your most horrific memories and fears."),
+    species = { "NETHER", "SUMMONED_CREATURE" },
+    hp = 60,
+    speed = 150,
+    melee_skill = 8,
+    melee_dice = 2,
+    melee_sides = 4,
+    melee_damage = { { type = "stab", amount = 2.0, penetration = 20 } },
+    dodge = 1,
+    vision_day = 50,
+    vision_night = 50,
+    harvest = "exempt",
+    defense = { id = "ZAPBACK", chance = 100 },
+    flags = {
+        "SEES", "HEARS", "GOODHEARING", "SMELLS", "NOHEAD", "HARDTOSHOOT", "GRABS", "WEBWALK", "PLASTIC",
+        "ELECTRIC", "ACIDPROOF", "HIT_AND_RUN", "NO_BREATHE", "NOGIB",
+    },
+}
+
+-- The version for monster summons.
+ccb.content.define_monster {
+    id = "mon_magi_shadow_monster",
+    copy_from = "mon_magi_shadow",
+    name = ccb.content.plural_text("shadow", "shadows"),
+    description = ccb.content.text("This is an animate shadow.  Looking like nothing more than an errant patch of normal shadow, it draws your attention by the way it moves subtly and whispers softly in the back of your mind.  Strange intrusive thoughts accompany the quiet murmur, awakening your most horrific memories and fears."),
+    species = { "NETHER", "SUMMONED_CREATURE" },
+    default_faction = "zombie",
+}
+
+ccb.content.define_monster {
+    id = "mon_keeper_of_the_glades_shaman",
+    copy_from = "mon_keeper_of_the_glades",
+    name = ccb.content.plural_text("keeper of the glades", "keeper of the glades"),
+    species = { "FOREST_SPIRIT", "SUMMONED_CREATURE" },
+    inheritance = { add = { attacks = {} } },
+}
+
+ccb.content.define_monster {
+    id = "mon_mag_stag_beetle",
+    name = ccb.content.plural_text("massive stag beetle", "massive stag beetles"),
+    description = ccb.content.text("This enormous stag beetle has reached mutated maturity."),
+    default_faction = "player",
+    categories = { "WILDLIFE" },
+    species = { "INSECT" },
+    looks_like = "mon_stag_beetle_giant",
+    volume = "400 L",
+    mass = "600 kg",
+    hp = 300,
+    speed = 80,
+    materials = { "iflesh" },
+    symbol = "S",
+    color = "brown",
+    morale = 30,
+    aggressive_to_characters = false,
+    melee_skill = 5,
+    melee_dice = 6,
+    melee_sides = 6,
+    melee_damage = { { type = "cut", amount = 9 } },
+    dodge = 1,
+    weakpoint_sets = { "wps_arthropod", "wps_arthropod_beetle" },
+    families = {
+        "prof_gross_anatomy",
+        "prof_intro_biology",
+        "prof_physiology",
+        "prof_wp_basic_bug",
+        "prof_wp_beetle",
+    },
+    pet = {
+        food = { "rune_wildwood" },
+        feed_message = ccb.content.text("The %s seems to like you!  It lets you pat its head and seems friendly."),
+    },
+    weakpoints = {
+        {
+            name = ccb.content.text("a soft section of chitin"),
+            armor_multiplier = { physical = 0.33 },
+            coverage = 20,
+            id = "a soft section of chitin",
+        },
+        {
+            name = ccb.content.text("a crack in the chitin"),
+            armor_multiplier = { physical = 0 },
+            coverage = 5,
+            id = "a crack in the chitin",
+        },
+    },
+    vision_day = 14,
+    vision_night = 12,
+    anger_triggers = { "FRIEND_ATTACKED", "FRIEND_DIED", "HURT" },
+    fear_triggers = { "FIRE" },
+    flags = {
+        "HEARS", "PET_MOUNTABLE", "PUSH_MON", "PUSH_VEH", "GOODHEARING", "PATH_AVOID_DANGER", "SEES",
+        "SMELLS", "WARM", "EATS",
+    },
+    armor = { bash = 60, cut = 72, acid = 18, heat = 8, bullet = 50, psionic = 14 },
+}
+
 ccb.content.define_monster {
     id = "mon_aerial_assassin",
     name = ccb.content.plural_text("aerial assassin", "aerial assassins"),

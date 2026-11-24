@@ -1,5 +1,107 @@
 local ccb = require("ccb")
 
+-- interstitial copy-from to edit flags and special attacks appropriately
+ccb.content.define_monster {
+    id = "mon_feral_wizard_default",
+    copy_from = "mon_feral_human_pipe",
+    attacks = { { reference = "BROWSE", cooldown = 100 }, { reference = "EAT_FOOD", cooldown = 100 } },
+    zombify_into = "mon_zombie_thaumic",
+    flags = {
+        "SEES", "HEARS", "SMELLS", "WARM", "BASHES", "GROUP_BASH", "HUMAN", "CAN_OPEN_DOORS",
+        "PATH_AVOID_DANGER", "PATH_AVOID_FIRE", "PRIORITIZE_TARGETS", "EATS", "MAGIC_USER",
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_human_magician",
+    name = ccb.content.plural_text("feral wizard", "feral wizards"),
+    copy_from = "mon_feral_wizard_default",
+    description = ccb.content.text("Stumbling about with strange ravings and odd motions, this crazed individual walks among the dead as one of their own.  Occasional flashes and sparks erupt from their twisted and grimy fingers as they perform arcane motions."),
+    materials = { "flesh" },
+    symbol = "@",
+    color = "magenta",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    spell = { id = "spell_feral_wizard_base" },
+                    casting_message = ccb.content.text("%1$s chants and gestures erratically!"),
+                    cooldown = 10,
+                    kind = "spell",
+                    when = "allow_feral_human_magician_spell",
+                },
+            },
+        },
+    },
+    death = {
+        drops = {
+            kind = "distribution",
+            items = {
+                { group = "enchanted_small_items", probability = 5 },
+                { group = "feral_humans_death_drops_pipe", probability = 100 },
+                { group = "enchanted_wands_lesser", probability = 3 },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_lab_magician",
+    copy_from = "mon_feral_wizard_default",
+    name = ccb.content.plural_text("feral thaumaturgical researcher", "feral thaumaturgical researchers"),
+    description = ccb.content.text("A researcher with the look of the stereotypical academic mage, their lab coat bearing an arcane sigil on the breast pocket.  The bloodshot eyes and constant muttering, accompanied by the occasional gesture that releases a burst of sparks, tell you that research is currently far from their minds."),
+    symbol = "@",
+    color = "cyan",
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    id = "feral_thaum_sci_spell_magicmissile",
+                    cooldown = 10,
+                    move_cost = 100,
+                    range = 12,
+                    damage = { { type = "nether", amount = 7 } },
+                    dodgeable = false,
+                    blockable = false,
+                    avatar_hit = ccb.content.text("%1$s screams words of magic and an eldritch bolt impacts your %2$s!"),
+                    npc_hit = ccb.content.text("%1$s screams words of magic and an eldritch bolt impacts <npcname>'s %2$s!"),
+                    avatar_miss = ccb.content.text("%1$s screams words of magic and you narrowly avoid an eldritch bolt!"),
+                    npc_miss = ccb.content.text("%1$s screams words of magic and <npcname> narrowly avoids an eldritch bolt!"),
+                    avatar_no_damage = ccb.content.text("%1$s screams words of magic and your %2$s is impacted by an eldritch bolt, but it does no damage."),
+                    npc_no_damage = ccb.content.text("%1$s screams words of magic and <npcname>'s %2$s is impacted by an eldritch bolt, but it does no damage."),
+                    kind = "melee",
+                    when = "allow_feral_human_magician_spell",
+                },
+                {
+                    id = "feral_thaum_sci_spell_blindflash",
+                    spell = { id = "blinding_flash", min_level = 0 },
+                    cooldown = 15,
+                    casting_message = ccb.content.text("%1$s gestures and light explodes everywhere!"),
+                    kind = "spell",
+                    when = "allow_feral_lab_magician_feral_thaum_sci_spell_blindflash",
+                },
+                {
+                    id = "smash",
+                    move_cost = 80,
+                    cooldown = 10,
+                    accuracy = 5,
+                    damage = { { type = "bash", amount = 15, penetration = 10 } },
+                    minimum_hit_size = 12,
+                    range = 8,
+                    throw_strength = 40,
+                    blockable = false,
+                    avatar_hit = ccb.content.text_without_extraction("%1$s gestures at you and a powerful force hurls you through the air!"),
+                    npc_hit = ccb.content.text_without_extraction("%1$s gestures at <npcname> and a powerful force hurls them through the air!"),
+                    avatar_miss = ccb.content.text_without_extraction("%s gestures at you, and you feel a crushing pressure for a moment before the feeling vanishes!"),
+                    npc_miss = ccb.content.text_without_extraction("%s gestures at <npcname> but nothing happens!"),
+                    when = "allow_feral_lab_magician_smash",
+                },
+            },
+        },
+    },
+    death = { drops = "mon_zombie_research_thaumaturge_death_drops" },
+}
+
 ccb.content.define_monster {
     id = "mon_feral_animist",
     copy_from = "mon_feral_wizard_default",
@@ -917,6 +1019,71 @@ ccb.content.define_monster {
                     spell = { id = "disjunction_monster", min_level = 8 },
                     casting_message = "%1$s waves their hands in a gesture of negation!",
                     when = "w16b_mon_when_magiclysm_d703c72ddb40",
+                },
+            },
+        },
+    },
+}
+
+ccb.content.define_monster {
+    id = "mon_feral_technomancer_enhanced",
+    name = "feral high technomancer",
+    description = "This feral human has obvious bionic enhancements in what would have been the sign of a powerful technomancer before the Cataclysm.  They move with much more speed and grace than most feral humans you've seen.",
+    copy_from = "mon_feral_wizard_default",
+    symbol = "@",
+    color = "dark_gray",
+    dissect = "dissect_mon_feral_high_technomancer",
+    death = {
+        drops = {
+            kind = "collection",
+            items = {
+                { group = "enchanted_combat_items", probability = 30 },
+                { group = "mon_feral_technomancer_death_drops", probability = 100 },
+            },
+        },
+    },
+    inheritance = {
+        add = {
+            attacks = {
+                {
+                    kind = "spell",
+                    id = "feral_high_technomancer_laze",
+                    cooldown = 20,
+                    spell = { id = "feral_laze", min_level = 5 },
+                    casting_message = "%1$s points and fires a beam of light!",
+                    when = "w16b_mon_when_magiclysm_140d572c6655",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_technomancer_bless",
+                    cooldown = 20,
+                    spell = { id = "feral_technomancer_bless_spell", min_level = 2, hit_self = true },
+                    casting_message = "%1$s mutters some words and their body is limned in light.",
+                    when = "w16b_mon_when_magiclysm_9fe5f25f3a2f",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_high_technomancer_invisibility",
+                    cooldown = 20,
+                    spell = { id = "feral_invisibility", min_level = 2, hit_self = true },
+                    casting_message = "%1$s makes a gesture and disappears.",
+                    when = "w16b_mon_when_magiclysm_a1b4a552975d",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_high_technomancer_summon_blade",
+                    cooldown = 65,
+                    spell = { id = "feral_animated_blade", min_level = 10 },
+                    casting_message = "%1$s gestures and swords appear out of thin air!",
+                    when = "w16b_mon_when_magiclysm_d703c72ddb40",
+                },
+                {
+                    kind = "spell",
+                    id = "feral_high_technomancer_synaptic_stim",
+                    cooldown = 40,
+                    spell = { id = "feral_synaptic_stimulation", min_level = 4, hit_self = true },
+                    casting_message = "%1$s mutters some words and begins moving much faster.",
+                    when = "w16b_mon_when_magiclysm_73a01ef3ac0e",
                 },
             },
         },
