@@ -21,11 +21,15 @@ class Character;
 class map;
 class ui_adaptor;
 class vehicle;
+struct vehicle_part;
 
 vpart_id vpart_appliance_from_item( const itype_id &item_id );
 bool place_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
                       const Character &owner, const std::optional<item> &base = std::nullopt,
                       std::optional<units::angle> direction = std::nullopt );
+
+bool place_unowned_appliance( map &here, const tripoint_bub_ms &p, const vpart_id &vpart,
+                              const std::optional<item> &base = std::nullopt );
 
 /**
  * Appliance interaction UI. Works similarly to veh_interact, but has
@@ -82,7 +86,7 @@ class veh_app_interact
         /**
          * Creates the header text, representing the appliance's usage info.
         */
-        std::string draw_info_imgui_header( map &here );
+        std::string draw_info_imgui_header( map &here, const vehicle_part &part );
         /**
          * Populates the list of available actions for this appliance. The action display
          * names are stored as uilist entries in imenu, and the associated functions

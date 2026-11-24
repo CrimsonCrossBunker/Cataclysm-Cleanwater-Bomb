@@ -111,6 +111,7 @@
 #include "units_utility.h"
 #include "value_ptr.h"
 #include "veh_type.h"
+#include "vehicle_appliance.h"
 #include "vehicle_palette.h"
 #include "vehicle_part_location.h"
 #include "vehicle_selector.h"
@@ -595,7 +596,7 @@ void vehicle::init_state( map &placed_on, int init_veh_fuel, veh_spawn_status in
             rng_fuel_amount( pt, pt.ammo_current() );
         }
 
-        if( vp.has_feature( "OPENABLE" ) ) { // doors are closed
+        if( vp.has_feature( "OPENABLE" ) && !vp.has_feature( "CABIN_WINDOW" ) ) {
             if( !pt.open && one_in( 4 ) ) {
                 open( placed_on, p );
             }
@@ -1304,6 +1305,9 @@ units::power vehicle::part_vpower_w( map &here, const vehicle_part &vp,
 // for motor consumption see @ref vpart_info::energy_consumption instead
 units::power vehicle::part_epower( const vehicle_part &vp ) const
 {
+    if( vp.info().has_flag( "SPLIT_HVAC_INDOOR" ) || vp.info().has_flag( "SPLIT_HVAC_OUTDOOR" ) ) {
+        return split_hvac_epower( vp );
+    }
     units::power e = vp.info().epower;
     if( e < 0_W ) {
         return e; // Consumers always draw full power, even if broken
@@ -3082,6 +3086,16 @@ int vpart_position::get_movecost() const
     }
 }
 
+bool vpart_position::can_climb_through_window() const
+{
+    if( vehicle().is_moving() || vehicle().vertical_velocity != 0 ) {
+        return false;
+    }
+    const auto window = avail_part_with_feature( "CABIN_WINDOW" );
+    const auto obstacle = obstacle_at_part();
+    return window && window->part().open && obstacle && obstacle->has_feature( VPFLAG_OPENABLE );
+}
+
 std::optional<vpart_reference> vpart_position::part_displayed() const
 {
     int part_id = vehicle().part_displayed_at( mount_pos3(), true );
@@ -3341,8 +3355,9 @@ int vehicle::avail_linkable_part( const tripoint_rel_ms &pt, bool to_ports ) con
     const std::string link_flag = to_ports ? "CABLE_PORTS" : "BATTERY";
     for( const int p : parts_at_relative( pt, /* use_cache = */ false ) ) {
         const vehicle_part &vp_here = this->part( p );
-        if( !vp_here.is_broken() &&
-            ( vp_here.info().has_flag( "APPLIANCE" ) || vp_here.info().has_flag( link_flag ) ) ) {
+        const vpart_info &info = vp_here.info();
+        if( !vp_here.is_broken() && !info.has_flag( "NO_POWER_CONNECTION" ) &&
+            ( info.has_flag( "APPLIANCE" ) || info.has_flag( link_flag ) ) ) {
             return p;
         }
     }
@@ -3470,7 +3485,8 @@ int vehicle::next_part_to_close( int p, bool outside ) const
          ++part_it ) {
         const vehicle_part &vp = part( *part_it );
         const vpart_info &vpi = vp.info();
-        if( vpi.has_flag( VPFLAG_OPENABLE ) && vp.is_available() && vp.open == 1
+        if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) &&
+            vp.is_available() && vp.open == 1
             && ( !outside || !vpi.has_flag( "OPENCLOSE_INSIDE" ) ) ) {
             return *part_it;
         }
@@ -3486,7 +3502,8 @@ int vehicle::next_part_to_open( int p, bool outside ) const
     for( const int elem : parts_at_relative( parts[p].mount_pos3(), true, true ) ) {
         const vehicle_part &vp = part( elem );
         const vpart_info &vpi = vp.info();
-        if( vpi.has_flag( VPFLAG_OPENABLE ) && vp.is_available() && vp.open == 0 &&
+        if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) &&
+            vp.is_available() && vp.open == 0 &&
             !( vp.locked && has_lock ) &&
             ( !outside || !vpi.has_flag( "OPENCLOSE_INSIDE" ) ) ) {
             return elem;
@@ -6034,7 +6051,7 @@ units::power vehicle::total_accessory_epower() const
     for( int part : accessories ) {
         const vehicle_part &vp = parts[part];
         if( vp.enabled ) {
-            epower += vp.info().epower;
+            epower += vp.info().epower < 0_W ? part_epower( vp ) : vp.info().epower;
         }
     }
     return epower;
@@ -6417,7 +6434,7 @@ void vehicle::power_parts( map &here )
 
         for( const vpart_reference &vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
             vehicle_part &pt = vp.part();
-            if( pt.info().epower < 0_W ) {
+            if( part_epower( pt ) < 0_W ) {
                 pt.enabled = false;
                 pt.power_disabled = true;
             }
@@ -6521,8 +6538,14 @@ std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &her
     }
     std::map < Vehicle *, float > distances; // distance represents sum of cable losses
     std::vector < Vehicle * > queue;
+    const auto can_conduct_power = []( const vehicle &veh ) {
+        return !veh.is_appliance() || !veh.cable_ports.empty() || !veh.batteries.empty();
+    };
 
     distances[start] = 0;
+    if( !can_conduct_power( *start ) ) {
+        return distances;
+    }
     queue.emplace_back( start );
     constexpr float infinity_distance = 10000.0f; // should be enough to represent "infinity"
 
@@ -6541,7 +6564,7 @@ std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &her
             }
 
             Vehicle *const v_next = find_vehicle_using_parts( here,  vp.target.second );
-            if( v_next == nullptr ) { // vehicle's rolled away or off-map
+            if( !v_next || !can_conduct_power( *v_next ) ) {
                 continue;
             }
             // try insert infinity for initial unvisited node distance
@@ -6806,6 +6829,9 @@ void vehicle::idle( map &here, bool on_map )
     avg_velocity = ( velocity + avg_velocity ) / 2;
 
     power_parts( here );
+    if( on_map && calendar::once_every( 1_minutes ) ) {
+        update_vehicle_climate( here, *this );
+    }
     Character &player_character = get_player_character();
     if( engine_on && total_power( here ) > 0_W ) {
         // Consume fuel at here only if the vehicle is not thrusting.
@@ -6871,8 +6897,13 @@ void vehicle::idle( map &here, bool on_map )
         if( pt.is_unavailable() || !pt.enabled ) {
             continue;
         }
-        for( const emit_id &e : pt.info().emissions ) {
-            here.emit_field( bub_part_pos( here, pt ), e );
+        const tripoint_bub_ms emitter = bub_part_pos( here, pt );
+        // Enclosed stationary heaters deliver heat through the room model.
+        if( !( is_appliance() && pt.info().has_flag( "SPACE_HEATER" ) &&
+               is_hvac_indoors( here, emitter ) ) ) {
+            for( const emit_id &e : pt.info().emissions ) {
+                here.emit_field( emitter, e );
+            }
         }
         for( const emit_id &e : pt.info().exhaust ) {
             if( exhaust_and_muffle.first == -1 ) {
@@ -7648,7 +7679,8 @@ void vehicle::refresh( const bool remove_fakes )
         if( vpi.has_flag( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
             accessories.push_back( p );
         }
-        if( vpi.has_flag( VPFLAG_CABLE_PORTS ) || vpi.has_flag( VPFLAG_APPLIANCE ) ) {
+        if( ( vpi.has_flag( VPFLAG_CABLE_PORTS ) || vpi.has_flag( VPFLAG_APPLIANCE ) ) &&
+            !vpi.has_flag( "NO_POWER_CONNECTION" ) ) {
             cable_ports.push_back( p );
         }
         if( vpi.has_control_req() ) {
@@ -9356,7 +9388,7 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
             // matching power_parts() behavior when the battery dies.
             for( const vpart_reference &drain_vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
                 vehicle_part &pt = drain_vp.part();
-                if( pt.info().epower < 0_W ) {
+                if( part_epower( pt ) < 0_W ) {
                     pt.enabled = false;
                     pt.power_disabled = true;
                 }

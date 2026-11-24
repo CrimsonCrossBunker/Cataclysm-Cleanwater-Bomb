@@ -1437,6 +1437,26 @@
   },
   {
     "type": "construction_group",
+    "id": "place_atlas_hydronic_boiler",
+    "name": "Place Electric Hot-Water Boiler"
+  },
+  {
+    "type": "construction_group",
+    "id": "place_atlas_wood_hydronic_boiler",
+    "name": "Place Wood Stove with Water Boiler"
+  },
+  {
+    "type": "construction_group",
+    "id": "place_household_water_heater",
+    "name": "Place Household Water Heater"
+  },
+  {
+    "type": "construction_group",
+    "id": "place_household_water_heater_family",
+    "name": "Place Family–Sized Water Heater"
+  },
+  {
+    "type": "construction_group",
     "id": "place_heater_large",
     "name": "Place Large Heater"
   },

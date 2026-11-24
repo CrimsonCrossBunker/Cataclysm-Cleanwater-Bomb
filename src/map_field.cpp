@@ -63,6 +63,7 @@
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
+#include "vehicle_appliance.h"
 #include "vpart_position.h"
 #include "weather.h"
 
@@ -1022,11 +1023,12 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
     // How much time to add to the fire's life due to burned items/terrain/furniture
     time_duration time_added = 0_turns;
     // Checks if the fire can spread
-    const bool can_spread = !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_FIRE_CONTAINER );
-    // If the flames are in furniture with fire_container flag like brazier or oven,
-    // they're fully contained, so skip consuming terrain
-    const bool can_burn = ( ter.is_flammable() || frn.is_flammable() ) &&
-                          !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_FIRE_CONTAINER );
+    const bool wood_boiler = has_wood_boiler( here, p );
+    const bool can_spread = !wood_boiler &&
+                            !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_FIRE_CONTAINER );
+    // A contained fire does not consume the terrain beneath its firebox.
+    const bool can_burn = can_spread && ( ter.is_flammable() || frn.is_flammable() );
+    double boiler_fuel_grams = 0.0;
     // The huge indent below should probably be somehow moved away from here
     // without forcing the function to use i_at( p ) for fires without items
     if( !is_sealed && map_tile.get_item_count() > 0 ) {
@@ -1055,6 +1057,8 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
             // destroyed by the fire, this changes the item weight, but may not actually
             // destroy it. We need to spawn products anyway.
             const units::mass old_weight = fuel->weight( false );
+            const int old_burnt = fuel->burnt;
+            const float old_fuel = frd.fuel_produced;
             bool destroyed = fuel->burn( frd );
             // If the item is considered destroyed, it may have negative charge count,
             // see `item::burn?. This in turn means `item::weight` returns a negative value,
@@ -1062,6 +1066,17 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
             const units::mass new_weight = destroyed ? 0_gram : fuel->weight( false );
             if( old_weight != new_weight ) {
                 here.create_burnproducts( p, *fuel, old_weight - new_weight );
+            }
+            if( wood_boiler && frd.fuel_produced > old_fuel ) {
+                if( fuel->count_by_charges() ) {
+                    boiler_fuel_grams += units::to_gram( old_weight - new_weight );
+                } else if( destroyed || fuel->burnt > old_burnt ) {
+                    // Non-charge items only lose item mass when burning destroys them.
+                    const int threshold = std::max( 1, 3 * static_cast<int>( fuel->base_volume() / 250_ml ) );
+                    const int progress = destroyed ? threshold : std::min( threshold, fuel->burnt );
+                    const double fraction = static_cast<double>( std::max( 0, progress - old_burnt ) ) / threshold;
+                    boiler_fuel_grams += units::to_gram( old_weight ) * fraction;
+                }
             }
 
             if( destroyed ) {
@@ -1086,11 +1101,14 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
         smoke = roll_remainder( frd.smoke_produced );
         time_added = 1_turns * roll_remainder( frd.fuel_produced );
     }
+    if( boiler_fuel_grams > 0.0 ) {
+        record_wood_boiler_burn( here, p, boiler_fuel_grams );
+    }
 
     int part;
     // Get the part of the vehicle in the fire (_internal skips the boundary check)
     vehicle *veh = here.veh_at_internal( p, part );
-    if( veh != nullptr ) {
+    if( veh != nullptr && !wood_boiler ) {
         veh->damage( here, part, cur.get_field_intensity() * 10, damage_heat, true );
         // Damage the vehicle in the fire.
     }
@@ -1451,7 +1469,7 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
         }
     }
     // Create smoke once - above us if possible, at us otherwise
-    if( !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_SUPPRESS_SMOKE ) &&
+    if( !wood_boiler && !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_SUPPRESS_SMOKE ) &&
         rng( 0, 100 - windpower ) <= smoke &&
         rng( 3, 35 ) < cur.get_field_intensity() * 10 ) {
         bool smoke_up = p.z() < here.max_z();

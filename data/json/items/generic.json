@@ -1089,7 +1089,7 @@
     "weight": "54431 g",
     "volume": "240 L",
     "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "use_action": { "type": "deploy_furn", "furn_type": "f_water_heater" },
+    "use_action": { "type": "deploy_appliance", "base": "ap_household_water_heater" },
     "melee_damage": { "bash": 5 }
   },
   {
@@ -1106,7 +1106,7 @@
     "weight": "80 kg",
     "volume": "406 L",
     "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "use_action": { "type": "deploy_furn", "furn_type": "f_water_heater_family" },
+    "use_action": { "type": "deploy_appliance", "base": "ap_household_water_heater_family" },
     "melee_damage": { "bash": 5 }
   },
   {

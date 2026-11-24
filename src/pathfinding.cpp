@@ -313,7 +313,13 @@ int map::cost_to_pass( const tripoint_bub_ms &cur, const tripoint_bub_ms &p,
 
     // If there's a vehicle here, we need to assess that instead of the terrain.
     if( veh != nullptr ) {
-        const auto vpobst = vpart_position( const_cast<vehicle &>( *veh ), part ).obstacle_at_part();
+        const vpart_position vehicle_tile( const_cast<vehicle &>( *veh ), part );
+        if( settings.allow_climb_vehicle_windows && terrain.movecost > 0 &&
+            ( !furniture.id || furniture.movecost >= 0 ) && field.total_move_cost() >= 0 &&
+            vehicle_tile.can_climb_through_window() ) {
+            return vpart_position::window_climb_movecost;
+        }
+        const auto vpobst = vehicle_tile.obstacle_at_part();
         part = vpobst ? vpobst->part_index() : -1;
         int dummy = -1;
         const bool is_outside_veh = veh_at_internal( cur, dummy ) != veh;

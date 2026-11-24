@@ -750,6 +750,10 @@ void MonsterGenerator::apply_species_attributes( mtype &mon )
 
 void MonsterGenerator::finalize_pathfinding_settings( mtype &mon )
 {
+    static const species_id species_ZOMBIE( "ZOMBIE" );
+    mon.path_settings.allow_climb_vehicle_windows = mon.in_species( species_ZOMBIE ) &&
+            mon.size <= creature_size::medium;
+
     if( mon.path_settings.max_length < 0 ) {
         mon.path_settings.max_length = mon.path_settings.max_dist * 5;
     }

@@ -706,6 +706,11 @@
   },
   {
     "type": "item_action",
+    "id": "HVAC_REMOTE",
+    "name": { "str": "Adjust an air conditioner" }
+  },
+  {
+    "type": "item_action",
     "id": "MANAGE_EXOSUIT",
     "name": { "str": "Manage exosuit modules" }
   },

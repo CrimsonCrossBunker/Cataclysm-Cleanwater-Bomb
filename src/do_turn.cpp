@@ -1299,6 +1299,7 @@ void game::simulate_turn_suffix()
     // Update vision caches for monsters. If this turns out to be expensive,
     // consider a stripped down cache just for monsters.
     m.build_map_cache( levz, true );
+    get_weather().update_room_heat( m, u.pos_bub( m ) );
 
     // Compute zones in original creature order. Optional workers prepare only
     // owned geometry values; no worker reads or mutates a live creature.

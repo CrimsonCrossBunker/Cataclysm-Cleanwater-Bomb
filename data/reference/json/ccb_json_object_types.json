@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:b9d699493659940fe523b9d89309bb6f04bf9d5ff2e038e5dbb18cfdc3a8f869",
+    "source_fingerprint": "sha256:1b455623d13515292ad6544854996d24bfbc1ea53dd85d74f2ad71e9601b73e8",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6886,
-    "top_level_objects": 97902,
+    "tracked_json_files": 6888,
+    "top_level_objects": 97937,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15371,
+        "occurrences": 15377,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -2467,7 +2467,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 911,
+        "occurrences": 915,
         "examples": [
           {
             "path": "data/json/construction/appliances.json",
@@ -2580,7 +2580,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 526,
+        "occurrences": 530,
         "examples": [
           {
             "path": "data/json/construction_group.json",
@@ -4504,7 +4504,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 193,
+        "occurrences": 194,
         "examples": [
           {
             "path": "data/json/item_actions.json",
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 931,
+        "occurrences": 938,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8225,
+        "occurrences": 8229,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -10557,7 +10557,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 608,
+        "occurrences": 617,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",
