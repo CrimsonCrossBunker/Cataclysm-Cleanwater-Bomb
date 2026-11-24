@@ -50,6 +50,8 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "activity_handlers.h"
+#include "pickup.h"
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 
@@ -225,7 +227,7 @@ TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
                           false, true, zone_abs, zone_abs );
     cart->zones_dirty = true;
     zone_data *first = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos3(), first_data,
-                       &here );
+        &here );
     REQUIRE( first != nullptr );
 
     bool returned_pointer_is_current = false;
@@ -239,7 +241,7 @@ TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
     zone_data second_data( "Second", zone_type_LOOT_FOOD, faction_your_followers,
                            false, true, zone_abs, zone_abs );
     zone_data *second = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos3(), second_data,
-                        &here );
+        &here );
     REQUIRE( second != nullptr );
 
     REQUIRE( zm.remove( *first, &here ) );
@@ -344,7 +346,7 @@ TEST_CASE( "vehicle_zone_remove_uses_non_global_map_context", "[zones][vehicle]"
     zone_data new_zone( "Outside reality bubble", zone_type_LOOT_FOOD,
                         faction_your_followers, false, true, zone_abs, zone_abs );
     zone_data *created = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos3(), new_zone,
-                         other_map.cast_to_map() );
+        other_map.cast_to_map() );
     REQUIRE( created != nullptr );
     created->set_enabled( false );
     CHECK_FALSE( created->get_enabled() );
@@ -739,7 +741,7 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
         int inserted = 0;
         for( int i = 0; i < max_item_in_square; ++i ) {
             item *added = here.add_item_or_charges_ret_loc( dest_pos, item( itype_test_rod_14cm ),
-                          false ).get_item();
+                false ).get_item();
             if( added == nullptr ) {
                 break;
             }
@@ -764,10 +766,10 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
     bool spillable_skipped = false;
     zone_sorting::zone_items items = zone_sorting::populate_items( src_pos );
     zone_sorting::unload_sort_options opts = zone_sorting::set_unload_options( dummy, src_abs,
-            false );
+        false );
     std::vector<item_location> other_activity;
     CHECK_FALSE( zone_sorting::has_items_to_sort( dummy, src_abs, opts, other_activity, items,
-                 &pickup_failure, &spillable_skipped ) );
+            &pickup_failure, &spillable_skipped ) );
 }
 
 // Activity must terminate even when every destination is count-full.
@@ -1006,7 +1008,7 @@ TEST_CASE( "zone_sorting_cart_on_source_full_inventory",
     zone_manager &zm = zone_manager::get_manager();
     item test_food( itype_test_apple );
     REQUIRE( zm.get_near_zone_type_for_item( test_food,
-             here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
+            here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
 
     // Run the sort activity
     dummy.assign_activity( zone_sort_activity_actor() );
@@ -1068,7 +1070,7 @@ TEST_CASE( "zone_sorting_virtual_pickup_from_cart",
     zone_manager &zm = zone_manager::get_manager();
     item test_food( itype_test_apple );
     REQUIRE( zm.get_near_zone_type_for_item( test_food,
-             here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
+            here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
 
     dummy.assign_activity( zone_sort_activity_actor() );
     process_activity( dummy );
@@ -1131,7 +1133,7 @@ TEST_CASE( "zone_sorting_virtual_pickup_full_inventory",
     zone_manager &zm = zone_manager::get_manager();
     item test_food( itype_test_apple );
     REQUIRE( zm.get_near_zone_type_for_item( test_food,
-             here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
+            here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
 
     dummy.assign_activity( zone_sort_activity_actor() );
     process_activity( dummy );
@@ -1187,7 +1189,7 @@ TEST_CASE( "zone_sorting_direct_delivery_to_cart",
     zone_manager &zm = zone_manager::get_manager();
     item test_food( itype_test_apple );
     REQUIRE( zm.get_near_zone_type_for_item( test_food,
-             here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
+            here.get_abs( start_pos ) ) == zone_type_LOOT_FOOD );
 
     dummy.assign_activity( zone_sort_activity_actor() );
     process_activity( dummy );
@@ -1428,7 +1430,7 @@ TEST_CASE( "zone_sorting_virtual_pickup_walled_dest_preserves_item",
 
     const int at_source = count_items_or_charges( src_pos, itype_test_apple, cargo );
     const int at_destination = count_items_or_charges( dest_pos, itype_test_apple,
-                               std::nullopt );
+        std::nullopt );
     CHECK( at_source + at_destination == 1 );
     CHECK( !dummy.activity );
 }
@@ -2439,7 +2441,7 @@ TEST_CASE( "zone_sorting_fast_delivery_preserves_heavy_items_with_cart",
         REQUIRE( worst.has_value() );
         if( worst ) {
             int req_at_worst = cart->drag_str_req_at( here, *worst,
-                               cart->total_mass( here ) + 200_kilogram );
+                cart->total_mass( here ) + 200_kilogram );
             CAPTURE( req_at_worst );
             CAPTURE( worst->x() );
             CAPTURE( worst->y() );
@@ -3297,7 +3299,7 @@ TEST_CASE( "has_items_to_sort_returns_false_for_spillable_only_source",
     bool pickup_failure = false;
 
     bool result = zone_sorting::has_items_to_sort( dummy, start_abs, zone_unload_options,
-                  other_activity_items, items, &pickup_failure );
+        other_activity_items, items, &pickup_failure );
 
     CHECK_FALSE( result );
 }
@@ -4132,7 +4134,7 @@ TEST_CASE( "zone_sorting_drag_refused_items_reach_the_inventory",
         dummy.activity.do_turn( dummy );
 
         const int at_source = count_items_or_charges( src_pos, itype_test_heavy_boulder,
-                              std::nullopt );
+            std::nullopt );
         const int carried = count_carried( dummy, itype_test_heavy_boulder );
         CAPTURE( at_source );
         CAPTURE( carried );
@@ -4154,7 +4156,7 @@ TEST_CASE( "zone_sorting_drag_refused_items_reach_the_inventory",
         dummy.activity.do_turn( dummy );
 
         const int at_source = count_items_or_charges( src_pos, itype_test_heavy_boulder,
-                              std::nullopt );
+            std::nullopt );
         CAPTURE( at_source );
         CHECK( at_source < boulders - 1 );
     }
@@ -4420,3 +4422,207 @@ TEST_CASE( "zone_activity_zero_move_passes_are_bounded",
         CHECK_FALSE( actor->recovered );
     }
 }
+
+namespace merged_zone_activity_scope_test
+{
+
+TEST_CASE( "unload_activity_scope_survives_save_and_reload", "[zones][activities][save]" )
+{
+    clear_avatar();
+    const zone_scope scope = GENERATE( zone_scope::all, zone_scope::static_only,
+                                       zone_scope::personal_only );
+    JsonValue input = json_loader::from_string(
+                          "{\"scope\":" + std::to_string( static_cast<int>( scope ) ) + "}" );
+    std::unique_ptr<activity_actor> restored = unload_loot_activity_actor::deserialize( input );
+    const unload_loot_activity_actor *unloading =
+        dynamic_cast<const unload_loot_activity_actor *>( restored.get() );
+    REQUIRE( unloading );
+    CHECK( unloading->query_for( get_avatar() ).scope == scope );
+
+    std::ostringstream saved;
+    JsonOut output( saved );
+    unloading->serialize( output );
+    JsonValue serialized = json_loader::from_string( saved.str() );
+    JsonObject saved_data = serialized.get_object();
+    saved_data.allow_omitted_members();
+    CHECK( saved_data.get_int( "scope" ) == static_cast<int>( scope ) );
+    restored = unload_loot_activity_actor::deserialize( serialized );
+    unloading = dynamic_cast<const unload_loot_activity_actor *>( restored.get() );
+    REQUIRE( unloading );
+    CHECK( unloading->query_for( get_avatar() ).scope == scope );
+}
+
+TEST_CASE( "unload_activity_scope_preserves_legacy_default", "[zones][activities][save]" )
+{
+    clear_avatar();
+    JsonValue input = json_loader::from_string( "{}" );
+    const std::unique_ptr<activity_actor> restored = unload_loot_activity_actor::deserialize( input );
+    const unload_loot_activity_actor *unloading =
+        dynamic_cast<const unload_loot_activity_actor *>( restored.get() );
+    REQUIRE( unloading );
+    CHECK( unloading->query_for( get_avatar() ).scope == zone_scope::all );
+}
+
+TEST_CASE( "unload_activity_scope_rejects_invalid_values", "[zones][activities][save]" )
+{
+    const int scope = GENERATE( -1, 3 );
+    JsonValue input = json_loader::from_string( "{\"scope\":" + std::to_string( scope ) + "}" );
+    CHECK_THROWS_AS( unload_loot_activity_actor::deserialize( input ), JsonError );
+}
+
+} // namespace merged_zone_activity_scope_test
+
+namespace merged_zone_activity_serialization_test
+{
+
+TEST_CASE( "unload_activity_preserves_zone_scope", "[zones][activities][serialization]" )
+{
+    const int scope = GENERATE( 0, 1, 2 );
+    CAPTURE( scope );
+    JsonValue data = json_loader::from_string( "{\"scope\":" + std::to_string( scope ) + "}" );
+    const std::unique_ptr<activity_actor> actor = unload_loot_activity_actor::deserialize( data );
+    REQUIRE( actor );
+    std::ostringstream saved;
+    JsonOut writer( saved );
+    actor->serialize( writer );
+    JsonObject object = json_loader::from_string( saved.str() ).get_object();
+    object.allow_omitted_members();
+    CHECK( object.get_int( "scope" ) == scope );
+}
+
+TEST_CASE( "legacy_unload_activity_defaults_to_all_zones", "[zones][activities][serialization]" )
+{
+    JsonValue data = json_loader::from_string( "{}" );
+    const std::unique_ptr<activity_actor> actor = unload_loot_activity_actor::deserialize( data );
+    REQUIRE( actor );
+    std::ostringstream saved;
+    JsonOut writer( saved );
+    actor->serialize( writer );
+    JsonObject object = json_loader::from_string( saved.str() ).get_object();
+    object.allow_omitted_members();
+    CHECK( object.get_int( "scope" ) == 0 );
+}
+
+TEST_CASE( "unload_activity_rejects_invalid_zone_scope", "[zones][activities][serialization]" )
+{
+    const int scope = GENERATE( -1, 3 );
+    CAPTURE( scope );
+    JsonValue data = json_loader::from_string( "{\"scope\":" + std::to_string( scope ) + "}" );
+    CHECK_THROWS_AS( unload_loot_activity_actor::deserialize( data ), JsonError );
+}
+
+} // namespace merged_zone_activity_serialization_test
+
+namespace merged_zone_gunmod_removal_test
+{
+
+static const activity_id ACT_GUNMOD_REMOVE( "ACT_GUNMOD_REMOVE" );
+static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
+
+TEST_CASE( "zone_gunmod_removal_preserves_location_and_resumes_sorting",
+           "[zones][activities][gunmod]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    zone_manager &zones = zone_manager::get_manager();
+    zones.clear();
+    on_out_of_scope cleanup( [&]() {
+        you.cancel_activity();
+        you.backlog.clear();
+        zones.clear();
+    } );
+    const tripoint_bub_ms pos( 60, 60, 0 );
+    you.setpos( here, pos );
+    const tripoint_abs_ms abs = here.get_abs( pos );
+    zones.add( "Unload", zone_type_id( "UNLOAD_ALL" ), faction_id( "your_followers" ),
+               false, true, abs, abs );
+    zones.cache_data();
+    item gun( itype_id( "win70" ) );
+    REQUIRE( gun.put_in( item( itype_id( "shoulder_strap" ) ), pocket_type::MOD ).success() );
+    item *stored = nullptr;
+    std::optional<vpart_reference> cargo;
+    if( GENERATE( false, true ) ) {
+        vehicle *cart = here.add_vehicle( vproto_id( "test_shopping_cart" ), pos,
+                                          0_degrees, 0, veh_spawn_status::UNDAMAGED );
+        REQUIRE( cart );
+        cargo = here.veh_at( pos ).cargo();
+        REQUIRE( cargo );
+        const auto added = cart->add_item( here, cargo->part(), gun );
+        REQUIRE( added );
+        stored = & **added;
+    } else {
+        stored = &here.add_item_or_charges( pos, gun );
+    }
+    REQUIRE( stored );
+    you.assign_activity( zone_sort_activity_actor() );
+    you.set_moves( 1000 );
+    zone_sorting::unload_sort_options options;
+    options.unload_mods = true;
+    int processed = 0;
+    CHECK_FALSE( zone_sorting::unload_item( you, abs, options, cargo, stored, {}, processed ) );
+    REQUIRE( you.activity.id() == ACT_GUNMOD_REMOVE );
+    REQUIRE_FALSE( you.backlog.empty() );
+    CHECK( you.backlog.front().id() == ACT_MOVE_LOOT );
+    CHECK( you.backlog.front().auto_resume );
+    you.activity.actor->finish( you.activity, you );
+    CHECK( stored->gunmods().empty() );
+    you.resume_backlog_activity();
+    REQUIRE( you.activity.id() == ACT_MOVE_LOOT );
+    // With no remaining sortable items, the resumed parent restores the view.
+    you.zone_sort_viewport.active = true;
+    process_activity( you );
+    CHECK_FALSE( you.activity );
+    CHECK_FALSE( you.zone_sort_viewport.active );
+}
+
+} // namespace merged_zone_gunmod_removal_test
+
+namespace merged_zone_reservation_cleanup_test
+{
+
+TEST_CASE( "zone_disassembly_releases_reservation_on_cancel", "[activities][zones][reservation]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    you.name = "Reservation test";
+    map &here = get_map();
+    const tripoint_bub_ms pos = you.pos_bub( here );
+    item &target = here.add_item_or_charges( pos, item( itype_id( "sheet" ) ) );
+    REQUIRE( target.is_disassemblable() );
+    you.i_add( item( itype_id( "scissors" ) ) );
+    multi_disassemble_activity_actor actor;
+    you.assign_activity( actor );
+    actor.multi_activity_can_do( you, pos );
+    REQUIRE( target.get_var( "activity_var" ) == you.name );
+    you.cancel_activity();
+    CHECK_FALSE( target.has_var( "activity_var" ) );
+    CHECK( you.may_activity_occupancy_after_end_items_loc.empty() );
+    you.backlog.clear();
+}
+
+TEST_CASE( "pickup_releases_legacy_own_reservation", "[activities][zones][reservation]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    you.name = "Reservation test";
+    you.wear_item( item( itype_id( "backpack" ) ), false );
+    map &here = get_map();
+    const tripoint_bub_ms pos = you.pos_bub( here );
+    item &target = here.add_item_or_charges( pos, item( itype_id( "hammer" ) ) );
+    target.set_var( "activity_var", you.name );
+    std::vector<item_location> targets{ item_location( map_cursor( pos ), &target ) };
+    std::vector<int> quantities{ 0 };
+    bool stashed = true;
+    Pickup::pick_info info;
+    you.set_moves( 1000 );
+    REQUIRE( Pickup::do_pickup( targets, quantities, true, stashed, info ) );
+    const auto hammers = you.cache_get_items_with( itype_id( "hammer" ) );
+    REQUIRE( hammers.size() == 1 );
+    CHECK_FALSE( hammers.front()->has_var( "activity_var" ) );
+}
+
+} // namespace merged_zone_reservation_cleanup_test
