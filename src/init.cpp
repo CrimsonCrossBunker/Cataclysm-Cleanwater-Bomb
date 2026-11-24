@@ -3,9 +3,13 @@
 #include <cata_path.h>
 #include <memory_fast.h>
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -13,6 +17,10 @@
 #include <string_view>
 #include <variant>
 #include <vector>
+
+#if !defined(_WIN32)
+    #include <sys/stat.h>
+#endif
 
 #include "achievement.h"
 #include "activity_type.h"
@@ -26,6 +34,7 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "butchery_requirements.h"
+#include "cached_options.h"
 #include "cata_assert.h"
 #include "cata_scope_helpers.h"
 #include "character_modifier.h"
@@ -57,6 +66,7 @@
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "gates.h"
+#include "get_version.h"
 #include "global_vars.h"
 #include "harvest.h"
 #include "help.h"
@@ -93,6 +103,7 @@
 #include "move_mode.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "native_file_path.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "omdata.h"
@@ -103,6 +114,7 @@
 #include "overmap_location.h"
 #include "overmap_map_data_cache.h"
 #include "overmap_worldgen.h"
+#include "path_info.h"
 #include "pet_slot.h"
 #include "profession.h"
 #include "profession_group.h"
@@ -113,6 +125,7 @@
 #include "relic.h"
 #include "requirements.h"
 #include "riding_config.h"
+#include "rng.h"
 #include "rotatable_symbols.h"
 #include "scenario.h"
 #include "scent_map.h"
@@ -145,6 +158,186 @@
 #if defined(TILES)
     #include "sdltiles.h"
 #endif
+
+namespace
+{
+
+void mix_fingerprint_bytes( std::uint64_t &h1, std::uint64_t &h2, const void *data,
+                            std::size_t size )
+{
+    const auto *bytes = static_cast<const unsigned char *>( data );
+    for( std::size_t i = 0; i < size; ++i ) {
+        const std::uint64_t b = bytes[i];
+        h1 ^= b;
+        h1 *= 0x100000001b3ULL;
+        h2 = ( h2 * 0x9e3779b97f4a7c15ULL ) ^
+             ( b + 0x517cc1b727220a95ULL + ( h2 << 6 ) + ( h2 >> 2 ) );
+    }
+}
+
+void mix_fingerprint_str( std::uint64_t &h1, std::uint64_t &h2, std::string_view tag,
+                          std::string_view value )
+{
+    mix_fingerprint_bytes( h1, h2, tag.data(), tag.size() );
+    const unsigned char sep = 0x1f;
+    mix_fingerprint_bytes( h1, h2, &sep, 1 );
+    mix_fingerprint_bytes( h1, h2, value.data(), value.size() );
+    const unsigned char end = 0x1e;
+    mix_fingerprint_bytes( h1, h2, &end, 1 );
+}
+
+bool stat_content_file( const std::filesystem::path &disk_path, std::uint64_t &size_out,
+                        std::int64_t &mtime_ms_out )
+{
+#if !defined(_WIN32)
+    struct stat st {};
+    if( ::stat( disk_path.c_str(), &st ) != 0 || !S_ISREG( st.st_mode ) ) {
+        return false;
+    }
+    size_out = static_cast<std::uint64_t>( st.st_size );
+#if defined(__APPLE__)
+    const std::int64_t sec = static_cast<std::int64_t>( st.st_mtimespec.tv_sec );
+    const std::int64_t nsec = static_cast<std::int64_t>( st.st_mtimespec.tv_nsec );
+#else
+    const std::int64_t sec = static_cast<std::int64_t>( st.st_mtim.tv_sec );
+    const std::int64_t nsec = static_cast<std::int64_t>( st.st_mtim.tv_nsec );
+#endif
+    mtime_ms_out = sec * 1000LL + nsec / 1000000LL;
+    return true;
+#else
+    std::error_code ec;
+    if( !std::filesystem::is_regular_file( disk_path, ec ) || ec ) {
+        return false;
+    }
+    const std::uintmax_t raw_size = std::filesystem::file_size( disk_path, ec );
+    const std::filesystem::file_time_type raw_mtime = ec ? std::filesystem::file_time_type{} :
+                                                      std::filesystem::last_write_time( disk_path, ec );
+    if( ec ) {
+        return false;
+    }
+    size_out = static_cast<std::uint64_t>( raw_size );
+    mtime_ms_out = static_cast<std::int64_t>(
+                       std::chrono::duration_cast<std::chrono::milliseconds>(
+                           raw_mtime.time_since_epoch() ).count() );
+    return true;
+#endif
+}
+
+std::filesystem::path verified_signature_cache_path()
+{
+    const std::filesystem::path user_dir = PATH_INFO::user_dir_path().get_unrelative_path();
+    if( user_dir.empty() ) {
+        return {};
+    }
+    return user_dir / std::filesystem::u8path( "cache" ) /
+           std::filesystem::u8path( "verified_content.sig" );
+}
+
+std::string format_fingerprint_hex( std::uint64_t h1, std::uint64_t h2 )
+{
+    constexpr char hex[] = "0123456789abcdef";
+    std::string out( 32, '0' );
+    for( int i = 0; i < 16; ++i ) {
+        out[i] = hex[( h1 >> ( ( 15 - i ) * 4 ) ) & 0xfU];
+        out[16 + i] = hex[( h2 >> ( ( 15 - i ) * 4 ) ) & 0xfU];
+    }
+    return out;
+}
+
+std::vector<std::string> read_verified_signatures( const std::filesystem::path &disk_path )
+{
+    std::vector<std::string> sigs;
+    std::ifstream in( disk_path, std::ios::binary );
+    if( !in ) {
+        return sigs;
+    }
+    std::string line;
+    while( std::getline( in, line ) ) {
+        if( !line.empty() && line.back() == '\r' ) {
+            line.pop_back();
+        }
+        if( line.size() == 32 ) {
+            sigs.push_back( std::move( line ) );
+        }
+    }
+    return sigs;
+}
+
+bool is_verified_signature_cached( const std::string &sig )
+{
+    const std::filesystem::path sig_path = verified_signature_cache_path();
+    if( sig_path.empty() || sig.size() != 32 ) {
+        return false;
+    }
+    const std::vector<std::string> sigs = read_verified_signatures( native_file_path( sig_path ) );
+    return std::find( sigs.begin(), sigs.end(), sig ) != sigs.end();
+}
+
+void store_verified_signature( const std::string &sig )
+{
+    const std::filesystem::path sig_path = verified_signature_cache_path();
+    if( sig_path.empty() || sig.size() != 32 ) {
+        return;
+    }
+    std::error_code ec;
+    std::filesystem::create_directories( native_file_path( sig_path.parent_path() ), ec );
+    if( ec ) {
+        return;
+    }
+    const std::filesystem::path disk_path = native_file_path( sig_path );
+    std::vector<std::string> sigs = read_verified_signatures( disk_path );
+    sigs.erase( std::remove( sigs.begin(), sigs.end(), sig ), sigs.end() );
+    sigs.insert( sigs.begin(), sig );
+    constexpr std::size_t max_verified_signatures = 64;
+    if( sigs.size() > max_verified_signatures ) {
+        sigs.resize( max_verified_signatures );
+    }
+    std::filesystem::path tmp_path = disk_path;
+    tmp_path += std::filesystem::u8path( ".tmp" );
+    std::ofstream out( tmp_path, std::ios::binary | std::ios::trunc );
+    if( !out ) {
+        return;
+    }
+    for( const std::string &entry : sigs ) {
+        out << entry << '\n';
+    }
+    out.close();
+    if( !out ) {
+        std::filesystem::remove( tmp_path, ec );
+        return;
+    }
+    std::filesystem::rename( tmp_path, disk_path, ec );
+    if( ec ) {
+        std::filesystem::remove( tmp_path, ec );
+    }
+}
+
+} // namespace
+
+DynamicDataLoader::scoped_force_verification::scoped_force_verification()
+    : previous_( DynamicDataLoader::get_instance().force_verification )
+{
+    DynamicDataLoader::get_instance().force_verification = true;
+}
+
+DynamicDataLoader::scoped_force_verification::~scoped_force_verification()
+{
+    DynamicDataLoader::get_instance().force_verification = previous_;
+}
+
+void DynamicDataLoader::record_loaded_content_token( std::string_view tag, std::string_view value )
+{
+    mix_fingerprint_str( fingerprint_h1, fingerprint_h2, tag, value );
+}
+
+void DynamicDataLoader::record_loaded_content_file( std::string_view tag,
+        const std::filesystem::path &path,
+        std::uint64_t size, std::int64_t mtime_ms )
+{
+    mix_fingerprint_str( fingerprint_h1, fingerprint_h2, tag, path.generic_u8string() );
+    mix_fingerprint_bytes( fingerprint_h1, fingerprint_h2, &size, sizeof( size ) );
+    mix_fingerprint_bytes( fingerprint_h1, fingerprint_h2, &mtime_ms, sizeof( mtime_ms ) );
+}
 
 DynamicDataLoader::DynamicDataLoader()
 {
@@ -580,6 +773,12 @@ void DynamicDataLoader::load_data_files( const cata_path &path, const std::strin
             if( load_ordered_lua && file.get_relative_path().extension() == ".lua" ) {
                 load_ordered_lua( src, file );
             } else {
+                const std::filesystem::path disk_path = native_file_path( file.get_unrelative_path() );
+                std::uint64_t file_size = 0;
+                std::int64_t file_mtime_ms = 0;
+                if( stat_content_file( disk_path, file_size, file_mtime_ms ) ) {
+                    record_loaded_content_file( src, disk_path, file_size, file_mtime_ms );
+                }
                 JsonValue jsin = json_loader::from_path( file );
                 load_all_from_json( jsin, src, path, file );
             }
@@ -648,9 +847,24 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
         scoped_debug_error_source error_source( get_mod_error_source( interaction_src ) );
         try {
             if( const cata_path *file = std::get_if<cata_path>( &entry ) ) {
+                const std::filesystem::path disk_path = native_file_path( file->get_unrelative_path() );
+                std::uint64_t file_size = 0;
+                std::int64_t file_mtime_ms = 0;
+                if( stat_content_file( disk_path, file_size, file_mtime_ms ) ) {
+                    record_loaded_content_file( interaction_src, disk_path, file_size, file_mtime_ms );
+                }
                 JsonValue jsin = json_loader::from_path( *file );
                 load_all_from_json( jsin, interaction_src, path, *file );
             } else if( const auto *overrides = std::get_if<const mod_world_options *>( &entry ) ) {
+                record_loaded_content_token( "mod_interaction_world_options", interaction_src );
+                for( const auto &[opt_key, opt_val] : **overrides ) {
+                    record_loaded_content_token( "mod_opt_key", opt_key );
+                    std::visit( [this]( const auto & v ) {
+                        std::ostringstream oss;
+                        oss << v;
+                        record_loaded_content_token( "mod_opt_val", oss.str() );
+                    }, opt_val );
+                }
                 get_options().apply_mod_world_options( interaction_src, **overrides );
             } else {
                 const auto &lua = std::get<interaction_lua_entry>( entry );
@@ -690,6 +904,10 @@ void DynamicDataLoader::load_all_from_json( const JsonValue &jsin, const std::st
 void DynamicDataLoader::set_mod_load_order( const std::vector<mod_id> &mods )
 {
     mod_load_order = mods;
+    record_loaded_content_token( "mod_order_count", std::to_string( mods.size() ) );
+    for( const mod_id &mod : mods ) {
+        record_loaded_content_token( "mod_order", mod.str() );
+    }
 }
 
 std::tuple<int, std::size_t, std::string_view> DynamicDataLoader::source_load_order(
@@ -718,6 +936,20 @@ void DynamicDataLoader::unload_data()
 {
     mod_load_order.clear();
     finalized = false;
+    fingerprint_h1 = 0xcbf29ce484222325ULL;
+    fingerprint_h2 = 0x100000001b3f5a79ULL;
+    errors_at_load_start = debugmsg_count();
+    record_loaded_content_token( "verify_fmt", "CCBV01" );
+    const char *ver = getVersionString();
+    record_loaded_content_token( "version", ver != nullptr ? std::string_view( ver ) : std::string_view( "" ) );
+    record_loaded_content_token( "build_date", __DATE__ );
+    record_loaded_content_token( "build_time", __TIME__ );
+    record_loaded_content_token( "ptr_size", std::to_string( sizeof( void * ) ) );
+#if defined(TILES)
+    record_loaded_content_token( "tiles_build", "1" );
+#else
+    record_loaded_content_token( "tiles_build", "0" );
+#endif
 
     achievement::reset();
     activity_type::reset();
@@ -1032,13 +1264,54 @@ void DynamicDataLoader::finalize_loaded_data()
     }
 
     if( !get_option<bool>( "SKIP_VERIFICATION" ) ) {
-        check_consistency();
+        std::uint64_t sig_h1 = fingerprint_h1;
+        std::uint64_t sig_h2 = fingerprint_h2;
+        if( world_generator && world_generator->active_world ) {
+            std::vector<std::string> opt_keys;
+            const auto &world_opts = world_generator->active_world->WORLD_OPTIONS;
+            opt_keys.reserve( world_opts.size() );
+            for( const auto &[opt_name, opt_val] : world_opts ) {
+                ( void )opt_val;
+                opt_keys.push_back( opt_name );
+            }
+            std::sort( opt_keys.begin(), opt_keys.end() );
+            for( const std::string &opt_name : opt_keys ) {
+                mix_fingerprint_str( sig_h1, sig_h2, "wopt_key", opt_name );
+                if( get_options().has_option( opt_name ) ) {
+                    mix_fingerprint_str( sig_h1, sig_h2, "wopt_val",
+                                         get_options().get_option( opt_name ).getValue( true ) );
+                }
+            }
+        }
+        if( get_options().has_option( "USE_TILES" ) ) {
+            mix_fingerprint_str( sig_h1, sig_h2, "use_tiles",
+                                 get_options().get_option( "USE_TILES" ).getValue( true ) );
+        }
+        if( get_options().has_option( "TILES" ) ) {
+            mix_fingerprint_str( sig_h1, sig_h2, "tileset",
+                                 get_options().get_option( "TILES" ).getValue( true ) );
+        }
+        const std::string content_sig = format_fingerprint_hex( sig_h1, sig_h2 );
+        const bool can_skip = !test_mode && !force_verification &&
+                              debugmsg_count() == errors_at_load_start &&
+                              is_verified_signature_cached( content_sig );
+        if( can_skip ) {
+            DebugLog( D_INFO, D_MAIN )
+                    << "Skipping redundant data verification (cached content signature "
+                    << content_sig << ")";
+        } else {
+            check_consistency();
+            if( !test_mode && debugmsg_count() == errors_at_load_start ) {
+                store_verified_signature( content_sig );
+            }
+        }
     }
     finalized = true;
 }
 
 void DynamicDataLoader::check_consistency()
 {
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
     using named_entry = std::pair<std::string, std::function<void()>>;
     const std::vector<named_entry> entries = {{
             { _( "Flags" ), &json_flag::check_consistency },

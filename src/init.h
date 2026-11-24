@@ -3,9 +3,10 @@
 #define CATA_SRC_INIT_H
 
 #include <cstddef>
+#include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <iosfwd>
-#include <functional>
 #include <list>
 #include <map>
 #include <memory>
@@ -76,6 +77,10 @@ class DynamicDataLoader
     private:
         std::vector<mod_id> mod_load_order;
         bool finalized = false;
+        std::uint64_t fingerprint_h1 = 0xcbf29ce484222325ULL;
+        std::uint64_t fingerprint_h2 = 0x100000001b3f5a79ULL;
+        std::uint64_t errors_at_load_start = 0;
+        bool force_verification = false;
         void load_data_files( const cata_path &path, const std::string &src,
                               const lua_data_loader &load_ordered_lua, bool exclude_interactions );
 
@@ -216,6 +221,22 @@ class DynamicDataLoader
          * cached stream is returned.
          */
         shared_ptr_fast<std::istream> get_cached_stream( const std::string &path );
+
+        void record_loaded_content_file( std::string_view tag, const std::filesystem::path &path,
+                                         std::uint64_t size, std::int64_t mtime_ms );
+        void record_loaded_content_token( std::string_view tag, std::string_view value );
+
+        class scoped_force_verification
+        {
+            public:
+                scoped_force_verification();
+                ~scoped_force_verification();
+                scoped_force_verification( const scoped_force_verification & ) = delete;
+                scoped_force_verification &operator=( const scoped_force_verification & ) = delete;
+
+            private:
+                bool previous_ = false;
+        };
 };
 
 #endif // CATA_SRC_INIT_H

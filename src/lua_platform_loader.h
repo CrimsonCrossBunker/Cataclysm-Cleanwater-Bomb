@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -91,6 +92,33 @@ void load_core_content( const std::filesystem::path &root );
 
 /** Execute a Mod's static entry at the native data load position. */
 void load_mod_content_with_data( const mod_source &source, const std::set<std::string> &selected_mod_ids );
+
+/** Flush any newly compiled Lua 5.4 bytecode chunks to the disk pack cache. */
+void flush_bytecode_cache();
+
+/** Flush any newly captured static FlexBuffer ordered-data packs to disk. */
+void flush_static_fb_cache();
+
+/** Reusable ordered-.data.lua session sharing one Lua VM and batching GC across files. */
+class ordered_data_session
+{
+    public:
+        ordered_data_session( const std::string &mod_id,
+                              const std::filesystem::path &root,
+                              const std::set<std::string> &selected_mod_ids,
+                              mod_source_type type = mod_source_type::mod );
+        ~ordered_data_session();
+        ordered_data_session( const ordered_data_session & ) = delete;
+        ordered_data_session &operator=( const ordered_data_session & ) = delete;
+        ordered_data_session( ordered_data_session && ) noexcept;
+        ordered_data_session &operator=( ordered_data_session && ) noexcept;
+
+        void load_file( const std::string &source_id, const std::filesystem::path &entry );
+
+    private:
+        struct impl;
+        std::unique_ptr<impl> pimpl_;
+};
 
 /** Bind the private lifecycle metadata of a mutation defined in ordered Lua data. */
 void bind_ordered_mutation_lifecycle( mutation_branch &definition, const JsonObject &object,

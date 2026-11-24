@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <fstream>
 #include <iomanip>
@@ -13,6 +15,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -20,11 +23,19 @@
 #include <string_view>
 #include <system_error>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
+#include <vector>
+
+#include <flatbuffers/flexbuffers.h>
 
 #include "debug.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+
+#if !defined(_WIN32)
+    #include <sys/stat.h>
+#endif
 
 #ifdef __clang__
     #pragma clang diagnostic push
@@ -72,6 +83,7 @@ extern "C" {
 #include "flag.h"
 #include "gates.h"
 #include "generic_factory.h"
+#include "get_version.h"
 #include "harvest.h"
 #include "init.h"
 #include "item_action.h"
@@ -104,6 +116,7 @@ extern "C" {
 #include "overmap_connection.h"
 #include "overmap_location.h"
 #include "output.h"
+#include "path_info.h"
 #include "pet_slot.h"
 #include "profession.h"
 #include "proficiency.h"
@@ -186,12 +199,17 @@ std::optional<fs::path> resolve_local_module( const fs::path &root,
         root / fs::u8path( relative + ".lua" ),
         root / relative_path / fs::u8path( "init.lua" )
     };
+    const bool simple_relative = relative.find( ".." ) == std::string::npos;
     for( const fs::path &candidate : candidates ) {
         std::error_code filesystem_error;
-        const fs::path canonical_candidate = fs::canonical( candidate, filesystem_error );
-        if( !filesystem_error &&
-            fs::is_regular_file( canonical_candidate, filesystem_error ) && !filesystem_error ) {
-            return canonical_candidate;
+        if( fs::is_regular_file( candidate, filesystem_error ) && !filesystem_error ) {
+            if( simple_relative ) {
+                return candidate.lexically_normal();
+            }
+            const fs::path canonical_candidate = fs::canonical( candidate, filesystem_error );
+            if( !filesystem_error ) {
+                return canonical_candidate;
+            }
         }
     }
     return std::nullopt;
@@ -248,7 +266,7 @@ void set_optional_field( const sol::table &values, const char *key, T &field, bo
 }
 
 std::size_t checked_dense_array_size( const sol::table &values, const std::string &label,
-                                     std::size_t maximum_entries )
+                                      std::size_t maximum_entries )
 {
     const std::size_t count = values.size();
     if( count > maximum_entries ) {
@@ -565,7 +583,7 @@ void install_mod_definition( sol::table &ccb )
         }
         return result;
     },
-    []( mod_definition & definition, const sol::table &value ) {
+    []( mod_definition & definition, const sol::table & value ) {
         definition.interaction_world_options = read_interaction_world_options( value );
     } ) );
     ccb["_ModDefinitionNative"] = sol::lua_nil;
@@ -574,15 +592,699 @@ void install_mod_definition( sol::table &ccb )
     } );
 }
 
-sol::load_result load_platform_file( sol::state &lua, const fs::path &path )
+struct cached_bytecode_entry {
+    std::uint64_t size = 0;
+    std::int64_t mtime_ms = 0;
+    std::shared_ptr<const std::string> bytecode;
+};
+
+struct bytecode_cache_store {
+    std::mutex mutex;
+    std::unordered_map<std::string, cached_bytecode_entry> entries;
+    fs::path loaded_pack_path;
+    bool dirty = false;
+};
+
+bytecode_cache_store &lua_bytecode_cache()
 {
-    std::ifstream input( native_file_path( path ), std::ios::binary );
-    if( !input ) {
-        throw std::runtime_error( "Cannot open Lua file: " + path.generic_u8string() );
+    static bytecode_cache_store store;
+    return store;
+}
+
+struct bytecode_pack_header {
+    char magic[8];
+    std::uint32_t lua_ver;
+    std::uint32_t ptr_size;
+    std::uint32_t lua_int_size;
+    std::uint32_t lua_num_size;
+    std::uint32_t entry_count;
+    std::uint32_t reserved;
+};
+static_assert( sizeof( bytecode_pack_header ) == 32, "unexpected bytecode pack header padding" );
+
+struct bytecode_pack_entry_header {
+    std::uint64_t src_size;
+    std::int64_t src_mtime_ms;
+    std::uint32_t path_len;
+    std::uint32_t bytecode_len;
+};
+static_assert( sizeof( bytecode_pack_entry_header ) == 24,
+               "unexpected bytecode pack entry padding" );
+
+constexpr std::array<char, 8> bytecode_pack_magic = { 'C', 'C', 'B', 'L', 'P', '0', '1', '\0' };
+
+enum class static_fb_loader : std::uint16_t {
+    mapgen = 0,
+    mapgen_palette,
+    item,
+    mutation,
+    monster,
+    overmap_terrain,
+    external_option,
+    character_modifier,
+    ammunition_type,
+    vehicle_part_location,
+    region_settings_river,
+    region_settings_lake,
+    region_settings_ocean,
+    region_settings_ravine,
+    region_settings_forest,
+    region_settings_forest_trail,
+    region_settings_forest_mapgen,
+    region_settings_terrain_furniture,
+    region_terrain_furniture,
+    region_settings_map_extras,
+    monster_attack,
+    magic_type,
+    forest_biome_component,
+    forest_biome_mapgen,
+    map_extra,
+    map_extra_collection,
+    trait_migration,
+    camp_migration,
+    mod_migration,
+    climate_station,
+    ascii_art,
+    city_building,
+    overmap_special,
+    pet_slot,
+    riding_config,
+    ter_furn_migration,
+    recipe_category,
+    addiction_type,
+    monster_faction,
+    mutation_type,
+    trait_group,
+    fault,
+    fault_fix,
+    vehicle_group,
+    construction,
+    harvest,
+    field_type,
+    terrain,
+    furniture,
+    trap,
+    proficiency_category,
+    proficiency,
+    item_action,
+    start_location,
+    scenario,
+    profession,
+    vehicle_part,
+    vehicle,
+    spell,
+    technique,
+    martial_art,
+    achievement,
+    npc,
+    count
+};
+
+struct static_fb_pack_header {
+    char magic[8];
+    std::uint32_t format_version;
+    std::uint32_t loader_count;
+    std::uint32_t ptr_size;
+    std::uint32_t entry_count;
+    std::uint64_t build_fingerprint;
+};
+static_assert( sizeof( static_fb_pack_header ) == 32, "unexpected static fb pack header padding" );
+
+struct static_fb_pack_entry_header {
+    std::uint64_t src_size;
+    std::int64_t src_mtime_ms;
+    std::uint32_t key_len;
+    std::uint32_t payload_len;
+    std::uint32_t record_count;
+    std::uint32_t reserved;
+};
+static_assert( sizeof( static_fb_pack_entry_header ) == 32,
+               "unexpected static fb entry header padding" );
+
+struct static_fb_record_header {
+    std::uint16_t loader_kind;
+    std::uint16_t reserved;
+    std::uint32_t fb_len;
+};
+static_assert( sizeof( static_fb_record_header ) == 8,
+               "unexpected static fb record header padding" );
+
+constexpr std::array<char, 8> static_fb_pack_magic = { 'C', 'C', 'B', 'F', 'B', '0', '1', '\0' };
+
+struct cached_static_fb_entry {
+    std::uint64_t size = 0;
+    std::int64_t mtime_ms = 0;
+    std::shared_ptr<const std::string> owner;
+    std::size_t payload_offset = 0;
+    std::uint32_t payload_len = 0;
+    std::uint32_t record_count = 0;
+};
+
+struct static_fb_cache_store {
+    std::mutex mutex;
+    std::unordered_map<std::string, cached_static_fb_entry> entries;
+    fs::path loaded_pack_path;
+    bool dirty = false;
+};
+
+static_fb_cache_store &lua_static_fb_cache()
+{
+    static static_fb_cache_store store;
+    return store;
+}
+
+struct static_fb_capture {
+    bool cacheable = true;
+    std::string serialized_records;
+    std::uint32_t record_count = 0;
+};
+
+thread_local static_fb_capture *active_static_fb_capture = nullptr;
+
+void taint_static_fb_capture()
+{
+    if( active_static_fb_capture != nullptr ) {
+        active_static_fb_capture->cacheable = false;
     }
-    std::string source( std::istreambuf_iterator<char> { input }, std::istreambuf_iterator<char> {} );
+}
+
+std::uint64_t static_fb_build_fingerprint()
+{
+    std::uint64_t h = 0xcbf29ce484222325ULL;
+    const auto mix = [&h]( std::string_view sv ) {
+        for( const unsigned char ch : sv ) {
+            h ^= ch;
+            h *= 0x100000001b3ULL;
+        }
+        h ^= 0xffULL;
+        h *= 0x100000001b3ULL;
+    };
+    const char *ver = getVersionString();
+    mix( ver != nullptr ? std::string_view( ver ) : std::string_view( "" ) );
+    mix( __DATE__ );
+    mix( __TIME__ );
+    return h;
+}
+
+fs::path static_fb_pack_path()
+{
+    const fs::path user_dir = PATH_INFO::user_dir_path().get_unrelative_path();
+    if( user_dir.empty() ) {
+        return {};
+    }
+    return user_dir / fs::u8path( "cache" ) / fs::u8path( "lua_static_fb.pack" );
+}
+
+std::string make_static_fb_key( std::string_view source_id, std::string_view path_key )
+{
+    std::string key;
+    key.reserve( source_id.size() + 1 + path_key.size() );
+    key.append( source_id );
+    key.push_back( '\0' );
+    key.append( path_key );
+    return key;
+}
+
+void ensure_disk_static_fb_pack_loaded()
+{
+    const fs::path pack_path = static_fb_pack_path();
+    if( pack_path.empty() ) {
+        return;
+    }
+    static_fb_cache_store &store = lua_static_fb_cache();
+    {
+        std::lock_guard<std::mutex> lock( store.mutex );
+        if( store.loaded_pack_path == pack_path ) {
+            return;
+        }
+        store.loaded_pack_path = pack_path;
+    }
+    const fs::path disk_pack = native_file_path( pack_path );
+    std::ifstream in( disk_pack, std::ios::binary | std::ios::ate );
+    if( !in ) {
+        return;
+    }
+    const std::ifstream::pos_type end_pos = in.tellg();
+    if( end_pos <= 0 || static_cast<std::size_t>( end_pos ) < sizeof( static_fb_pack_header ) ) {
+        return;
+    }
+    auto raw = std::make_shared<std::string>( static_cast<std::size_t>( end_pos ), '\0' );
+    in.seekg( 0, std::ios::beg );
+    in.read( raw->data(), static_cast<std::streamsize>( raw->size() ) );
+    if( !in || static_cast<std::size_t>( in.gcount() ) != raw->size() ) {
+        return;
+    }
+    static_fb_pack_header hdr{};
+    std::memcpy( &hdr, raw->data(), sizeof( hdr ) );
+    if( std::memcmp( hdr.magic, static_fb_pack_magic.data(), static_fb_pack_magic.size() ) != 0 ||
+        hdr.format_version != 1U ||
+        hdr.loader_count != static_cast<std::uint32_t>( static_fb_loader::count ) ||
+        hdr.ptr_size != static_cast<std::uint32_t>( sizeof( void * ) ) ||
+        hdr.build_fingerprint != static_fb_build_fingerprint() ) {
+        return;
+    }
+    std::vector<std::pair<std::string, cached_static_fb_entry>> parsed;
+    parsed.reserve( std::min<std::size_t>( hdr.entry_count, 16384U ) );
+    std::size_t pos = sizeof( static_fb_pack_header );
+    for( std::uint32_t i = 0; i < hdr.entry_count; ++i ) {
+        if( raw->size() - pos < sizeof( static_fb_pack_entry_header ) ) {
+            break;
+        }
+        static_fb_pack_entry_header eh{};
+        std::memcpy( &eh, raw->data() + pos, sizeof( eh ) );
+        pos += sizeof( eh );
+        if( eh.key_len == 0 || eh.payload_len == 0 || eh.record_count == 0 ) {
+            break;
+        }
+        const std::size_t payload = static_cast<std::size_t>( eh.key_len ) +
+                                    static_cast<std::size_t>( eh.payload_len );
+        if( raw->size() - pos < payload ) {
+            break;
+        }
+        std::string entry_key( raw->data() + pos, eh.key_len );
+        pos += eh.key_len;
+        const std::size_t payload_offset = pos;
+        pos += eh.payload_len;
+        parsed.emplace_back( std::move( entry_key ), cached_static_fb_entry{
+            eh.src_size, eh.src_mtime_ms, raw, payload_offset, eh.payload_len, eh.record_count
+        } );
+    }
+    std::lock_guard<std::mutex> lock( store.mutex );
+    for( auto &item : parsed ) {
+        store.entries.try_emplace( std::move( item.first ), std::move( item.second ) );
+    }
+}
+
+void flush_disk_static_fb_pack()
+{
+    const fs::path pack_path = static_fb_pack_path();
+    if( pack_path.empty() ) {
+        return;
+    }
+    std::vector<std::pair<std::string, cached_static_fb_entry>> snapshot;
+    {
+        static_fb_cache_store &store = lua_static_fb_cache();
+        std::lock_guard<std::mutex> lock( store.mutex );
+        if( !store.dirty || store.entries.empty() ) {
+            store.dirty = false;
+            return;
+        }
+        snapshot.reserve( store.entries.size() );
+        for( const auto &[key, entry] : store.entries ) {
+            if( entry.owner && entry.payload_len > 0 && entry.record_count > 0 &&
+                entry.payload_offset <= entry.owner->size() &&
+                entry.payload_len <= entry.owner->size() - entry.payload_offset &&
+                key.size() <= std::numeric_limits<std::uint32_t>::max() &&
+                snapshot.size() < std::numeric_limits<std::uint32_t>::max() ) {
+                snapshot.emplace_back( key, entry );
+            }
+        }
+        store.dirty = false;
+        store.loaded_pack_path = pack_path;
+    }
+    if( snapshot.empty() ) {
+        return;
+    }
+    std::error_code ec;
+    fs::create_directories( native_file_path( pack_path.parent_path() ), ec );
+    if( ec ) {
+        return;
+    }
+    const fs::path disk_pack = native_file_path( pack_path );
+    fs::path tmp_path = disk_pack;
+    tmp_path += fs::u8path( ".tmp" );
+    static_fb_pack_header hdr{};
+    std::memcpy( hdr.magic, static_fb_pack_magic.data(), static_fb_pack_magic.size() );
+    hdr.format_version = 1U;
+    hdr.loader_count = static_cast<std::uint32_t>( static_fb_loader::count );
+    hdr.ptr_size = static_cast<std::uint32_t>( sizeof( void * ) );
+    hdr.entry_count = static_cast<std::uint32_t>( snapshot.size() );
+    hdr.build_fingerprint = static_fb_build_fingerprint();
+
+    std::ofstream out( tmp_path, std::ios::binary | std::ios::trunc );
+    if( !out ) {
+        return;
+    }
+    out.write( reinterpret_cast<const char *>( &hdr ), sizeof( hdr ) );
+    for( const auto &[key, entry] : snapshot ) {
+        static_fb_pack_entry_header eh{};
+        eh.src_size = entry.size;
+        eh.src_mtime_ms = entry.mtime_ms;
+        eh.key_len = static_cast<std::uint32_t>( key.size() );
+        eh.payload_len = entry.payload_len;
+        eh.record_count = entry.record_count;
+        eh.reserved = 0;
+        out.write( reinterpret_cast<const char *>( &eh ), sizeof( eh ) );
+        out.write( key.data(), static_cast<std::streamsize>( key.size() ) );
+        out.write( entry.owner->data() + entry.payload_offset,
+                   static_cast<std::streamsize>( entry.payload_len ) );
+    }
+    out.close();
+    if( !out ) {
+        fs::remove( tmp_path, ec );
+        return;
+    }
+    fs::rename( tmp_path, disk_pack, ec );
+    if( ec ) {
+        fs::remove( tmp_path, ec );
+    }
+}
+
+void dispatch_static_fb_loader( static_fb_loader kind, const JsonObject &definition,
+                                const std::string &source );
+
+void emit_static_fb_record( static_fb_loader kind, std::vector<std::uint8_t> bytes,
+                            const std::string &source )
+{
+    if( active_static_fb_capture != nullptr && active_static_fb_capture->cacheable ) {
+        if( bytes.size() <= std::numeric_limits<std::uint32_t>::max() ) {
+            static_fb_record_header rh{};
+            rh.loader_kind = static_cast<std::uint16_t>( kind );
+            rh.reserved = 0;
+            rh.fb_len = static_cast<std::uint32_t>( bytes.size() );
+            active_static_fb_capture->serialized_records.append(
+                reinterpret_cast<const char *>( &rh ), sizeof( rh ) );
+            active_static_fb_capture->serialized_records.append(
+                reinterpret_cast<const char *>( bytes.data() ), bytes.size() );
+            ++active_static_fb_capture->record_count;
+        } else {
+            active_static_fb_capture->cacheable = false;
+        }
+    }
+    const JsonValue parsed = json_loader::from_flexbuffer( std::move( bytes ) );
+    dispatch_static_fb_loader( kind, parsed.get_object(), source );
+}
+
+bool try_replay_static_fb( const std::string &source_id, const std::string &path_key,
+                           std::uint64_t src_size, std::int64_t src_mtime_ms )
+{
+    ensure_disk_static_fb_pack_loaded();
+    const std::string full_key = make_static_fb_key( source_id, path_key );
+    cached_static_fb_entry entry;
+    {
+        static_fb_cache_store &store = lua_static_fb_cache();
+        std::lock_guard<std::mutex> lock( store.mutex );
+        const auto it = store.entries.find( full_key );
+        if( it == store.entries.end() || it->second.size != src_size ||
+            it->second.mtime_ms != src_mtime_ms ) {
+            return false;
+        }
+        entry = it->second;
+    }
+    if( !entry.owner || entry.payload_offset > entry.owner->size() ||
+        entry.payload_len > entry.owner->size() - entry.payload_offset ) {
+        static_fb_cache_store &store = lua_static_fb_cache();
+        std::lock_guard<std::mutex> lock( store.mutex );
+        store.entries.erase( full_key );
+        store.dirty = true;
+        return false;
+    }
+    // Pre-validate every record header in the payload before mutating any native registry.
+    std::size_t scan_pos = entry.payload_offset;
+    const std::size_t payload_end = entry.payload_offset + entry.payload_len;
+    for( std::uint32_t i = 0; i < entry.record_count; ++i ) {
+        if( payload_end - scan_pos < sizeof( static_fb_record_header ) ) {
+            scan_pos = payload_end + 1;
+            break;
+        }
+        static_fb_record_header rh{};
+        std::memcpy( &rh, entry.owner->data() + scan_pos, sizeof( rh ) );
+        scan_pos += sizeof( rh );
+        if( rh.loader_kind >= static_cast<std::uint16_t>( static_fb_loader::count ) ||
+            rh.fb_len == 0 || payload_end - scan_pos < rh.fb_len ) {
+            scan_pos = payload_end + 1;
+            break;
+        }
+        scan_pos += rh.fb_len;
+    }
+    if( scan_pos != payload_end ) {
+        static_fb_cache_store &store = lua_static_fb_cache();
+        std::lock_guard<std::mutex> lock( store.mutex );
+        store.entries.erase( full_key );
+        store.dirty = true;
+        return false;
+    }
+    std::size_t pos = entry.payload_offset;
+    for( std::uint32_t i = 0; i < entry.record_count; ++i ) {
+        static_fb_record_header rh{};
+        std::memcpy( &rh, entry.owner->data() + pos, sizeof( rh ) );
+        pos += sizeof( rh );
+        const JsonValue val = json_loader::from_flexbuffer_slice( entry.owner, pos, rh.fb_len );
+        pos += rh.fb_len;
+        dispatch_static_fb_loader( static_cast<static_fb_loader>( rh.loader_kind ), val.get_object(),
+                                   source_id );
+    }
+    return true;
+}
+
+fs::path bytecode_pack_path()
+{
+    const fs::path user_dir = PATH_INFO::user_dir_path().get_unrelative_path();
+    if( user_dir.empty() ) {
+        return {};
+    }
+    return user_dir / fs::u8path( "cache" ) / fs::u8path( "lua_bytecode.pack" );
+}
+
+bool stat_lua_file( const fs::path &disk_path, std::uint64_t &size_out,
+                    std::int64_t &mtime_ms_out, bool &is_regular_out )
+{
+#if !defined(_WIN32)
+    struct stat st {};
+    if( ::stat( disk_path.c_str(), &st ) != 0 ) {
+        return false;
+    }
+    is_regular_out = S_ISREG( st.st_mode );
+    size_out = static_cast<std::uint64_t>( st.st_size );
+#if defined(__APPLE__)
+    const std::int64_t sec = static_cast<std::int64_t>( st.st_mtimespec.tv_sec );
+    const std::int64_t nsec = static_cast<std::int64_t>( st.st_mtimespec.tv_nsec );
+#else
+    const std::int64_t sec = static_cast<std::int64_t>( st.st_mtim.tv_sec );
+    const std::int64_t nsec = static_cast<std::int64_t>( st.st_mtim.tv_nsec );
+#endif
+    mtime_ms_out = sec * 1000LL + nsec / 1000000LL;
+    return true;
+#else
+    std::error_code stat_ec;
+    is_regular_out = fs::is_regular_file( disk_path, stat_ec );
+    if( stat_ec || !is_regular_out ) {
+        return !stat_ec;
+    }
+    const std::uintmax_t raw_size = fs::file_size( disk_path, stat_ec );
+    const fs::file_time_type raw_mtime = stat_ec ? fs::file_time_type {} :
+                                         fs::last_write_time( disk_path, stat_ec );
+    if( stat_ec ) {
+        return false;
+    }
+    size_out = static_cast<std::uint64_t>( raw_size );
+    mtime_ms_out = static_cast<std::int64_t>(
+                       std::chrono::duration_cast<std::chrono::milliseconds>(
+                           raw_mtime.time_since_epoch() ).count() );
+    return true;
+#endif
+}
+
+void ensure_disk_bytecode_pack_loaded()
+{
+    const fs::path pack_path = bytecode_pack_path();
+    if( pack_path.empty() ) {
+        return;
+    }
+    bytecode_cache_store &store = lua_bytecode_cache();
+    {
+        std::lock_guard<std::mutex> lock( store.mutex );
+        if( store.loaded_pack_path == pack_path ) {
+            return;
+        }
+        store.loaded_pack_path = pack_path;
+    }
+    const fs::path disk_pack = native_file_path( pack_path );
+    std::ifstream in( disk_pack, std::ios::binary | std::ios::ate );
+    if( !in ) {
+        return;
+    }
+    const std::ifstream::pos_type end_pos = in.tellg();
+    if( end_pos <= 0 || static_cast<std::size_t>( end_pos ) < sizeof( bytecode_pack_header ) ) {
+        return;
+    }
+    std::string raw( static_cast<std::size_t>( end_pos ), '\0' );
+    in.seekg( 0, std::ios::beg );
+    in.read( raw.data(), static_cast<std::streamsize>( raw.size() ) );
+    if( !in || static_cast<std::size_t>( in.gcount() ) != raw.size() ) {
+        return;
+    }
+    bytecode_pack_header hdr{};
+    std::memcpy( &hdr, raw.data(), sizeof( hdr ) );
+    if( std::memcmp( hdr.magic, bytecode_pack_magic.data(), bytecode_pack_magic.size() ) != 0 ||
+        hdr.lua_ver != static_cast<std::uint32_t>( LUA_VERSION_NUM ) ||
+        hdr.ptr_size != static_cast<std::uint32_t>( sizeof( void * ) ) ||
+        hdr.lua_int_size != static_cast<std::uint32_t>( sizeof( lua_Integer ) ) ||
+        hdr.lua_num_size != static_cast<std::uint32_t>( sizeof( lua_Number ) ) ) {
+        return;
+    }
+    std::vector<std::pair<std::string, cached_bytecode_entry>> parsed;
+    parsed.reserve( std::min<std::size_t>( hdr.entry_count, 16384U ) );
+    std::size_t pos = sizeof( bytecode_pack_header );
+    for( std::uint32_t i = 0; i < hdr.entry_count; ++i ) {
+        if( raw.size() - pos < sizeof( bytecode_pack_entry_header ) ) {
+            break;
+        }
+        bytecode_pack_entry_header eh{};
+        std::memcpy( &eh, raw.data() + pos, sizeof( eh ) );
+        pos += sizeof( eh );
+        if( eh.path_len == 0 || eh.bytecode_len == 0 ) {
+            break;
+        }
+        const std::size_t payload = static_cast<std::size_t>( eh.path_len ) +
+                                    static_cast<std::size_t>( eh.bytecode_len );
+        if( raw.size() - pos < payload ) {
+            break;
+        }
+        std::string entry_key( raw.data() + pos, eh.path_len );
+        pos += eh.path_len;
+        auto bc = std::make_shared<const std::string>( raw.data() + pos, eh.bytecode_len );
+        pos += eh.bytecode_len;
+        parsed.emplace_back( std::move( entry_key ),
+                             cached_bytecode_entry{ eh.src_size, eh.src_mtime_ms, std::move( bc ) } );
+    }
+    std::lock_guard<std::mutex> lock( store.mutex );
+    for( auto &item : parsed ) {
+        store.entries.try_emplace( std::move( item.first ), std::move( item.second ) );
+    }
+}
+
+void flush_disk_bytecode_pack()
+{
+    const fs::path pack_path = bytecode_pack_path();
+    if( pack_path.empty() ) {
+        return;
+    }
+    std::vector<std::pair<std::string, cached_bytecode_entry>> snapshot;
+    {
+        bytecode_cache_store &store = lua_bytecode_cache();
+        std::lock_guard<std::mutex> lock( store.mutex );
+        if( !store.dirty || store.entries.empty() ) {
+            store.dirty = false;
+            return;
+        }
+        snapshot.reserve( store.entries.size() );
+        for( const auto &[key, entry] : store.entries ) {
+            if( entry.bytecode &&
+                key.size() <= std::numeric_limits<std::uint32_t>::max() &&
+                entry.bytecode->size() <= std::numeric_limits<std::uint32_t>::max() &&
+                snapshot.size() < std::numeric_limits<std::uint32_t>::max() ) {
+                snapshot.emplace_back( key, entry );
+            }
+        }
+        store.dirty = false;
+        store.loaded_pack_path = pack_path;
+    }
+    if( snapshot.empty() ) {
+        return;
+    }
+    std::error_code ec;
+    fs::create_directories( native_file_path( pack_path.parent_path() ), ec );
+    if( ec ) {
+        return;
+    }
+    const fs::path disk_pack = native_file_path( pack_path );
+    fs::path tmp_path = disk_pack;
+    tmp_path += fs::u8path( ".tmp" );
+    bytecode_pack_header hdr{};
+    std::memcpy( hdr.magic, bytecode_pack_magic.data(), bytecode_pack_magic.size() );
+    hdr.lua_ver = static_cast<std::uint32_t>( LUA_VERSION_NUM );
+    hdr.ptr_size = static_cast<std::uint32_t>( sizeof( void * ) );
+    hdr.lua_int_size = static_cast<std::uint32_t>( sizeof( lua_Integer ) );
+    hdr.lua_num_size = static_cast<std::uint32_t>( sizeof( lua_Number ) );
+    hdr.entry_count = static_cast<std::uint32_t>( snapshot.size() );
+    hdr.reserved = 0;
+
+    std::ofstream out( tmp_path, std::ios::binary | std::ios::trunc );
+    if( !out ) {
+        return;
+    }
+    out.write( reinterpret_cast<const char *>( &hdr ), sizeof( hdr ) );
+    for( const auto &[key, entry] : snapshot ) {
+        bytecode_pack_entry_header eh{};
+        eh.src_size = entry.size;
+        eh.src_mtime_ms = entry.mtime_ms;
+        eh.path_len = static_cast<std::uint32_t>( key.size() );
+        eh.bytecode_len = static_cast<std::uint32_t>( entry.bytecode->size() );
+        out.write( reinterpret_cast<const char *>( &eh ), sizeof( eh ) );
+        out.write( key.data(), static_cast<std::streamsize>( key.size() ) );
+        out.write( entry.bytecode->data(), static_cast<std::streamsize>( entry.bytecode->size() ) );
+    }
+    out.close();
+    if( !out ) {
+        fs::remove( tmp_path, ec );
+        return;
+    }
+    fs::rename( tmp_path, disk_pack, ec );
+    if( ec ) {
+        fs::remove( tmp_path, ec );
+    }
+}
+
+sol::load_result load_platform_file( sol::state &lua, const fs::path &path,
+                                     bool record_in_content_fingerprint = true )
+{
+    const fs::path disk_path = native_file_path( path );
+    const std::string path_key = path.generic_u8string();
+    const std::string chunk_name = "@" + path_key;
+
+    std::uint64_t src_size = 0;
+    std::int64_t src_mtime_ms = 0;
+    bool is_regular = false;
+    const bool have_stat = stat_lua_file( disk_path, src_size, src_mtime_ms, is_regular ) && is_regular;
+    if( have_stat && record_in_content_fingerprint ) {
+        DynamicDataLoader::get_instance().record_loaded_content_file(
+            "lua_platform", disk_path, src_size, src_mtime_ms );
+    }
+
+    if( have_stat ) {
+        ensure_disk_bytecode_pack_loaded();
+        std::shared_ptr<const std::string> mem_bytecode;
+        {
+            bytecode_cache_store &store = lua_bytecode_cache();
+            std::lock_guard<std::mutex> lock( store.mutex );
+            const auto it = store.entries.find( path_key );
+            if( it != store.entries.end() && it->second.size == src_size &&
+                it->second.mtime_ms == src_mtime_ms ) {
+                mem_bytecode = it->second.bytecode;
+            }
+        }
+        if( mem_bytecode ) {
+            sol::load_result loaded = lua.load_buffer( mem_bytecode->data(), mem_bytecode->size(),
+                chunk_name, sol::load_mode::binary );
+            if( loaded.valid() ) {
+                return loaded;
+            }
+            bytecode_cache_store &store = lua_bytecode_cache();
+            std::lock_guard<std::mutex> lock( store.mutex );
+            store.entries.erase( path_key );
+            store.dirty = true;
+        }
+    }
+
+    std::ifstream input( disk_path, std::ios::binary | std::ios::ate );
+    if( !input ) {
+        throw std::runtime_error( "Cannot open Lua file: " + path_key );
+    }
+    std::string source;
+    const std::ifstream::pos_type end_pos = input.tellg();
+    if( end_pos > 0 ) {
+        source.resize( static_cast<std::size_t>( end_pos ) );
+        input.seekg( 0, std::ios::beg );
+        input.read( source.data(), static_cast<std::streamsize>( source.size() ) );
+        source.resize( static_cast<std::size_t>( input.gcount() ) );
+    } else if( end_pos < 0 ) {
+        input.clear();
+        input.seekg( 0, std::ios::beg );
+        source.assign( std::istreambuf_iterator<char> { input }, std::istreambuf_iterator<char> {} );
+    }
     if( input.bad() ) {
-        throw std::runtime_error( "Cannot read Lua file: " + path.generic_u8string() );
+        throw std::runtime_error( "Cannot read Lua file: " + path_key );
     }
     if( source.compare( 0, 3, "\xef\xbb\xbf" ) == 0 ) {
         source.erase( 0, 3 );
@@ -594,7 +1296,28 @@ sol::load_result load_platform_file( sol::state &lua, const fs::path &path )
             source.insert( source.begin(), '\n' );
         }
     }
-    return lua.load( source, "@" + path.generic_u8string() );
+    sol::load_result loaded = lua.load( source, chunk_name );
+    if( loaded.valid() && have_stat && path_key.size() <= std::numeric_limits<std::uint32_t>::max() ) {
+        lua_State *L = lua.lua_state();
+        lua_pushvalue( L, loaded.stack_index() );
+        std::string dumped;
+        const auto writer = []( lua_State *, const void *data, const size_t size, void *ud ) -> int {
+            static_cast<std::string *>( ud )->append( static_cast<const char *>( data ), size );
+            return 0;
+        };
+        const int dump_status = lua_dump( L, writer, &dumped, 0 );
+        lua_pop( L, 1 );
+        if( dump_status == 0 && !dumped.empty() ) {
+            auto shared_dumped = std::make_shared<const std::string>( std::move( dumped ) );
+            bytecode_cache_store &store = lua_bytecode_cache();
+            std::lock_guard<std::mutex> lock( store.mutex );
+            store.entries.insert_or_assign( path_key, cached_bytecode_entry{
+                src_size, src_mtime_ms, std::move( shared_dumped )
+            } );
+            store.dirty = true;
+        }
+    }
+    return loaded;
 }
 
 struct file_execution_result {
@@ -637,14 +1360,17 @@ struct static_dialogue_action {
 void initialize_state( sol::state &lua, const fs::path &requested_root,
                        const std::shared_ptr<runtime> &platform = nullptr,
                        const std::shared_ptr<const std::set<std::string>> &selected_mod_ids = nullptr,
-                       const mod_source_type type = mod_source_type::mod )
+                       const mod_source_type type = mod_source_type::mod,
+                       bool root_is_canonical = false )
 {
     // Mods are trusted executable code. State ownership is not a sandbox.
     lua.open_libraries();
 
     std::error_code filesystem_error;
-    const fs::path root = fs::canonical( requested_root, filesystem_error );
-    if( filesystem_error || !fs::is_directory( root, filesystem_error ) || filesystem_error ) {
+    const fs::path root = root_is_canonical ? requested_root :
+                          fs::canonical( requested_root, filesystem_error );
+    if( !root_is_canonical &&
+        ( filesystem_error || !fs::is_directory( root, filesystem_error ) || filesystem_error ) ) {
         throw std::runtime_error( "Cannot resolve Lua-first Mod root '" +
                                   requested_root.generic_u8string() + "'" );
     }
@@ -661,7 +1387,7 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
             install_runtime_api( platform, lua, ccb );
         }
         sol::table content = ccb["content"];
-        content.set_function( "is_mod_active", [selected_mod_ids]( const std::string &id ) {
+        content.set_function( "is_mod_active", [selected_mod_ids]( const std::string & id ) {
             return selected_mod_ids->count( id ) != 0;
         } );
     } else {
@@ -695,7 +1421,7 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     }
     searchers.set_function( 1, [&lua, root]( const std::string & module_name ) {
         sol::variadic_results result;
-        const std::optional<fs::path> path = resolve_local_module( root, module_name );
+        std::optional<fs::path> path = resolve_local_module( root, module_name );
         if( !path ) {
             // Match the standard Lua searcher diagnostic prefix.
             // NOLINTNEXTLINE(cata-text-style)
@@ -745,7 +1471,204 @@ end
 
 thread_local std::string active_ordered_mod_id;
 
-void write_mapgen_range( JsonOut &json, const char *field, const sol::object &value )
+class native_flex_writer
+{
+    public:
+        native_flex_writer() {
+            scratch &tls = shared_scratch();
+            if( !tls.in_use ) {
+                tls.in_use = true;
+                tls.builder.Clear();
+                tls.starts.clear();
+                using_tls_ = true;
+                fbb_ = &tls.builder;
+                starts_ = &tls.starts;
+                key_scratch_ = &tls.key_scratch;
+            } else {
+                owned_builder_ = std::make_unique<flexbuffers::Builder>(
+                                     512, flexbuffers::BUILDER_FLAG_SHARE_KEYS );
+                fbb_ = owned_builder_.get();
+                starts_ = &owned_starts_;
+                key_scratch_ = &owned_key_scratch_;
+            }
+        }
+
+        ~native_flex_writer() {
+            if( using_tls_ ) {
+                shared_scratch().in_use = false;
+            }
+        }
+
+        native_flex_writer( const native_flex_writer & ) = delete;
+        native_flex_writer &operator=( const native_flex_writer & ) = delete;
+
+        void start_object() {
+            starts_->push_back( fbb_->StartMap() );
+        }
+
+        void end_object() {
+            fbb_->EndMap( starts_->back() );
+            starts_->pop_back();
+        }
+
+        void start_array() {
+            starts_->push_back( fbb_->StartVector() );
+        }
+
+        void end_array() {
+            fbb_->EndVector( starts_->back(), false, false );
+            starts_->pop_back();
+        }
+
+        void member( const char *key ) {
+            fbb_->Key( key );
+        }
+
+        void member( const std::string &key ) {
+            fbb_->Key( key.c_str(), key.size() );
+        }
+
+        void member( std::string_view key ) {
+            key_scratch_->assign( key.data(), key.size() );
+            fbb_->Key( key_scratch_->c_str(), key_scratch_->size() );
+        }
+
+        void write_null() {
+            fbb_->Null();
+        }
+
+        void write( bool v ) {
+            fbb_->Bool( v );
+        }
+
+        template < typename T, std::enable_if_t < std::is_integral_v<T> && !std::is_same_v<T, bool>,
+                int > = 0 >
+        void write( T v ) {
+            if constexpr( std::is_signed_v<T> ) {
+                fbb_->Int( static_cast<std::int64_t>( v ) );
+            } else {
+                const std::uint64_t uv = static_cast<std::uint64_t>( v );
+                if( uv <= static_cast<std::uint64_t>( std::numeric_limits<std::int64_t>::max() ) ) {
+                    fbb_->Int( static_cast<std::int64_t>( uv ) );
+                } else {
+                    fbb_->UInt( uv );
+                }
+            }
+        }
+
+        template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+        void write( T v ) {
+            const double dv = static_cast<double>( v );
+            if( std::isfinite( dv ) && std::trunc( dv ) == dv &&
+                dv >= -9007199254740992.0 && dv <= 9007199254740992.0 ) {
+                fbb_->Int( static_cast<std::int64_t>( dv ) );
+            } else {
+                fbb_->Double( dv );
+            }
+        }
+
+        void write( const char *s ) {
+            fbb_->String( s );
+        }
+
+        void write( const std::string &s ) {
+            fbb_->String( s.c_str(), s.size() );
+        }
+
+        void write( std::string_view s ) {
+            fbb_->String( s.data(), s.size() );
+        }
+
+        template<typename T>
+        void write( const std::vector<T> &values ) {
+            start_array();
+            for( const auto &entry : values ) {
+                write( entry );
+            }
+            end_array();
+        }
+
+        template<typename T, std::size_t N>
+        void write( const std::array<T, N> &values ) {
+            start_array();
+            for( const auto &entry : values ) {
+                write( entry );
+            }
+            end_array();
+        }
+
+        template<typename T>
+        void write( const std::set<T> &values ) {
+            start_array();
+            for( const auto &entry : values ) {
+                write( entry );
+            }
+            end_array();
+        }
+
+        template<typename V>
+        void write( const std::map<std::string, V> &values ) {
+            start_object();
+            for( const auto &[k, val] : values ) {
+                member( k, val );
+            }
+            end_object();
+        }
+
+        template<typename K, typename V>
+        void member( const K &key, const V &value ) {
+            member( key );
+            write( value );
+        }
+
+        std::vector<std::uint8_t> finish_bytes() {
+            fbb_->Finish();
+            if( owned_builder_ ) {
+                return std::move( *owned_builder_ ).GetBuffer();
+            }
+            const std::vector<std::uint8_t> &buf = fbb_->GetBuffer();
+            return std::vector<std::uint8_t>( buf.begin(), buf.end() );
+        }
+
+        JsonValue finish() {
+            return json_loader::from_flexbuffer( finish_bytes() );
+        }
+
+    private:
+        struct scratch {
+            flexbuffers::Builder builder{ 512, flexbuffers::BUILDER_FLAG_SHARE_KEYS };
+            std::vector<std::size_t> starts;
+            std::string key_scratch;
+            bool in_use = false;
+        };
+
+        static scratch &shared_scratch() {
+            thread_local scratch tls;
+            return tls;
+        }
+
+        bool using_tls_ = false;
+        std::unique_ptr<flexbuffers::Builder> owned_builder_;
+        std::vector<std::size_t> owned_starts_;
+        std::string owned_key_scratch_;
+        flexbuffers::Builder *fbb_ = nullptr;
+        std::vector<std::size_t> *starts_ = nullptr;
+        std::string *key_scratch_ = nullptr;
+};
+
+JsonObject empty_native_object()
+{
+    static const JsonValue empty_doc = []() {
+        native_flex_writer w;
+        w.start_object();
+        w.end_object();
+        return w.finish();
+    }
+    ();
+    return empty_doc.get_object();
+}
+
+void write_mapgen_range( native_flex_writer &json, const char *field, const sol::object &value )
 {
     if( !value.valid() || value.get_type() == sol::type::nil ) {
         return;
@@ -767,21 +1690,148 @@ void write_mapgen_range( JsonOut &json, const char *field, const sol::object &va
     json.end_array();
 }
 
+struct lua_stack_guard {
+    lua_State *L;
+    int top;
+    explicit lua_stack_guard( lua_State *state ) noexcept : L( state ), top( lua_gettop( state ) ) {}
+    ~lua_stack_guard() {
+        lua_settop( L, top );
+    }
+    lua_stack_guard( const lua_stack_guard & ) = delete;
+    lua_stack_guard &operator=( const lua_stack_guard & ) = delete;
+};
+
 template<typename T>
-void write_placement_member( JsonOut &json, const sol::table &options, const char *field,
-                             const char *native_field )
+void write_lua_field_value( native_flex_writer &json, const sol::table &table, const char *field,
+                            const char *native_field, lua_State *L, const int val_idx )
 {
-    if( const auto value = options.get<sol::optional<T>>( field ) ) {
-        json.member( native_field, *value );
+    const int t = lua_type( L, val_idx );
+    if( t == LUA_TNIL ) {
+        return;
+    }
+    if constexpr( std::is_same_v<T, std::string> ) {
+        if( t == LUA_TSTRING ) {
+            std::size_t len = 0;
+            const char *s = lua_tolstring( L, val_idx, &len );
+            json.member( native_field, std::string_view( s, len ) );
+            return;
+        }
+    } else if constexpr( std::is_same_v<T, bool> ) {
+        if( t == LUA_TBOOLEAN ) {
+            json.member( native_field, lua_toboolean( L, val_idx ) != 0 );
+            return;
+        }
+    } else if constexpr( std::is_integral_v<T> ) {
+        if( lua_isinteger( L, val_idx ) ) {
+            json.member( native_field, static_cast<T>( lua_tointeger( L, val_idx ) ) );
+            return;
+        }
+    } else if constexpr( std::is_floating_point_v<T> ) {
+        if( t == LUA_TNUMBER ) {
+            json.member( native_field, static_cast<T>( lua_tonumber( L, val_idx ) ) );
+            return;
+        }
+    }
+    if( const auto fallback = table.get<sol::optional<T>>( field ) ) {
+        json.member( native_field, *fallback );
     }
 }
 
-void write_mapgen_value( JsonOut &json, const sol::object &value );
+void write_bounded_string_array( native_flex_writer &json, const char *native_field,
+                                 const sol::table &values, std::string_view field,
+                                 std::size_t max_entries = 256,
+                                 std::string_view context = "ModDefinition",
+                                 const char *empty_error = nullptr )
+{
+    lua_State *L = values.lua_state();
+    const lua_stack_guard guard( L );
+    values.push( L );
+    const int tbl_idx = lua_gettop( L );
+    const bool has_mt = lua_getmetatable( L, tbl_idx ) != 0;
+    if( has_mt ) {
+        lua_pop( L, 1 );
+        const auto items = bounded_string_array( values, field, max_entries, context );
+        if( empty_error != nullptr && items.empty() ) {
+            throw std::invalid_argument( empty_error );
+        }
+        json.member( native_field, items );
+        return;
+    }
+    const std::size_t count = lua_rawlen( L, tbl_idx );
+    if( count > max_entries ) {
+        throw std::runtime_error( std::string( context ) + " " + std::string( field ) +
+                                  " exceed " + std::to_string( max_entries ) + " entries" );
+    }
+    std::size_t observed = 0;
+    bool all_strings = true;
+    lua_pushnil( L );
+    while( lua_next( L, tbl_idx ) != 0 ) {
+        if( !lua_isinteger( L, -2 ) ) {
+            throw std::runtime_error( std::string( context ) + " " + std::string( field ) +
+                                      " must be a dense array" );
+        }
+        const lua_Integer index = lua_tointeger( L, -2 );
+        if( index < 1 || static_cast<std::uint64_t>( index ) > count ) {
+            throw std::runtime_error( std::string( context ) + " " + std::string( field ) +
+                                      " must be a dense array" );
+        }
+        if( all_strings && lua_type( L, -1 ) != LUA_TSTRING ) {
+            all_strings = false;
+        }
+        ++observed;
+        lua_pop( L, 1 );
+    }
+    if( observed != count ) {
+        throw std::runtime_error( std::string( context ) + " " + std::string( field ) +
+                                  " must be a dense array" );
+    }
+    if( !all_strings ) {
+        throw std::runtime_error( std::string( context ) + " " + std::string( field ) +
+                                  " may only contain strings" );
+    }
+    if( empty_error != nullptr && count == 0 ) {
+        throw std::invalid_argument( empty_error );
+    }
+    json.member( native_field );
+    json.start_array();
+    for( std::size_t i = 1; i <= count; ++i ) {
+        lua_rawgeti( L, tbl_idx, static_cast<lua_Integer>( i ) );
+        std::size_t len = 0;
+        const char *s = lua_tolstring( L, -1, &len );
+        json.write( std::string_view( s, len ) );
+        lua_pop( L, 1 );
+    }
+    json.end_array();
+}
+
+template<typename T>
+void write_placement_member( native_flex_writer &json, const sol::table &options, const char *field,
+                             const char *native_field )
+{
+    lua_State *L = options.lua_state();
+    const lua_stack_guard guard( L );
+    options.push( L );
+    const int tbl_idx = lua_gettop( L );
+    const bool has_mt = lua_getmetatable( L, tbl_idx ) != 0;
+    if( has_mt ) {
+        lua_pop( L, 1 );
+    }
+    lua_pushstring( L, field );
+    if( has_mt ) {
+        lua_gettable( L, tbl_idx );
+    } else {
+        lua_rawget( L, tbl_idx );
+    }
+    write_lua_field_value<T>( json, options, field, native_field, L, -1 );
+}
+
+void write_mapgen_value( native_flex_writer &json, const sol::object &value );
 
 template<typename Weight, bool AllowExpression = true>
-void write_mapgen_weighted_choices( JsonOut &json, const char *field, const sol::table &choices )
+void write_mapgen_weighted_choices( native_flex_writer &json, const char *field,
+                                    const sol::table &choices )
 {
-    const auto write_choice = [&]( const sol::object &id ) {
+    const auto write_choice = [&]( const sol::object & id ) {
         if constexpr( AllowExpression ) {
             write_mapgen_value( json, id );
         } else {
@@ -818,10 +1868,15 @@ void write_mapgen_weighted_choices( JsonOut &json, const char *field, const sol:
     json.end_array();
 }
 
-void write_mapgen_value( JsonOut &json, const sol::object &value )
+void write_mapgen_value( native_flex_writer &json, const sol::object &value )
 {
     if( value.get_type() == sol::type::string ) {
-        json.write( value.as<std::string>() );
+        lua_State *L = value.lua_state();
+        const lua_stack_guard guard( L );
+        value.push( L );
+        std::size_t len = 0;
+        const char *s = lua_tolstring( L, -1, &len );
+        json.write( std::string_view( s, len ) );
         return;
     }
     const sol::table definition = value.as<sol::table>();
@@ -855,13 +1910,15 @@ void write_mapgen_value( JsonOut &json, const sol::object &value )
     json.end_object();
 }
 
-void write_mapgen_value_member( JsonOut &json, std::string_view field, const sol::object &value )
+void write_mapgen_value_member( native_flex_writer &json, std::string_view field,
+                                const sol::object &value )
 {
     json.member( field );
     write_mapgen_value( json, value );
 }
 
-void write_mapgen_integer_choices( JsonOut &json, const sol::table &options, const char *field )
+void write_mapgen_integer_choices( native_flex_writer &json, const sol::table &options,
+                                   const char *field )
 {
     const sol::object value = options.raw_get<sol::object>( field );
     if( value.get_type() != sol::type::table ) {
@@ -881,7 +1938,7 @@ void write_mapgen_integer_choices( JsonOut &json, const sol::table &options, con
     json.end_array();
 }
 
-void write_placement_item( JsonOut &json, const sol::table &options )
+void write_placement_item( native_flex_writer &json, const sol::table &options )
 {
     write_mapgen_value_member( json, "item", options.raw_get<sol::object>( "id" ) );
     write_mapgen_range( json, "chance", options.raw_get<sol::object>( "chance" ) );
@@ -889,12 +1946,12 @@ void write_placement_item( JsonOut &json, const sol::table &options )
     write_placement_member<std::string>( json, options, "variant", "variant" );
     write_placement_member<std::string>( json, options, "faction", "faction" );
     if( const auto flags = options.get<sol::optional<sol::table>>( "flags" ) ) {
-        json.member( "custom-flags", bounded_string_array( *flags, "flags",
-                     std::numeric_limits<std::size_t>::max(), "mapgen item placement" ) );
+        write_bounded_string_array( json, "custom-flags", *flags, "flags",
+                                    std::numeric_limits<std::size_t>::max(), "mapgen item placement" );
     }
 }
 
-void write_placement_item_group_entries( JsonOut &json, const sol::table &entries )
+void write_placement_item_group_entries( native_flex_writer &json, const sol::table &entries )
 {
     json.start_array();
     for( std::size_t i = 1, count = entries.size(); i <= count; ++i ) {
@@ -922,7 +1979,9 @@ void write_placement_item_group_entries( JsonOut &json, const sol::table &entrie
         }
         write_placement_member<std::string>( json, entry, "variant", "variant" );
         write_placement_member<int>( json, entry, "probability", "prob" );
-        for( const char *field : { "count", "charges", "damage" } ) {
+        for( const char *field : {
+                 "count", "charges", "damage"
+             } ) {
             write_mapgen_range( json, field, entry.raw_get<sol::object>( field ) );
         }
         json.end_object();
@@ -930,7 +1989,7 @@ void write_placement_item_group_entries( JsonOut &json, const sol::table &entrie
     json.end_array();
 }
 
-void write_placement_item_group( JsonOut &json, const sol::table &options )
+void write_placement_item_group( native_flex_writer &json, const sol::table &options )
 {
     const sol::object group = options.raw_get<sol::object>( "group" );
     if( group.get_type() == sol::type::table ) {
@@ -949,25 +2008,28 @@ void write_placement_item_group( JsonOut &json, const sol::table &options )
     write_placement_member<std::string>( json, options, "faction", "faction" );
 }
 
-void write_placement_loot( JsonOut &json, const sol::table &options )
+void write_placement_loot( native_flex_writer &json, const sol::table &options )
 {
     write_placement_member<std::string>( json, options, "id", "item" );
     write_placement_member<std::string>( json, options, "group", "group" );
     write_placement_member<std::string>( json, options, "variant", "variant" );
-    for( const char *field : { "chance", "ammo", "magazine" } ) {
+    for( const char *field : {
+             "chance", "ammo", "magazine"
+         } ) {
         write_placement_member<int>( json, options, field, field );
     }
 }
 
-void write_placement_monster_group( JsonOut &json, const sol::table &options )
+void write_placement_monster_group( native_flex_writer &json, const sol::table &options )
 {
     write_mapgen_value_member( json, "monster", options.raw_get<sol::object>( "group" ) );
     write_mapgen_range( json, "chance", options.raw_get<sol::object>( "chance" ) );
     write_placement_member<double>( json, options, "density", "density" );
 }
 
-void write_static_singular_text( JsonOut &json, const char *field, const sol::object &value,
-                                const char *label )
+void write_static_singular_text( native_flex_writer &json, const char *field,
+                                 const sol::object &value,
+                                 const char *label )
 {
     if( !value.valid() || value.get_type() == sol::type::nil ) {
         return;
@@ -987,7 +2049,7 @@ void write_static_singular_text( JsonOut &json, const char *field, const sol::ob
     }
 }
 
-void write_placement_monster( JsonOut &json, const sol::table &options )
+void write_placement_monster( native_flex_writer &json, const sol::table &options )
 {
     const sol::object id = options.raw_get<sol::object>( "id" );
     const sol::object group = options.raw_get<sol::object>( "group" );
@@ -1007,7 +2069,9 @@ void write_placement_monster( JsonOut &json, const sol::table &options )
     }
     write_mapgen_range( json, "chance", options.raw_get<sol::object>( "chance" ) );
     write_mapgen_range( json, "pack_size", options.raw_get<sol::object>( "pack_size" ) );
-    for( const char *field : { "one_or_none", "friendly", "target", "use_pack_size" } ) {
+    for( const char *field : {
+             "one_or_none", "friendly", "target", "use_pack_size"
+         } ) {
         write_placement_member<bool>( json, options, field, field );
     }
     write_placement_member<std::string>( json, options, "random_name", "random_name" );
@@ -1048,17 +2112,19 @@ void write_placement_monster( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_placement_vehicle( JsonOut &json, const sol::table &options )
+void write_placement_vehicle( native_flex_writer &json, const sol::table &options )
 {
     json.member( "vehicle", options.get<std::string>( "id" ) );
-    for( const char *field : { "chance", "fuel", "status" } ) {
+    for( const char *field : {
+             "chance", "fuel", "status"
+         } ) {
         write_placement_member<int>( json, options, field, field );
     }
     write_placement_member<std::string>( json, options, "faction", "faction" );
     write_mapgen_integer_choices( json, options, "rotation" );
 }
 
-void write_placement_field( JsonOut &json, const sol::table &options )
+void write_placement_field( native_flex_writer &json, const sol::table &options )
 {
     json.member( "field", options.get<std::string>( "id" ) );
     write_mapgen_integer_choices( json, options, "intensity" );
@@ -1067,7 +2133,7 @@ void write_placement_field( JsonOut &json, const sol::table &options )
     write_placement_member<bool>( json, options, "remove", "remove" );
 }
 
-void write_placement_npc( JsonOut &json, const sol::table &options )
+void write_placement_npc( native_flex_writer &json, const sol::table &options )
 {
     json.member( "class", options.get<std::string>( "id" ) );
     write_placement_member<bool>( json, options, "target", "target" );
@@ -1075,13 +2141,13 @@ void write_placement_npc( JsonOut &json, const sol::table &options )
     const sol::object traits = options.raw_get<sol::object>( "traits" );
     if( traits.get_type() == sol::type::table ) {
         json.member( "add_trait", bounded_string_array( traits.as<sol::table>(), "traits",
-                     std::numeric_limits<std::size_t>::max(), "mapgen NPC placement" ) );
+                std::numeric_limits<std::size_t>::max(), "mapgen NPC placement" ) );
     } else {
         write_placement_member<std::string>( json, options, "traits", "add_trait" );
     }
 }
 
-void write_placement_sign( JsonOut &json, const sol::table &options )
+void write_placement_sign( native_flex_writer &json, const sol::table &options )
 {
     write_static_singular_text( json, "signage", options.raw_get<sol::object>( "text" ),
                                 "mapgen sign text" );
@@ -1089,14 +2155,14 @@ void write_placement_sign( JsonOut &json, const sol::table &options )
     write_placement_member<std::string>( json, options, "furniture", "furniture" );
 }
 
-void write_placement_graffiti( JsonOut &json, const sol::table &options )
+void write_placement_graffiti( native_flex_writer &json, const sol::table &options )
 {
     write_static_singular_text( json, "text", options.raw_get<sol::object>( "text" ),
                                 "mapgen graffiti text" );
     write_placement_member<std::string>( json, options, "snippet", "snippet" );
 }
 
-void write_placement_zone( JsonOut &json, const sol::table &options )
+void write_placement_zone( native_flex_writer &json, const sol::table &options )
 {
     json.member( "type", options.get<std::string>( "id" ) );
     json.member( "faction", options.get<std::string>( "faction" ) );
@@ -1104,21 +2170,22 @@ void write_placement_zone( JsonOut &json, const sol::table &options )
     write_placement_member<std::string>( json, options, "filter", "filter" );
 }
 
-void write_placement_toilet( JsonOut &json, const sol::table &options )
+void write_placement_toilet( native_flex_writer &json, const sol::table &options )
 {
     write_mapgen_range( json, "amount", options.raw_get<sol::object>( "water_charges" ) );
 }
 
-void write_mapgen_string_array( JsonOut &json, const sol::table &options, const char *field,
+void write_mapgen_string_array( native_flex_writer &json, const sol::table &options,
+                                const char *field,
                                 const char *native_field )
 {
     if( const auto values = options.get<sol::optional<sol::table>>( field ) ) {
         json.member( native_field, bounded_string_array( *values, field,
-                     std::numeric_limits<std::size_t>::max(), "mapgen placement" ) );
+            std::numeric_limits<std::size_t>::max(), "mapgen placement" ) );
     }
 }
 
-void write_placement_computer( JsonOut &json, const sol::table &options )
+void write_placement_computer( native_flex_writer &json, const sol::table &options )
 {
     write_static_singular_text( json, "name", options.raw_get<sol::object>( "name" ),
                                 "mapgen computer name" );
@@ -1166,34 +2233,36 @@ void write_placement_computer( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_placement_vending_machine( JsonOut &json, const sol::table &options )
+void write_placement_vending_machine( native_flex_writer &json, const sol::table &options )
 {
     write_placement_member<std::string>( json, options, "group", "item_group" );
-    for( const char *field : { "reinforced", "lootable", "powered", "networked" } ) {
+    for( const char *field : {
+             "reinforced", "lootable", "powered", "networked"
+         } ) {
         write_placement_member<bool>( json, options, field, field );
     }
 }
 
-void write_placement_liquid( JsonOut &json, const sol::table &options )
+void write_placement_liquid( native_flex_writer &json, const sol::table &options )
 {
     json.member( "liquid", options.get<std::string>( "id" ) );
     write_mapgen_range( json, "amount", options.raw_get<sol::object>( "amount" ) );
     write_mapgen_range( json, "chance", options.raw_get<sol::object>( "one_in" ) );
 }
 
-void write_placement_fuel_pump( JsonOut &json, const sol::table &options )
+void write_placement_fuel_pump( native_flex_writer &json, const sol::table &options )
 {
     write_mapgen_range( json, "amount", options.raw_get<sol::object>( "amount" ) );
     write_placement_member<std::string>( json, options, "fuel", "fuel" );
 }
 
-void write_placement_corpse( JsonOut &json, const sol::table &options )
+void write_placement_corpse( native_flex_writer &json, const sol::table &options )
 {
     json.member( "group", options.get<std::string>( "group" ) );
     write_placement_member<int>( json, options, "age_days", "age" );
 }
 
-void write_placement_rubble( JsonOut &json, const sol::table &options )
+void write_placement_rubble( native_flex_writer &json, const sol::table &options )
 {
     write_placement_member<std::string>( json, options, "furniture", "rubble_type" );
     write_placement_member<std::string>( json, options, "floor", "floor_type" );
@@ -1201,14 +2270,16 @@ void write_placement_rubble( JsonOut &json, const sol::table &options )
     write_placement_member<bool>( json, options, "overwrite", "overwrite" );
 }
 
-using placement_writer = void ( * )( JsonOut &, const sol::table & );
+using placement_writer = void ( * )( native_flex_writer &, const sol::table & );
 
-void write_static_mapgen_placement( JsonOut &json, const sol::table &options,
+void write_static_mapgen_placement( native_flex_writer &json, const sol::table &options,
                                     placement_writer writer, bool positioned )
 {
     json.start_object();
     if( positioned ) {
-        for( const char *axis : { "x", "y", "z" } ) {
+        for( const char *axis : {
+                 "x", "y", "z"
+             } ) {
             write_mapgen_range( json, axis, options.raw_get<sol::object>( axis ) );
         }
     }
@@ -1217,7 +2288,7 @@ void write_static_mapgen_placement( JsonOut &json, const sol::table &options,
     json.end_object();
 }
 
-void write_placement_sealed_item( JsonOut &json, const sol::table &options )
+void write_placement_sealed_item( native_flex_writer &json, const sol::table &options )
 {
     json.member( "furniture", options.get<std::string>( "furniture" ) );
     write_mapgen_range( json, "chance", options.raw_get<sol::object>( "chance" ) );
@@ -1231,7 +2302,7 @@ void write_placement_sealed_item( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_mapgen_glyph_placement( JsonOut &json, const sol::table &placements,
+void write_mapgen_glyph_placement( native_flex_writer &json, const sol::table &placements,
                                    placement_writer writer )
 {
     const std::size_t count = placements.size();
@@ -1257,7 +2328,8 @@ std::vector<std::string> sorted_mapgen_glyphs( const sol::table &glyphs )
     return keys;
 }
 
-void write_mapgen_glyph_placements( JsonOut &json, const char *field, const sol::table &glyphs,
+void write_mapgen_glyph_placements( native_flex_writer &json, const char *field,
+                                    const sol::table &glyphs,
                                     placement_writer writer )
 {
     json.member( field );
@@ -1269,7 +2341,7 @@ void write_mapgen_glyph_placements( JsonOut &json, const char *field, const sol:
     json.end_object();
 }
 
-void write_static_mapgen_placements( JsonOut &json, const sol::table &layout,
+void write_static_mapgen_placements( native_flex_writer &json, const sol::table &layout,
                                      bool include_positions )
 {
     struct placement_fields {
@@ -1284,8 +2356,10 @@ void write_static_mapgen_placements( JsonOut &json, const sol::table &layout,
         { "item_group_placements", "place_items", "item_groups", "items", write_placement_item_group },
         { "loot_placements", "place_loot", nullptr, nullptr, write_placement_loot },
         { "monster_placements", "place_monster", "monster_glyphs", "monster", write_placement_monster },
-        { "monster_group_placements", "place_monsters", "monster_group_glyphs", "monsters",
-            write_placement_monster_group },
+        {
+            "monster_group_placements", "place_monsters", "monster_group_glyphs", "monsters",
+            write_placement_monster_group
+        },
         { "vehicle_placements", "place_vehicles", "vehicle_glyphs", "vehicles", write_placement_vehicle },
         { "field_placements", "place_fields", "field_glyphs", "fields", write_placement_field },
         { "npc_placements", "place_npcs", "npc_glyphs", "npcs", write_placement_npc },
@@ -1294,54 +2368,73 @@ void write_static_mapgen_placements( JsonOut &json, const sol::table &layout,
         { "zone_placements", "place_zones", "zone_glyphs", "zones", write_placement_zone },
         { "toilet_placements", "place_toilets", nullptr, nullptr, write_placement_toilet },
         { "computer_placements", "place_computers", "computer_glyphs", "computers", write_placement_computer },
-        { "vending_placements", "place_vendingmachines", "vending_glyphs", "vendingmachines",
-            write_placement_vending_machine },
+        {
+            "vending_placements", "place_vendingmachines", "vending_glyphs", "vendingmachines",
+            write_placement_vending_machine
+        },
         { "liquid_placements", "place_liquids", "liquid_glyphs", "liquids", write_placement_liquid },
         { "fuel_pump_placements", "place_gaspumps", "fuel_pump_glyphs", "gaspumps", write_placement_fuel_pump },
         { nullptr, nullptr, "sealed_item_glyphs", "sealed_item", write_placement_sealed_item },
         { "corpse_placements", "place_corpses", "corpse_glyphs", "corpses", write_placement_corpse },
         { "rubble_placements", "place_rubble", "rubble_glyphs", "rubble", write_placement_rubble },
-        { "transform_placements", "place_ter_furn_transforms", "transform_glyphs", "ter_furn_transforms",
-            []( JsonOut & out, const sol::table & options ) {
+        {
+            "transform_placements", "place_ter_furn_transforms", "transform_glyphs", "ter_furn_transforms",
+            []( native_flex_writer & out, const sol::table & options )
+            {
                 write_mapgen_value_member( out, "transform", options.raw_get<sol::object>( "id" ) );
             }
         },
-        { "vehicle_removals", "remove_vehicles", nullptr, nullptr,
-            []( JsonOut & out, const sol::table & options ) {
+        {
+            "vehicle_removals", "remove_vehicles", nullptr, nullptr,
+            []( native_flex_writer & out, const sol::table & options )
+            {
                 write_mapgen_string_array( out, options, "prototypes", "vehicles" );
             }
         },
-        { "npc_removals", "remove_npcs", nullptr, nullptr,
-            []( JsonOut & out, const sol::table & options ) {
+        {
+            "npc_removals", "remove_npcs", nullptr, nullptr,
+            []( native_flex_writer & out, const sol::table & options )
+            {
                 write_placement_member<std::string>( out, options, "id", "class" );
                 write_placement_member<std::string>( out, options, "unique_id", "unique_id" );
             }
         },
-        { "clear_areas", "place_remove_all", "clear_glyphs", "remove_all",
-            []( JsonOut &, const sol::table & ) {}
+        {
+            "clear_areas", "place_remove_all", "clear_glyphs", "remove_all",
+            []( native_flex_writer &, const sol::table & ) {}
         },
-        { "position_markers", "place_variables", nullptr, nullptr,
-            []( JsonOut & out, const sol::table & options ) {
+        {
+            "position_markers", "place_variables", nullptr, nullptr,
+            []( native_flex_writer & out, const sol::table & options )
+            {
                 out.member( "name", options.get<std::string>( "name" ) );
             }
         },
-        { "faction_areas", "faction_owner", nullptr, nullptr,
-            []( JsonOut & out, const sol::table & options ) {
+        {
+            "faction_areas", "faction_owner", nullptr, nullptr,
+            []( native_flex_writer & out, const sol::table & options )
+            {
                 out.member( "id", options.get<std::string>( "id" ) );
             }
         },
-        { "terrain_placements", "place_terrain", nullptr, nullptr,
-            []( JsonOut & out, const sol::table & options ) {
+        {
+            "terrain_placements", "place_terrain", nullptr, nullptr,
+            []( native_flex_writer & out, const sol::table & options )
+            {
                 out.member( "ter", options.get<std::string>( "id" ) );
             }
         },
-        { "furniture_placements", "place_furniture", nullptr, nullptr,
-            []( JsonOut & out, const sol::table & options ) {
+        {
+            "furniture_placements", "place_furniture", nullptr, nullptr,
+            []( native_flex_writer & out, const sol::table & options )
+            {
                 out.member( "furn", options.get<std::string>( "id" ) );
             }
         },
-        { "trap_placements", "place_traps", nullptr, nullptr,
-            []( JsonOut & out, const sol::table & options ) {
+        {
+            "trap_placements", "place_traps", nullptr, nullptr,
+            []( native_flex_writer & out, const sol::table & options )
+            {
                 out.member( "trap", options.get<std::string>( "id" ) );
             }
         },
@@ -1368,7 +2461,7 @@ void write_static_mapgen_placements( JsonOut &json, const sol::table &layout,
     }
 }
 
-void write_mapgen_glyph_alternatives( JsonOut &json, std::string_view member,
+void write_mapgen_glyph_alternatives( native_flex_writer &json, std::string_view member,
                                       const sol::object &value )
 {
     if( value.get_type() == sol::type::string ) {
@@ -1399,7 +2492,7 @@ void write_mapgen_glyph_alternatives( JsonOut &json, std::string_view member,
     json.end_array();
 }
 
-void write_mapgen_glyph_mappings( JsonOut &json, const sol::table &mappings )
+void write_mapgen_glyph_mappings( native_flex_writer &json, const sol::table &mappings )
 {
     struct mapping_field {
         const char *field;
@@ -1420,7 +2513,9 @@ void write_mapgen_glyph_mappings( JsonOut &json, const sol::table &mappings )
         const sol::table mapping = mappings.raw_get<sol::table>( glyph );
         json.member( glyph );
         json.start_object();
-        for( const char *field : { "terrain", "furniture", "traps" } ) {
+        for( const char *field : {
+                 "terrain", "furniture", "traps"
+             } ) {
             const sol::object mapped = mapping.raw_get<sol::object>( field );
             if( mapped.get_type() != sol::type::nil ) {
                 write_mapgen_glyph_alternatives( json, field, mapped );
@@ -1437,7 +2532,7 @@ void write_mapgen_glyph_mappings( JsonOut &json, const sol::table &mappings )
     json.end_object();
 }
 
-void write_mapgen_tile_edits( JsonOut &json, const sol::table &edits )
+void write_mapgen_tile_edits( native_flex_writer &json, const sol::table &edits )
 {
     static constexpr std::pair<std::string_view, std::string_view> actions[] = {
         { "terrain", "terrain" }, { "furniture", "furniture" }, { "trap", "trap" },
@@ -1456,19 +2551,21 @@ void write_mapgen_tile_edits( JsonOut &json, const sol::table &edits )
         }
         const std::string operation = edit.get<std::string>( "operation" );
         const auto action = std::find_if( std::begin( actions ), std::end( actions ),
-        [&]( const auto &entry ) {
+        [&]( const auto & entry ) {
             return entry.first == operation;
         } );
         if( action == std::end( actions ) ) {
             throw std::invalid_argument( "unknown mapgen tile operation: " + operation );
         }
         if( shape != "point" && ( operation == "bash" || operation == "burn" ||
-                                 operation == "remember_position" ) ) {
+                                  operation == "remember_position" ) ) {
             throw std::invalid_argument( operation + " requires a point tile edit" );
         }
         json.start_object();
         json.member( shape == "rectangle" ? "square" : shape, action->second );
-        for( const char *axis : { "x", "y", "z" } ) {
+        for( const char *axis : {
+                 "x", "y", "z"
+             } ) {
             write_mapgen_range( json, axis, edit.raw_get<sol::object>( axis ) );
         }
         if( shape != "point" ) {
@@ -1484,7 +2581,7 @@ void write_mapgen_tile_edits( JsonOut &json, const sol::table &edits )
     json.end_array();
 }
 
-void write_mapgen_terrain_matchers( JsonOut &json, const sol::table &matches )
+void write_mapgen_terrain_matchers( native_flex_writer &json, const sol::table &matches )
 {
     json.start_array();
     const std::size_t count = matches.size();
@@ -1505,7 +2602,7 @@ void write_mapgen_terrain_matchers( JsonOut &json, const sol::table &matches )
     json.end_array();
 }
 
-void write_mapgen_nested_placement( JsonOut &json, const sol::table &placement )
+void write_mapgen_nested_placement( native_flex_writer &json, const sol::table &placement )
 {
     json.start_object();
     const sol::object id = placement.raw_get<sol::object>( "id" );
@@ -1558,7 +2655,7 @@ void write_mapgen_nested_placement( JsonOut &json, const sol::table &placement )
                     json.member( key, values.as<std::string>() );
                 } else {
                     json.member( key, bounded_string_array( values.as<sol::table>(), field,
-                                 std::numeric_limits<std::size_t>::max(), "nested mapgen" ) );
+                                                            std::numeric_limits<std::size_t>::max(), "nested mapgen" ) );
                 }
             }
             json.end_object();
@@ -1580,7 +2677,7 @@ void write_mapgen_nested_placement( JsonOut &json, const sol::table &placement )
     json.end_object();
 }
 
-void write_mapgen_parameters( JsonOut &json, const sol::table &parameters )
+void write_mapgen_parameters( native_flex_writer &json, const sol::table &parameters )
 {
     static constexpr std::pair<std::string_view, std::string_view> value_types[] = {
         { "palette", "palette_id" }, { "terrain", "ter_str_id" }, { "furniture", "furn_str_id" },
@@ -1593,7 +2690,7 @@ void write_mapgen_parameters( JsonOut &json, const sol::table &parameters )
     };
     const auto native_name = []( const auto & entries, const std::string & name ) {
         const auto entry = std::find_if( std::begin( entries ), std::end( entries ),
-        [&]( const auto &candidate ) {
+        [&]( const auto & candidate ) {
             return candidate.first == name;
         } );
         if( entry == std::end( entries ) ) {
@@ -1617,7 +2714,7 @@ void write_mapgen_parameters( JsonOut &json, const sol::table &parameters )
     json.end_object();
 }
 
-void write_mapgen_palette_fields( JsonOut &json, const sol::table &layout,
+void write_mapgen_palette_fields( native_flex_writer &json, const sol::table &layout,
                                   bool include_positions )
 {
     if( const auto parameters = layout.get<sol::optional<sol::table>>( "parameters" ) ) {
@@ -1625,7 +2722,7 @@ void write_mapgen_palette_fields( JsonOut &json, const sol::table &layout,
     }
     if( const auto palettes = layout.get<sol::optional<sol::table>>( "palettes" ) ) {
         const std::size_t count = checked_dense_array_size( *palettes, "mapgen layout palettes",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         json.member( "palettes" );
         json.start_array();
         for( std::size_t i = 1; i <= count; ++i ) {
@@ -1633,7 +2730,9 @@ void write_mapgen_palette_fields( JsonOut &json, const sol::table &layout,
         }
         json.end_array();
     }
-    for( const char *field : { "terrain", "furniture", "traps" } ) {
+    for( const char *field : {
+             "terrain", "furniture", "traps"
+         } ) {
         if( const auto glyphs = layout.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
             json.start_object();
@@ -1683,7 +2782,7 @@ void write_mapgen_palette_fields( JsonOut &json, const sol::table &layout,
     }
 }
 
-void write_static_mapgen_layout_fields( JsonOut &json, const sol::table &layout,
+void write_static_mapgen_layout_fields( native_flex_writer &json, const sol::table &layout,
                                         std::size_t max_rows )
 {
     const sol::object fill = layout.raw_get<sol::object>( "fill_terrain" );
@@ -1691,25 +2790,29 @@ void write_static_mapgen_layout_fields( JsonOut &json, const sol::table &layout,
         write_mapgen_value_member( json, "fill_ter", fill );
     }
     if( const auto rows = layout.get<sol::optional<sol::table>>( "rows" ) ) {
-        json.member( "rows", bounded_string_array( *rows, "rows", max_rows, "mapgen layout" ) );
+        write_bounded_string_array( json, "rows", *rows, "rows", max_rows, "mapgen layout" );
     }
     if( const auto size = layout.get<sol::optional<sol::table>>( "size" ) ) {
-        json.member( "mapgensize", std::array<int, 2>{ size->get<int>( "width" ),
-                     size->get<int>( "height" ) } );
+        json.member( "mapgensize", std::array<int, 2> { size->get<int>( "width" ),
+            size->get<int>( "height" )
+                                                      } );
     }
     const auto layout_flags = layout.get<sol::optional<sol::table>>( "flags" );
     const bool erase = layout.get_or( "erase_before_terrain", false );
     if( layout_flags || erase ) {
         std::vector<std::string> flags = layout_flags ?
-            bounded_string_array( *layout_flags, "flags", std::numeric_limits<std::size_t>::max(),
-                                  "mapgen layout" ) : std::vector<std::string>{};
-        if( erase && std::find( flags.begin(), flags.end(), "ERASE_ALL_BEFORE_PLACING_TERRAIN" ) == flags.end() ) {
+                                         bounded_string_array( *layout_flags, "flags", std::numeric_limits<std::size_t>::max(),
+                                             "mapgen layout" ) : std::vector<std::string> {};
+        if( erase &&
+            std::find( flags.begin(), flags.end(), "ERASE_ALL_BEFORE_PLACING_TERRAIN" ) == flags.end() ) {
             flags.emplace_back( "ERASE_ALL_BEFORE_PLACING_TERRAIN" );
         }
         json.member( "flags", flags );
     }
     write_mapgen_range( json, "rotation", layout.raw_get<sol::object>( "rotation" ) );
-    for( const char *field : { "predecessor_mapgen", "fallback_predecessor_mapgen" } ) {
+    for( const char *field : {
+             "predecessor_mapgen", "fallback_predecessor_mapgen"
+         } ) {
         if( const auto predecessor = layout.get<sol::optional<std::string>>( field ) ) {
             json.member( field, *predecessor );
         }
@@ -1729,7 +2832,8 @@ void write_static_mapgen_layout_fields( JsonOut &json, const sol::table &layout,
     }
 }
 
-void write_static_mapgen_layout( JsonOut &json, const sol::table &layout, std::size_t max_rows )
+void write_static_mapgen_layout( native_flex_writer &json, const sol::table &layout,
+                                 std::size_t max_rows )
 {
     json.member( "object" );
     json.start_object();
@@ -1737,7 +2841,7 @@ void write_static_mapgen_layout( JsonOut &json, const sol::table &layout, std::s
     json.end_object();
 }
 
-void write_overmap_mapgens( JsonOut &json, const char *key, const sol::table &variants )
+void write_overmap_mapgens( native_flex_writer &json, const char *key, const sol::table &variants )
 {
     json.member( key );
     json.start_array();
@@ -1762,7 +2866,7 @@ void write_overmap_mapgens( JsonOut &json, const char *key, const sol::table &va
     json.end_array();
 }
 
-void write_static_mapgen_targets( JsonOut &json, const sol::object &id )
+void write_static_mapgen_targets( native_flex_writer &json, const sol::object &id )
 {
     if( id.get_type() != sol::type::table ) {
         json.member( "om_terrain", id.as<std::string>() );
@@ -1771,7 +2875,7 @@ void write_static_mapgen_targets( JsonOut &json, const sol::object &id )
     const sol::table targets = id.as<sol::table>();
     const std::size_t limit = std::numeric_limits<std::size_t>::max();
     if( targets.raw_get<sol::object>( 1 ).get_type() != sol::type::table ) {
-        json.member( "om_terrain", bounded_string_array( targets, "id", limit, "overmap mapgen" ) );
+        write_bounded_string_array( json, "om_terrain", targets, "id", limit, "overmap mapgen" );
         return;
     }
     std::vector<std::vector<std::string>> grid;
@@ -1779,7 +2883,7 @@ void write_static_mapgen_targets( JsonOut &json, const sol::object &id )
     grid.reserve( rows );
     for( std::size_t i = 1; i <= rows; ++i ) {
         grid.push_back( bounded_string_array( targets.raw_get<sol::table>( i ), "id row", limit,
-                                             "overmap mapgen" ) );
+                                              "overmap mapgen" ) );
     }
     json.member( "om_terrain", grid );
 }
@@ -1788,8 +2892,7 @@ void load_static_mapgen( const sol::table &options )
 {
     const std::string kind = options.get<std::string>( "kind" );
     const sol::object id = options.raw_get<sol::object>( "id" );
-    std::ostringstream serialized;
-    JsonOut json( serialized );
+    native_flex_writer json;
     json.start_object();
     if( kind == "overmap" ) {
         write_static_mapgen_targets( json, id );
@@ -1816,48 +2919,90 @@ void load_static_mapgen( const sol::table &options )
     write_static_mapgen_layout( json, options.get<sol::table>( "layout" ),
                                 std::numeric_limits<std::size_t>::max() );
     json.end_object();
-    load_mapgen( json_loader::from_string( serialized.str() ).get_object() );
+    emit_static_fb_record( static_fb_loader::mapgen, json.finish_bytes(), std::string() );
 }
 
 void load_static_mapgen_palette( const sol::table &options, const std::string &source )
 {
-    std::ostringstream serialized;
-    JsonOut json( serialized );
+    native_flex_writer json;
     json.start_object();
     json.member( "id", options.get<std::string>( "id" ) );
     write_placement_member<bool>( json, options, "extend", "extending" );
     write_mapgen_palette_fields( json, options.get<sol::table>( "layout" ), false );
     json.end_object();
-    mapgen_palette::load( json_loader::from_string( serialized.str() ).get_object(), source );
+    emit_static_fb_record( static_fb_loader::mapgen_palette, json.finish_bytes(), source );
 }
 
 using item_field = std::pair<const char *, const char *>;
 
 template<typename T>
-void write_item_fields( JsonOut &json, const sol::table &values,
+void write_item_fields( native_flex_writer &json, const sol::table &values,
                         std::initializer_list<item_field> fields )
 {
+    lua_State *L = values.lua_state();
+    const lua_stack_guard guard( L );
+    values.push( L );
+    const int tbl_idx = lua_gettop( L );
+    const bool has_mt = lua_getmetatable( L, tbl_idx ) != 0;
+    if( has_mt ) {
+        lua_pop( L, 1 );
+    }
     for( const auto &[field, native] : fields ) {
-        write_placement_member<T>( json, values, field, native );
+        lua_pushstring( L, field );
+        if( has_mt ) {
+            lua_gettable( L, tbl_idx );
+        } else {
+            lua_rawget( L, tbl_idx );
+        }
+        write_lua_field_value<T>( json, values, field, native, L, -1 );
+        lua_pop( L, 1 );
     }
 }
 
-void write_item_ids( JsonOut &json, const sol::table &values,
+void write_item_ids( native_flex_writer &json, const sol::table &values,
                      std::initializer_list<item_field> fields )
 {
+    lua_State *L = values.lua_state();
+    const lua_stack_guard guard( L );
+    values.push( L );
+    const int tbl_idx = lua_gettop( L );
+    const bool has_mt = lua_getmetatable( L, tbl_idx ) != 0;
+    if( has_mt ) {
+        lua_pop( L, 1 );
+    }
     for( const auto &[field, native] : fields ) {
-        if( const auto ids = values.get<sol::optional<sol::table>>( field ) ) {
-            json.member( native, bounded_string_array( *ids, field,
-                         std::numeric_limits<std::size_t>::max(), "static definition" ) );
+        lua_pushstring( L, field );
+        if( has_mt ) {
+            lua_gettable( L, tbl_idx );
+        } else {
+            lua_rawget( L, tbl_idx );
         }
+        const int val_idx = lua_gettop( L );
+        if( lua_type( L, val_idx ) == LUA_TTABLE ) {
+            const sol::table ids( L, val_idx );
+            write_bounded_string_array( json, native, ids, field,
+                                        std::numeric_limits<std::size_t>::max(), "static definition" );
+        } else if( lua_type( L, val_idx ) != LUA_TNIL ) {
+            if( const auto ids = values.get<sol::optional<sol::table>>( field ) ) {
+                write_bounded_string_array( json, native, *ids, field,
+                                            std::numeric_limits<std::size_t>::max(),
+                                            "static definition" );
+            }
+        }
+        lua_pop( L, 1 );
     }
 }
 
-void write_item_text_value( JsonOut &json, const char *field, const sol::object &value,
+void write_item_text_value( native_flex_writer &json, const char *field, const sol::object &value,
                             bool allow_plural, bool infer_regular_plural = false )
 {
     if( value.get_type() == sol::type::string ) {
-        json.write( value.as<std::string>() );
+        lua_State *L = value.lua_state();
+        const lua_stack_guard guard( L );
+        value.push( L );
+        std::size_t len = 0;
+        const char *s = lua_tolstring( L, -1, &len );
+        json.write( std::string_view( s, len ) );
         return;
     }
     const detail::localized_text &text = value.as<const detail::localized_text &>();
@@ -1880,7 +3025,7 @@ void write_item_text_value( JsonOut &json, const char *field, const sol::object 
     json.end_object();
 }
 
-void write_item_text( JsonOut &json, const char *field, const sol::object &value,
+void write_item_text( native_flex_writer &json, const char *field, const sol::object &value,
                       bool allow_plural, bool infer_regular_plural = false )
 {
     if( value.get_type() != sol::type::nil ) {
@@ -1889,7 +3034,7 @@ void write_item_text( JsonOut &json, const char *field, const sol::object &value
     }
 }
 
-void write_item_plain_text( JsonOut &json, const char *field, const sol::object &value )
+void write_item_plain_text( native_flex_writer &json, const char *field, const sol::object &value )
 {
     if( value.get_type() == sol::type::nil ) {
         return;
@@ -1905,7 +3050,8 @@ void write_item_plain_text( JsonOut &json, const char *field, const sol::object 
     json.member( field, text.singular );
 }
 
-void write_static_native_text( JsonOut &json, const sol::table &options, const char *field,
+void write_static_native_text( native_flex_writer &json, const sol::table &options,
+                               const char *field,
                                const char *native )
 {
     const sol::object value = options.raw_get<sol::object>( field );
@@ -1922,17 +3068,46 @@ void write_static_native_text( JsonOut &json, const sol::table &options, const c
 }
 
 template<typename T>
-void write_item_keyed_values( JsonOut &json, const char *field, const sol::table &values )
+void write_item_keyed_values( native_flex_writer &json, const char *field,
+                              const sol::table &values )
 {
     json.member( field );
     json.start_object();
+    if constexpr( std::is_same_v<T, std::string> ) {
+        lua_State *L = values.lua_state();
+        const lua_stack_guard guard( L );
+        values.push( L );
+        const int tbl_idx = lua_gettop( L );
+        const bool has_mt = lua_getmetatable( L, tbl_idx ) != 0;
+        if( has_mt ) {
+            lua_pop( L, 1 );
+        } else {
+            lua_pushnil( L );
+            while( lua_next( L, tbl_idx ) != 0 ) {
+                if( lua_type( L, -2 ) == LUA_TSTRING && lua_type( L, -1 ) == LUA_TSTRING ) {
+                    std::size_t klen = 0;
+                    const char *kptr = lua_tolstring( L, -2, &klen );
+                    std::size_t vlen = 0;
+                    const char *vptr = lua_tolstring( L, -1, &vlen );
+                    json.member( std::string_view( kptr, klen ), std::string_view( vptr, vlen ) );
+                } else {
+                    const sol::object k( L, -2 );
+                    const sol::object v( L, -1 );
+                    json.member( k.as<std::string>(), v.as<T>() );
+                }
+                lua_pop( L, 1 );
+            }
+            json.end_object();
+            return;
+        }
+    }
     for( const auto &[id, value] : values ) {
         json.member( id.as<std::string>(), value.as<T>() );
     }
     json.end_object();
 }
 
-void write_item_materials( JsonOut &json, const sol::table &values, bool armor )
+void write_item_materials( native_flex_writer &json, const sol::table &values, bool armor )
 {
     json.member( "material" );
     json.start_array();
@@ -1958,7 +3133,7 @@ void write_item_materials( JsonOut &json, const sol::table &values, bool armor )
     json.end_array();
 }
 
-void write_item_armor( JsonOut &json, const sol::table &armor )
+void write_item_armor( native_flex_writer &json, const sol::table &armor )
 {
     write_item_fields<double>( json, armor, { { "thickness", "material_thickness" } } );
     write_item_fields<int>( json, armor, {
@@ -1988,9 +3163,11 @@ void write_item_armor( JsonOut &json, const sol::table &armor )
                 { "filtered_protection", "environmental_protection_with_filter" },
             } );
             write_item_fields<bool>( json, portion, { { "covers_all", "covers_all" },
-                { "rigid_only", "rigid_layer_only" } } );
+                { "rigid_only", "rigid_layer_only" }
+            } );
             write_item_fields<double>( json, portion, { { "thickness", "material_thickness" },
-                { "volume_encumbrance", "volume_encumber_modifier" } } );
+                { "volume_encumbrance", "volume_encumber_modifier" }
+            } );
             write_item_fields<std::string>( json, portion, { { "breathability", "breathability" } } );
             write_mapgen_range( json, "encumbrance", portion.raw_get<sol::object>( "encumbrance" ) );
             if( const auto materials = portion.get<sol::optional<sol::table>>( "materials" ) ) {
@@ -2002,7 +3179,7 @@ void write_item_armor( JsonOut &json, const sol::table &armor )
     }
 }
 
-void write_item_vitamins( JsonOut &json, const sol::table &values, const char *field )
+void write_item_vitamins( native_flex_writer &json, const sol::table &values, const char *field )
 {
     if( const auto nutrients = values.get<sol::optional<sol::table>>( field ) ) {
         json.member( "vitamins" );
@@ -2024,7 +3201,7 @@ void write_item_vitamins( JsonOut &json, const sol::table &values, const char *f
     }
 }
 
-void write_item_rot_spawn( JsonOut &json, const sol::table &values )
+void write_item_rot_spawn( native_flex_writer &json, const sol::table &values )
 {
     if( const auto spawn = values.get<sol::optional<sol::table>>( "rot_spawn" ) ) {
         json.member( "rot_spawn" );
@@ -2037,12 +3214,12 @@ void write_item_rot_spawn( JsonOut &json, const sol::table &values )
     }
 }
 
-void write_item_contamination( JsonOut &json, const sol::table &entries )
+void write_item_contamination( native_flex_writer &json, const sol::table &entries )
 {
     json.member( "contamination" );
     json.start_array();
     const std::size_t count = checked_dense_array_size( entries, "contamination",
-                              std::numeric_limits<std::size_t>::max() );
+        std::numeric_limits<std::size_t>::max() );
     for( std::size_t i = 1; i <= count; ++i ) {
         const sol::table entry = entries.raw_get<sol::table>( i );
         json.start_object();
@@ -2053,7 +3230,7 @@ void write_item_contamination( JsonOut &json, const sol::table &entries )
     json.end_array();
 }
 
-void write_item_comestible( JsonOut &json, const sol::table &food )
+void write_item_comestible( native_flex_writer &json, const sol::table &food )
 {
     if( const auto addictions = food.get<sol::optional<sol::table>>( "addictions" ) ) {
         if( food.raw_get<sol::object>( "addiction" ).get_type() != sol::type::nil ) {
@@ -2109,7 +3286,7 @@ void write_item_comestible( JsonOut &json, const sol::table &food )
     }
 }
 
-void write_item_damage_unit( JsonOut &json, const sol::table &unit )
+void write_item_damage_unit( native_flex_writer &json, const sol::table &unit )
 {
     json.start_object();
     json.member( "damage_type", unit.get<std::string>( "type" ) );
@@ -2134,7 +3311,7 @@ void write_item_damage_unit( JsonOut &json, const sol::table &unit )
     json.end_object();
 }
 
-void write_item_damage( JsonOut &json, const sol::table &options,
+void write_item_damage( native_flex_writer &json, const sol::table &options,
                         const char *field, const char *native )
 {
     if( const auto damage = options.get<sol::optional<sol::table>>( field ) ) {
@@ -2151,7 +3328,7 @@ void write_item_damage( JsonOut &json, const sol::table &options,
     }
 }
 
-void write_item_ammunition( JsonOut &json, const sol::table &ammo )
+void write_item_ammunition( native_flex_writer &json, const sol::table &ammo )
 {
     write_item_fields<std::string>( json, ammo, {
         { "type", "ammo_type" }, { "casing", "casing" }, { "drop", "drop" },
@@ -2185,7 +3362,7 @@ void write_item_ammunition( JsonOut &json, const sol::table &ammo )
     }
 }
 
-void write_item_magazine( JsonOut &json, const sol::table &magazine )
+void write_item_magazine( native_flex_writer &json, const sol::table &magazine )
 {
     write_item_ids( json, magazine, { { "ammunition", "ammo_type" } } );
     write_item_fields<std::string>( json, magazine, {
@@ -2197,7 +3374,8 @@ void write_item_magazine( JsonOut &json, const sol::table &magazine )
     write_placement_member<double>( json, magazine, "jam_multiplier", "mag_jam_mult" );
 }
 
-void write_item_gun_modes( JsonOut &json, const sol::table &modes, const char *field = "modes" )
+void write_item_gun_modes( native_flex_writer &json, const sol::table &modes,
+                           const char *field = "modes" )
 {
     json.member( field );
     json.start_array();
@@ -2225,7 +3403,7 @@ void write_item_gun_modes( JsonOut &json, const sol::table &modes, const char *f
         }
         if( const auto flags = mode.get<sol::optional<sol::table>>( "flags" ) ) {
             json.write( bounded_string_array( *flags, "flags",
-                        std::numeric_limits<std::size_t>::max(), "firing mode" ) );
+                                              std::numeric_limits<std::size_t>::max(), "firing mode" ) );
         }
         json.end_array();
     }
@@ -2244,14 +3422,14 @@ std::string read_item_display_id( const sol::object &value, std::string_view con
     return text.singular;
 }
 
-void write_item_counted_ids( JsonOut &json, const sol::table &options, const char *field,
+void write_item_counted_ids( native_flex_writer &json, const sol::table &options, const char *field,
                              const char *native )
 {
     if( const auto entries = options.get<sol::optional<sol::table>>( field ) ) {
         json.member( native );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *entries, field,
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t i = 1; i <= count; ++i ) {
             const sol::table entry = entries->raw_get<sol::table>( i );
             json.start_array();
@@ -2263,7 +3441,7 @@ void write_item_counted_ids( JsonOut &json, const sol::table &options, const cha
     }
 }
 
-void write_item_gun( JsonOut &json, const sol::table &gun )
+void write_item_gun( native_flex_writer &json, const sol::table &gun )
 {
     const sol::object skill = gun.raw_get<sol::object>( "skill" );
     if( skill.get_type() != sol::type::nil ) {
@@ -2317,7 +3495,8 @@ void write_item_gun( JsonOut &json, const sol::table &gun )
     }
 }
 
-void write_item_pockets( JsonOut &json, const sol::table &pockets, const char *field = "pocket_data" )
+void write_item_pockets( native_flex_writer &json, const sol::table &pockets,
+                         const char *field = "pocket_data" )
 {
     json.member( field );
     json.start_array();
@@ -2372,7 +3551,7 @@ void write_item_pockets( JsonOut &json, const sol::table &pockets, const char *f
     json.end_array();
 }
 
-void write_item_mod( JsonOut &json, const sol::table &mod )
+void write_item_mod( native_flex_writer &json, const sol::table &mod )
 {
     write_item_ids( json, mod, {
         { "ammo_types", "ammo_modifier" }, { "compatible_ammo", "acceptable_ammo" }
@@ -2385,20 +3564,20 @@ void write_item_mod( JsonOut &json, const sol::table &mod )
         json.member( "magazine_adaptor" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *adapters, "magazine_adapters",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t i = 1; i <= count; ++i ) {
             const sol::table adapter = adapters->raw_get<sol::table>( i );
             json.start_array();
             json.write( adapter.get<std::string>( "ammo_type" ) );
             json.write( bounded_string_array( adapter.get<sol::table>( "magazines" ), "magazines",
-                        std::numeric_limits<std::size_t>::max(), "magazine adapter" ) );
+                                              std::numeric_limits<std::size_t>::max(), "magazine adapter" ) );
             json.end_array();
         }
         json.end_array();
     }
 }
 
-void write_item_gunmod( JsonOut &json, const sol::table &mod )
+void write_item_gunmod( native_flex_writer &json, const sol::table &mod )
 {
     write_item_mod( json, mod );
     write_item_fields<std::string>( json, mod, {
@@ -2436,7 +3615,7 @@ void write_item_gunmod( JsonOut &json, const sol::table &mod )
         json.member( "mod_targets" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *targets, "targets",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t i = 1; i <= count; ++i ) {
             json.write( read_item_display_id( targets->raw_get<sol::object>( i ), "gun_type_type" ) );
         }
@@ -2449,13 +3628,13 @@ void write_item_gunmod( JsonOut &json, const sol::table &mod )
     }
 }
 
-void write_item_artifact( JsonOut &json, const sol::table &artifact )
+void write_item_artifact( native_flex_writer &json, const sol::table &artifact )
 {
     if( const auto passives = artifact.get<sol::optional<sol::table>>( "enchantments" ) ) {
         json.member( "passive_effects" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *passives, "enchantments",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t i = 1; i <= count; ++i ) {
             const sol::object entry = passives->raw_get<sol::object>( i );
             json.start_object();
@@ -2488,7 +3667,7 @@ void write_item_artifact( JsonOut &json, const sol::table &artifact )
     }
 }
 
-void write_item_variants( JsonOut &json, const sol::table &options )
+void write_item_variants( native_flex_writer &json, const sol::table &options )
 {
     if( const auto variants = options.get<sol::optional<sol::table>>( "variants" ) ) {
         json.member( "variants" );
@@ -2504,7 +3683,8 @@ void write_item_variants( JsonOut &json, const sol::table &options )
                 { "symbol", "symbol" }, { "color", "color" }, { "ascii_picture", "ascii_picture" },
             } );
             write_item_fields<bool>( json, variant, { { "append", "append" },
-                { "expand_snippets", "expand_snippets" } } );
+                { "expand_snippets", "expand_snippets" }
+            } );
             write_placement_member<int>( json, variant, "weight", "weight" );
             json.end_object();
         }
@@ -2512,7 +3692,7 @@ void write_item_variants( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_item_conditional_names( JsonOut &json, const sol::table &names )
+void write_item_conditional_names( native_flex_writer &json, const sol::table &names )
 {
     json.member( "conditional_names" );
     json.start_array();
@@ -2528,7 +3708,7 @@ void write_item_conditional_names( JsonOut &json, const sol::table &names )
     json.end_array();
 }
 
-void write_item_faults( JsonOut &json, const sol::table &faults )
+void write_item_faults( native_flex_writer &json, const sol::table &faults )
 {
     json.member( "faults" );
     json.start_array();
@@ -2538,15 +3718,18 @@ void write_item_faults( JsonOut &json, const sol::table &faults )
         json.start_object();
         write_item_fields<std::string>( json, fault, { { "fault", "fault" }, { "group", "fault_group" } } );
         write_item_fields<double>( json, fault, { { "weight", "weight" },
-            { "weight_multiplier", "weight_mult" } } );
+            { "weight_multiplier", "weight_mult" }
+        } );
         write_item_fields<int>( json, fault, { { "weight_override", "weight_override" },
-            { "weight_add", "weight_add" } } );
+            { "weight_add", "weight_add" }
+        } );
         json.end_object();
     }
     json.end_array();
 }
 
-void write_item_qualities( JsonOut &json, const sol::table &qualities, const char *field = "qualities" )
+void write_item_qualities( native_flex_writer &json, const sol::table &qualities,
+                           const char *field = "qualities" )
 {
     json.member( field );
     json.start_array();
@@ -2569,7 +3752,7 @@ void write_item_qualities( JsonOut &json, const sol::table &qualities, const cha
     json.end_array();
 }
 
-void write_item_inheritance( JsonOut &json, const sol::table &options )
+void write_item_inheritance( native_flex_writer &json, const sol::table &options )
 {
     if( const auto additions = options.get<sol::optional<sol::table>>( "add" ) ) {
         json.member( "extend" );
@@ -2607,7 +3790,7 @@ void write_item_inheritance( JsonOut &json, const sol::table &options )
             if( qualities->size() > 0 &&
                 qualities->raw_get<sol::object>( 1 ).get_type() == sol::type::string ) {
                 json.member( "qualities", bounded_string_array( *qualities, "qualities",
-                             std::numeric_limits<std::size_t>::max(), "item delete" ) );
+                    std::numeric_limits<std::size_t>::max(), "item delete" ) );
             } else {
                 write_item_qualities( json, *qualities, "qualities" );
             }
@@ -2648,7 +3831,8 @@ void write_item_inheritance( JsonOut &json, const sol::table &options )
         } );
         write_item_fields<int>( json, *offset, { { "warmth", "warmth" }, { "fun", "fun" },
             { "quench", "quench" }, { "range", "range" }, { "dispersion", "dispersion" },
-            { "recoil", "recoil" }, { "accuracy", "to_hit" } } );
+            { "recoil", "recoil" }, { "accuracy", "to_hit" }
+        } );
         write_item_damage( json, *offset, "damage", "damage" );
         write_item_damage( json, *offset, "ranged_damage", "ranged_damage" );
         if( const auto damage = offset->get<sol::optional<sol::table>>( "melee_damage" ) ) {
@@ -2661,7 +3845,7 @@ void write_item_inheritance( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_item_tool( JsonOut &json, const sol::table &tool )
+void write_item_tool( native_flex_writer &json, const sol::table &tool )
 {
     write_item_fields<int>( json, tool, {
         { "max_charges", "max_charges" }, { "initial_charges", "initial_charges" },
@@ -2683,7 +3867,7 @@ void write_item_tool( JsonOut &json, const sol::table &tool )
         json.member( "consumption_per_use" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *reqs, "consumption_per_use",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t i = 1; i <= count; ++i ) {
             const sol::table req = reqs->raw_get<sol::table>( i );
             json.start_object();
@@ -2695,14 +3879,14 @@ void write_item_tool( JsonOut &json, const sol::table &tool )
     }
 }
 
-void write_item_bionic( JsonOut &json, const sol::table &bionic )
+void write_item_bionic( native_flex_writer &json, const sol::table &bionic )
 {
     write_placement_member<int>( json, bionic, "difficulty", "difficulty" );
     write_placement_member<bool>( json, bionic, "upgrade", "is_upgrade" );
     write_placement_member<std::string>( json, bionic, "installation", "installation_data" );
 }
 
-void write_item_pet_armor( JsonOut &json, const sol::table &armor )
+void write_item_pet_armor( native_flex_writer &json, const sol::table &armor )
 {
     write_placement_member<double>( json, armor, "thickness", "material_thickness" );
     write_item_fields<int>( json, armor, {
@@ -2716,7 +3900,7 @@ void write_item_pet_armor( JsonOut &json, const sol::table &armor )
     write_placement_member<bool>( json, armor, "power_armor", "power_armor" );
 }
 
-void write_item_pet_equipment( JsonOut &json, const sol::table &gear )
+void write_item_pet_equipment( native_flex_writer &json, const sol::table &gear )
 {
     write_item_ids( json, gear, {
         { "slots", "pet_slots" }, { "passive_effects", "pet_passive_effects" }
@@ -2733,7 +3917,8 @@ void write_item_pet_equipment( JsonOut &json, const sol::table &gear )
     } );
 }
 
-void write_item_fermentation( JsonOut &json, const sol::table &recipe, const char *time_field,
+void write_item_fermentation( native_flex_writer &json, const sol::table &recipe,
+                              const char *time_field,
                               const char *result_field )
 {
     const sol::object duration = recipe.raw_get<sol::object>( "duration" );
@@ -2744,7 +3929,7 @@ void write_item_fermentation( JsonOut &json, const sol::table &recipe, const cha
     }
     if( const auto products = recipe.get<sol::optional<sol::table>>( "products" ) ) {
         const std::size_t count = checked_dense_array_size( *products, "fermentation products",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         json.member( result_field );
         json.start_array();
         for( std::size_t i = 1; i <= count; ++i ) {
@@ -2764,17 +3949,17 @@ void write_item_fermentation( JsonOut &json, const sol::table &recipe, const cha
     }
 }
 
-void write_item_milling( JsonOut &json, const sol::table &milling )
+void write_item_milling( native_flex_writer &json, const sol::table &milling )
 {
     write_item_fields<std::string>( json, milling, { { "result", "into" }, { "recipe", "recipe" } } );
 }
 
-void write_item_wheel( JsonOut &json, const sol::table &wheel )
+void write_item_wheel( native_flex_writer &json, const sol::table &wheel )
 {
     write_item_fields<int>( json, wheel, { { "diameter", "diameter" }, { "width", "width" } } );
 }
 
-void write_item_seed( JsonOut &json, const sol::table &seed )
+void write_item_seed( native_flex_writer &json, const sol::table &seed )
 {
     write_item_text( json, "plant_name", seed.raw_get<sol::object>( "plant_name" ), false );
     write_item_fields<std::string>( json, seed, {
@@ -2788,7 +3973,7 @@ void write_item_seed( JsonOut &json, const sol::table &seed )
         json.member( "growth_stages" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *stages, "growth_stages",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t index = 1; index <= count; ++index ) {
             const sol::table stage = stages->raw_get<sol::table>( index );
             json.start_object();
@@ -2810,7 +3995,7 @@ void write_item_seed( JsonOut &json, const sol::table &seed )
     }
 }
 
-void write_item_transformation( JsonOut &json, const sol::table &options )
+void write_item_transformation( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "target", "target" }, { "target_group", "target_group" }, { "variant_kind", "variant_type" },
@@ -2826,7 +4011,7 @@ void write_item_transformation( JsonOut &json, const sol::table &options )
     }
     if( const auto charges = options.get<sol::optional<sol::table>>( "random_charges" ) ) {
         const std::size_t count = checked_dense_array_size( *charges, "random_charges",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         json.member( "rand_target_charges" );
         json.start_array();
         for( std::size_t i = 1; i <= count; ++i ) {
@@ -2836,7 +4021,7 @@ void write_item_transformation( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_item_transform_action( JsonOut &json, const sol::table &options )
+void write_item_transform_action( native_flex_writer &json, const sol::table &options )
 {
     write_item_transformation( json, options );
     write_item_fields<int>( json, options, {
@@ -2853,18 +4038,21 @@ void write_item_transform_action( JsonOut &json, const sol::table &options )
     }
     write_item_text( json, "msg", options.raw_get<sol::object>( "message" ), false );
     write_item_text( json, "menu_text", options.raw_get<sol::object>( "menu_text" ), false );
-    write_item_text( json, "damage_failure_msg", options.raw_get<sol::object>( "damage_failure" ), false );
-    write_item_text( json, "need_charges_msg", options.raw_get<sol::object>( "need_charges_message" ), false );
-    write_item_text( json, "need_fire_msg", options.raw_get<sol::object>( "need_fire_message" ), false );
+    write_item_text( json, "damage_failure_msg", options.raw_get<sol::object>( "damage_failure" ),
+                     false );
+    write_item_text( json, "need_charges_msg", options.raw_get<sol::object>( "need_charges_message" ),
+                     false );
+    write_item_text( json, "need_fire_msg", options.raw_get<sol::object>( "need_fire_message" ),
+                     false );
 }
 
-void write_item_action_effects( JsonOut &json, const sol::table &options )
+void write_item_action_effects( native_flex_writer &json, const sol::table &options )
 {
     if( const auto effects = options.get<sol::optional<sol::table>>( "effects" ) ) {
         json.member( "effects" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *effects, "effects",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t index = 1; index <= count; ++index ) {
             const sol::table effect = effects->raw_get<sol::table>( index );
             json.start_object();
@@ -2884,12 +4072,14 @@ void write_item_action_effects( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_item_drug_action( JsonOut &json, const sol::table &options )
+void write_item_drug_action( native_flex_writer &json, const sol::table &options )
 {
     write_item_text( json, "activation_message", options.raw_get<sol::object>( "message" ), false );
     write_placement_member<int>( json, options, "moves", "moves" );
     write_placement_member<std::string>( json, options, "used_up_item", "used_up_item" );
-    for( const char *field : { "charges_needed", "tools_needed", "fields_produced" } ) {
+    for( const char *field : {
+             "charges_needed", "tools_needed", "fields_produced"
+         } ) {
         if( const auto values = options.get<sol::optional<sol::table>>( field ) ) {
             write_item_keyed_values<int>( json, field, *values );
         }
@@ -2901,7 +4091,7 @@ void write_item_drug_action( JsonOut &json, const sol::table &options )
         json.member( "vitamins" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *vitamins, "vitamins",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t index = 1; index <= count; ++index ) {
             const sol::table vitamin = vitamins->raw_get<sol::table>( index );
             json.start_array();
@@ -2917,7 +4107,7 @@ void write_item_drug_action( JsonOut &json, const sol::table &options )
     write_item_action_effects( json, options );
 }
 
-void write_item_blast( JsonOut &json, const sol::table &options )
+void write_item_blast( native_flex_writer &json, const sol::table &options )
 {
     if( const auto blast = options.get<sol::optional<sol::table>>( "blast" ) ) {
         json.member( "explosion" );
@@ -2944,7 +4134,7 @@ void write_item_blast( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_item_explosion_action( JsonOut &json, const sol::table &options )
+void write_item_explosion_action( native_flex_writer &json, const sol::table &options )
 {
     write_item_blast( json, options );
     write_item_ids( json, options, { { "ammo_effects", "effects" } } );
@@ -2961,7 +4151,7 @@ void write_item_explosion_action( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_item_heal_action( JsonOut &json, const sol::table &options )
+void write_item_heal_action( native_flex_writer &json, const sol::table &options )
 {
     json.member( "move_cost", options.get<int>( "moves" ) );
     write_placement_member<int>( json, options, "bleed", "bleed" );
@@ -2989,7 +4179,7 @@ void write_item_heal_action( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_item_instrument_action( JsonOut &json, const sol::table &options )
+void write_item_instrument_action( native_flex_writer &json, const sol::table &options )
 {
     json.member( "volume", options.get<int>( "volume" ) );
     json.member( "fun", options.get<int>( "fun" ) );
@@ -3020,7 +4210,7 @@ void write_item_instrument_action( JsonOut &json, const sol::table &options )
 }
 
 
-void write_item_native_action( JsonOut &json, const sol::object &action )
+void write_item_native_action( native_flex_writer &json, const sol::object &action )
 {
     if( action.get_type() == sol::type::string ) {
         const std::string name = action.as<std::string>();
@@ -3050,7 +4240,8 @@ void write_item_native_action( JsonOut &json, const sol::object &action )
         write_item_transform_action( json, options );
         if( kind == "delayed_transform" ) {
             write_placement_member<int>( json, options, "age", "transform_age" );
-            write_item_text( json, "not_ready_msg", options.raw_get<sol::object>( "not_ready_message" ), false );
+            write_item_text( json, "not_ready_msg", options.raw_get<sol::object>( "not_ready_message" ),
+                             false );
         }
     } else if( kind == "consume_drug" ) {
         write_item_drug_action( json, options );
@@ -3209,14 +4400,14 @@ void write_item_native_action( JsonOut &json, const sol::object &action )
     json.end_object();
 }
 
-void write_item_action_list( JsonOut &json, const sol::table &options, const char *field,
+void write_item_action_list( native_flex_writer &json, const sol::table &options, const char *field,
                              const char *native )
 {
     if( const auto actions = options.get<sol::optional<sol::table>>( field ) ) {
         json.member( native );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *actions, field,
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t index = 1; index <= count; ++index ) {
             write_item_native_action( json, actions->raw_get<sol::object>( index ) );
         }
@@ -3229,22 +4420,28 @@ void load_static_item( const sol::table &options, const std::string &source )
     struct slot_type {
         const char *field;
         const char *native_id;
-        void ( *write )( JsonOut &, const sol::table & );
+        void ( *write )( native_flex_writer &, const sol::table & );
     };
     static constexpr slot_type slot_types[] = {
         { "tool", "TOOL", write_item_tool },
         { "armor", "ARMOR", write_item_armor },
         { "pet_armor", "PET_ARMOR", write_item_pet_armor },
         { "pet_equipment", "PET_EQUIPMENT", write_item_pet_equipment },
-        { "engine", "ENGINE", []( JsonOut & out, const sol::table & engine ) {
+        {
+            "engine", "ENGINE", []( native_flex_writer & out, const sol::table & engine )
+            {
                 write_placement_member<int>( out, engine, "displacement", "displacement" );
             }
         },
-        { "brewing", "BREWABLE", []( JsonOut & out, const sol::table & recipe ) {
+        {
+            "brewing", "BREWABLE", []( native_flex_writer & out, const sol::table & recipe )
+            {
                 write_item_fermentation( out, recipe, "brew_time", "brew_results" );
             }
         },
-        { "composting", "COMPOSTABLE", []( JsonOut & out, const sol::table & recipe ) {
+        {
+            "composting", "COMPOSTABLE", []( native_flex_writer & out, const sol::table & recipe )
+            {
                 write_item_fermentation( out, recipe, "compost_time", "compost_results" );
             }
         },
@@ -3260,48 +4457,233 @@ void load_static_item( const sol::table &options, const std::string &source )
         { "toolmod", "TOOLMOD", write_item_mod },
         { "artifact", "ARTIFACT", write_item_artifact },
     };
-    std::vector<const slot_type *> slots;
-    for( const slot_type &candidate : slot_types ) {
-        if( options.raw_get<sol::object>( candidate.field ).get_type() != sol::type::nil ) {
-            slots.push_back( &candidate );
+    enum item_field_kind : std::uint8_t {
+        f_slot = 0, f_str, f_bool, f_int, f_double, f_complex
+    };
+    enum complex_bit : std::uint8_t {
+        c_subtype_order = 0, c_name, c_description, c_snippet_category,
+        c_flags, c_techniques, c_repair_materials, c_emissions,
+        c_weapon_categories, c_e_ports_banned, c_materials, c_replace_materials,
+        c_melee_damage, c_thrown_damage, c_mounted_charge, c_pockets,
+        c_variants, c_conditional_names, c_faults, c_qualities,
+        c_charged_qualities, c_properties, c_variables, c_memory_card,
+        c_minimum_skills, c_accuracy, c_transform_into, c_blast,
+        c_use_actions, c_tick_actions, c_countdown_action, c_drop_action,
+        c_inheritance
+    };
+    struct item_opt_desc {
+        item_field_kind kind;
+        std::uint8_t index;
+        const char *lua_key;
+        const char *native_key;
+    };
+    static const std::unordered_map<std::string_view, item_opt_desc> item_opt_map = {
+        { "tool", { f_slot, 0, "tool", "" } },
+        { "armor", { f_slot, 1, "armor", "" } },
+        { "pet_armor", { f_slot, 2, "pet_armor", "" } },
+        { "pet_equipment", { f_slot, 3, "pet_equipment", "" } },
+        { "engine", { f_slot, 4, "engine", "" } },
+        { "brewing", { f_slot, 5, "brewing", "" } },
+        { "composting", { f_slot, 6, "composting", "" } },
+        { "seed", { f_slot, 7, "seed", "" } },
+        { "milling", { f_slot, 8, "milling", "" } },
+        { "comestible", { f_slot, 9, "comestible", "" } },
+        { "bionic", { f_slot, 10, "bionic", "" } },
+        { "wheel", { f_slot, 11, "wheel", "" } },
+        { "ammunition", { f_slot, 12, "ammunition", "" } },
+        { "magazine", { f_slot, 13, "magazine", "" } },
+        { "gun", { f_slot, 14, "gun", "" } },
+        { "gunmod", { f_slot, 15, "gunmod", "" } },
+        { "toolmod", { f_slot, 16, "toolmod", "" } },
+        { "artifact", { f_slot, 17, "artifact", "" } },
+        { "copy_from", { f_str, 0, "copy_from", "copy-from" } },
+        { "symbol", { f_str, 0, "symbol", "symbol" } },
+        { "color", { f_str, 0, "color", "color" } },
+        { "category", { f_str, 0, "category", "category" } },
+        { "looks_like", { f_str, 0, "looks_like", "looks_like" } },
+        { "ascii_picture", { f_str, 0, "ascii_picture", "ascii_picture" } },
+        { "variant_kind", { f_str, 0, "variant_kind", "variant_type" } },
+        { "phase", { f_str, 0, "phase", "phase" } },
+        { "display_type", { f_str, 0, "display_type", "display_type" } },
+        { "default_container", { f_str, 0, "default_container", "container" } },
+        { "repair_like", { f_str, 0, "repair_like", "repairs_like" } },
+        { "mass", { f_str, 0, "mass", "weight" } },
+        { "volume", { f_str, 0, "volume", "volume" } },
+        { "length", { f_str, 0, "length", "longest_side" } },
+        { "integral_mass", { f_str, 0, "integral_mass", "integral_weight" } },
+        { "integral_volume", { f_str, 0, "integral_volume", "integral_volume" } },
+        { "integral_length", { f_str, 0, "integral_length", "integral_longest_side" } },
+        { "price", { f_str, 0, "price", "price" } },
+        { "survival_price", { f_str, 0, "survival_price", "price_postapoc" } },
+        { "revert_to", { f_str, 0, "revert_to", "revert_to" } },
+        { "e_port", { f_str, 0, "e_port", "e_port" } },
+        { "ememory_size", { f_str, 0, "ememory_size", "ememory_size" } },
+        { "transfer_rate", { f_str, 0, "transfer_rate", "etransfer_rate" } },
+        { "nanofab_template_group", { f_str, 0, "nanofab_template_group", "nanofab_template_group" } },
+        { "template_requirements", { f_str, 0, "template_requirements", "template_requirements" } },
+        { "trait_group", { f_str, 0, "trait_group", "trait_group" } },
+        { "countdown_interval", { f_str, 0, "countdown_interval", "countdown_interval" } },
+        { "stackable", { f_bool, 0, "stackable", "stackable" } },
+        { "expand_snippets", { f_bool, 0, "expand_snippets", "expand_snippets" } },
+        { "sealed_container", { f_bool, 0, "sealed_container", "sealed" } },
+        { "explode_in_fire", { f_bool, 0, "explode_in_fire", "explode_in_fire" } },
+        { "stack_size", { f_int, 0, "stack_size", "stack_size" } },
+        { "light", { f_int, 0, "light", "light" } },
+        { "max_worn", { f_int, 0, "max_worn", "max_worn" } },
+        { "min_strength", { f_int, 0, "min_strength", "min_strength" } },
+        { "throwing_recovery_chance", { f_int, 0, "throwing_recovery_chance", "thrown_recovery_chance" } },
+        { "max_energy_shield_hp", { f_int, 0, "max_energy_shield_hp", "max_energy_shield_hp" } },
+        { "fertilizer_quality", { f_double, 0, "fertilizer_quality", "fertilizer_quality" } },
+        { "solar_efficiency", { f_double, 0, "solar_efficiency", "solar_efficiency" } },
+        { "subtype_order", { f_complex, c_subtype_order, "subtype_order", "" } },
+        { "name", { f_complex, c_name, "name", "" } },
+        { "description", { f_complex, c_description, "description", "" } },
+        { "snippet_category", { f_complex, c_snippet_category, "snippet_category", "" } },
+        { "flags", { f_complex, c_flags, "flags", "" } },
+        { "techniques", { f_complex, c_techniques, "techniques", "" } },
+        { "repair_materials", { f_complex, c_repair_materials, "repair_materials", "" } },
+        { "emissions", { f_complex, c_emissions, "emissions", "" } },
+        { "weapon_categories", { f_complex, c_weapon_categories, "weapon_categories", "" } },
+        { "e_ports_banned", { f_complex, c_e_ports_banned, "e_ports_banned", "" } },
+        { "materials", { f_complex, c_materials, "materials", "" } },
+        { "replace_materials", { f_complex, c_replace_materials, "replace_materials", "" } },
+        { "melee_damage", { f_complex, c_melee_damage, "melee_damage", "" } },
+        { "thrown_damage", { f_complex, c_thrown_damage, "thrown_damage", "" } },
+        { "mounted_charge", { f_complex, c_mounted_charge, "mounted_charge", "" } },
+        { "pockets", { f_complex, c_pockets, "pockets", "" } },
+        { "variants", { f_complex, c_variants, "variants", "" } },
+        { "conditional_names", { f_complex, c_conditional_names, "conditional_names", "" } },
+        { "faults", { f_complex, c_faults, "faults", "" } },
+        { "qualities", { f_complex, c_qualities, "qualities", "" } },
+        { "charged_qualities", { f_complex, c_charged_qualities, "charged_qualities", "" } },
+        { "properties", { f_complex, c_properties, "properties", "" } },
+        { "variables", { f_complex, c_variables, "variables", "" } },
+        { "memory_card", { f_complex, c_memory_card, "memory_card", "" } },
+        { "minimum_skills", { f_complex, c_minimum_skills, "minimum_skills", "" } },
+        { "accuracy", { f_complex, c_accuracy, "accuracy", "" } },
+        { "transform_into", { f_complex, c_transform_into, "transform_into", "" } },
+        { "blast", { f_complex, c_blast, "blast", "" } },
+        { "use_actions", { f_complex, c_use_actions, "use_actions", "" } },
+        { "tick_actions", { f_complex, c_tick_actions, "tick_actions", "" } },
+        { "countdown_action", { f_complex, c_countdown_action, "countdown_action", "" } },
+        { "drop_action", { f_complex, c_drop_action, "drop_action", "" } },
+        { "inheritance", { f_complex, c_inheritance, "inheritance", "" } },
+    };
+
+    native_flex_writer json;
+    json.start_object();
+    json.member( "type", "ITEM" );
+
+    std::uint32_t slot_mask = 0;
+    std::uint64_t complex_mask = 0;
+    bool used_fast_scan = false;
+    {
+        lua_State *L = options.lua_state();
+        const lua_stack_guard guard( L );
+        options.push( L );
+        const int tbl_idx = lua_gettop( L );
+        const bool has_mt = lua_getmetatable( L, tbl_idx ) != 0;
+        if( has_mt ) {
+            lua_pop( L, 1 );
+        } else {
+            used_fast_scan = true;
+            lua_pushnil( L );
+            while( lua_next( L, tbl_idx ) != 0 ) {
+                if( lua_type( L, -2 ) == LUA_TSTRING ) {
+                    std::size_t klen = 0;
+                    const char *kptr = lua_tolstring( L, -2, &klen );
+                    const auto it = item_opt_map.find( std::string_view( kptr, klen ) );
+                    if( it != item_opt_map.end() ) {
+                        const item_opt_desc &d = it->second;
+                        switch( d.kind ) {
+                            case f_slot:
+                                slot_mask |= ( std::uint32_t{ 1 } << d.index );
+                                break;
+                            case f_str:
+                                write_lua_field_value<std::string>( json, options, d.lua_key, d.native_key, L, -1 );
+                                break;
+                            case f_bool:
+                                write_lua_field_value<bool>( json, options, d.lua_key, d.native_key, L, -1 );
+                                break;
+                            case f_int:
+                                write_lua_field_value<int>( json, options, d.lua_key, d.native_key, L, -1 );
+                                break;
+                            case f_double:
+                                write_lua_field_value<double>( json, options, d.lua_key, d.native_key, L, -1 );
+                                break;
+                            case f_complex:
+                                complex_mask |= ( std::uint64_t{ 1 } << d.index );
+                                break;
+                        }
+                    }
+                }
+                lua_pop( L, 1 );
+            }
         }
     }
-    if( const auto order = options.get<sol::optional<sol::table>>( "subtype_order" ) ) {
-        const auto names = bounded_string_array( *order, "subtype_order", std::size( slot_types ),
-                           "static item" );
-        if( names.size() != slots.size() ) {
-            throw std::invalid_argument( "subtype_order must list every configured subtype once" );
-        }
-        auto next = slots.begin();
-        for( const std::string &field : names ) {
-            const auto match = std::find_if( next, slots.end(), [&field]( const slot_type * slot ) {
-                return slot->field == field;
-            } );
-            if( match == slots.end() ) {
-                throw std::invalid_argument( "unknown or repeated item subtype: " + field );
+
+    std::vector<const slot_type *> slots;
+    if( used_fast_scan ) {
+        for( std::size_t idx = 0; idx < std::size( slot_types ); ++idx ) {
+            if( ( slot_mask & ( std::uint32_t{ 1 } << idx ) ) != 0 ) {
+                slots.push_back( &slot_types[idx] );
             }
-            std::iter_swap( next, match );
-            ++next;
+        }
+    } else {
+        for( std::size_t idx = 0; idx < std::size( slot_types ); ++idx ) {
+            if( options.raw_get<sol::object>( slot_types[idx].field ).get_type() != sol::type::nil ) {
+                slot_mask |= ( std::uint32_t{ 1 } << idx );
+                slots.push_back( &slot_types[idx] );
+            }
+        }
+        complex_mask = ~std::uint64_t{ 0 };
+    }
+
+    const auto has_complex = [complex_mask]( complex_bit b ) -> bool {
+        return ( complex_mask & ( std::uint64_t{ 1 } << b ) ) != 0;
+    };
+
+    if( has_complex( c_subtype_order ) ) {
+        if( const auto order = options.get<sol::optional<sol::table>>( "subtype_order" ) ) {
+            const auto names = bounded_string_array( *order, "subtype_order", std::size( slot_types ),
+                "static item" );
+            if( names.size() != slots.size() ) {
+                throw std::invalid_argument( "subtype_order must list every configured subtype once" );
+            }
+            auto next = slots.begin();
+            for( const std::string &field : names ) {
+                const auto match = std::find_if( next, slots.end(), [&field]( const slot_type * slot ) {
+                    return slot->field == field;
+                } );
+                if( match == slots.end() ) {
+                    throw std::invalid_argument( "unknown or repeated item subtype: " + field );
+                }
+                std::iter_swap( next, match );
+                ++next;
+            }
+        } else if( slots.size() > 1 ) {
+            throw std::invalid_argument( "ordered items with multiple subtypes require subtype_order" );
         }
     } else if( slots.size() > 1 ) {
         throw std::invalid_argument( "ordered items with multiple subtypes require subtype_order" );
     }
-    if( const auto gun = options.get<sol::optional<sol::table>>( "gun" ) ) {
-        if( const auto mod = options.get<sol::optional<sol::table>>( "gunmod" ) ) {
-            for( const char *field : { "barrel_length", "effects" } ) {
-                if( gun->raw_get<sol::object>( field ).get_type() != sol::type::nil &&
-                    mod->raw_get<sol::object>( field ).get_type() != sol::type::nil ) {
-                    throw std::invalid_argument( std::string( "gun and gunmod share the item field " ) + field );
+    constexpr std::uint32_t gun_and_mod_mask = ( std::uint32_t{ 1 } << 14 ) | ( std::uint32_t{ 1 } <<
+            15 );
+    if( ( slot_mask & gun_and_mod_mask ) == gun_and_mod_mask ) {
+        if( const auto gun = options.get<sol::optional<sol::table>>( "gun" ) ) {
+            if( const auto mod = options.get<sol::optional<sol::table>>( "gunmod" ) ) {
+                for( const char *field : {
+                         "barrel_length", "effects"
+                     } ) {
+                    if( gun->raw_get<sol::object>( field ).get_type() != sol::type::nil &&
+                        mod->raw_get<sol::object>( field ).get_type() != sol::type::nil ) {
+                        throw std::invalid_argument( std::string( "gun and gunmod share the item field " ) + field );
+                    }
                 }
             }
         }
     }
-    std::ostringstream serialized;
-    JsonOut json( serialized );
-    serialized << std::defaultfloat << std::setprecision( std::numeric_limits<double>::max_digits10 );
-    json.start_object();
     // The native factory can queue a definition whose parent is loaded later.
-    json.member( "type", "ITEM" );
     json.member( options.get_or( "abstract", false ) ? "abstract" : "id",
                  options.get<std::string>( "id" ) );
     if( !slots.empty() ) {
@@ -3312,174 +4694,255 @@ void load_static_item( const sol::table &options, const std::string &source )
         }
         json.end_array();
     }
-    write_item_text( json, "name", options.raw_get<sol::object>( "name" ), true, true );
-    write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
-    write_item_fields<std::string>( json, options, {
-        { "copy_from", "copy-from" }, { "symbol", "symbol" }, { "color", "color" },
-        { "category", "category" }, { "looks_like", "looks_like" }, { "ascii_picture", "ascii_picture" },
-        { "variant_kind", "variant_type" }, { "phase", "phase" }, { "display_type", "display_type" },
-        { "default_container", "container" }, { "repair_like", "repairs_like" },
-        { "mass", "weight" }, { "volume", "volume" }, { "length", "longest_side" },
-        { "integral_mass", "integral_weight" }, { "integral_volume", "integral_volume" },
-        { "integral_length", "integral_longest_side" },
-        { "price", "price" }, { "survival_price", "price_postapoc" },
-        { "revert_to", "revert_to" },
-        { "e_port", "e_port" }, { "ememory_size", "ememory_size" },
-        { "transfer_rate", "etransfer_rate" },
-        { "nanofab_template_group", "nanofab_template_group" },
-        { "template_requirements", "template_requirements" }, { "trait_group", "trait_group" },
-    } );
-    const sol::object snippet_cat = options.raw_get<sol::object>( "snippet_category" );
-    if( snippet_cat.get_type() == sol::type::string ) {
-        json.member( "snippet_category", snippet_cat.as<std::string>() );
-    } else if( snippet_cat.get_type() == sol::type::table ) {
-        const sol::table entries = snippet_cat.as<sol::table>();
-        json.member( "snippet_category" );
-        json.start_array();
-        const std::size_t count = checked_dense_array_size( entries, "snippet_category",
-                                  std::numeric_limits<std::size_t>::max() );
-        for( std::size_t i = 1; i <= count; ++i ) {
-            const sol::table entry = entries.raw_get<sol::table>( i );
+    if( has_complex( c_name ) ) {
+        write_item_text( json, "name", options.raw_get<sol::object>( "name" ), true, true );
+    }
+    if( has_complex( c_description ) ) {
+        write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
+    }
+    if( !used_fast_scan ) {
+        write_item_fields<std::string>( json, options, {
+            { "copy_from", "copy-from" }, { "symbol", "symbol" }, { "color", "color" },
+            { "category", "category" }, { "looks_like", "looks_like" }, { "ascii_picture", "ascii_picture" },
+            { "variant_kind", "variant_type" }, { "phase", "phase" }, { "display_type", "display_type" },
+            { "default_container", "container" }, { "repair_like", "repairs_like" },
+            { "mass", "weight" }, { "volume", "volume" }, { "length", "longest_side" },
+            { "integral_mass", "integral_weight" }, { "integral_volume", "integral_volume" },
+            { "integral_length", "integral_longest_side" },
+            { "price", "price" }, { "survival_price", "price_postapoc" },
+            { "revert_to", "revert_to" },
+            { "e_port", "e_port" }, { "ememory_size", "ememory_size" },
+            { "transfer_rate", "etransfer_rate" },
+            { "nanofab_template_group", "nanofab_template_group" },
+            { "template_requirements", "template_requirements" }, { "trait_group", "trait_group" },
+        } );
+    }
+    if( has_complex( c_snippet_category ) ) {
+        const sol::object snippet_cat = options.raw_get<sol::object>( "snippet_category" );
+        if( snippet_cat.get_type() == sol::type::string ) {
+            json.member( "snippet_category", snippet_cat.as<std::string>() );
+        } else if( snippet_cat.get_type() == sol::type::table ) {
+            const sol::table entries = snippet_cat.as<sol::table>();
+            json.member( "snippet_category" );
+            json.start_array();
+            const std::size_t count = checked_dense_array_size( entries, "snippet_category",
+                std::numeric_limits<std::size_t>::max() );
+            for( std::size_t i = 1; i <= count; ++i ) {
+                const sol::table entry = entries.raw_get<sol::table>( i );
+                json.start_object();
+                json.member( "id", entry.get<std::string>( "id" ) );
+                write_item_text( json, "text", entry.raw_get<sol::object>( "text" ), false );
+                json.end_object();
+            }
+            json.end_array();
+        }
+    }
+    if( !used_fast_scan ) {
+        write_item_fields<bool>( json, options, {
+            { "stackable", "stackable" }, { "expand_snippets", "expand_snippets" },
+            { "sealed_container", "sealed" }, { "explode_in_fire", "explode_in_fire" },
+        } );
+        write_item_fields<int>( json, options, {
+            { "stack_size", "stack_size" }, { "light", "light" }, { "max_worn", "max_worn" },
+            { "min_strength", "min_strength" }, { "throwing_recovery_chance", "thrown_recovery_chance" },
+            { "max_energy_shield_hp", "max_energy_shield_hp" },
+        } );
+        write_item_fields<double>( json, options, {
+            { "fertilizer_quality", "fertilizer_quality" }, { "solar_efficiency", "solar_efficiency" },
+        } );
+    }
+    constexpr std::uint64_t id_arrays_mask =
+        ( std::uint64_t{ 1 } << c_flags ) |
+        ( std::uint64_t{ 1 } << c_techniques ) |
+        ( std::uint64_t{ 1 } << c_repair_materials ) |
+        ( std::uint64_t{ 1 } << c_emissions ) |
+        ( std::uint64_t{ 1 } << c_weapon_categories ) |
+        ( std::uint64_t{ 1 } << c_e_ports_banned );
+    if( ( complex_mask & id_arrays_mask ) != 0 ) {
+        if( has_complex( c_flags ) ) {
+            write_item_ids( json, options, { { "flags", "flags" } } );
+        }
+        if( has_complex( c_techniques ) ) {
+            write_item_ids( json, options, { { "techniques", "techniques" } } );
+        }
+        if( has_complex( c_repair_materials ) ) {
+            write_item_ids( json, options, { { "repair_materials", "repairs_with" } } );
+        }
+        if( has_complex( c_emissions ) ) {
+            write_item_ids( json, options, { { "emissions", "emits" } } );
+        }
+        if( has_complex( c_weapon_categories ) ) {
+            write_item_ids( json, options, { { "weapon_categories", "weapon_category" } } );
+        }
+        if( has_complex( c_e_ports_banned ) ) {
+            write_item_ids( json, options, { { "e_ports_banned", "e_ports_banned" } } );
+        }
+    }
+    if( has_complex( c_materials ) ) {
+        if( const auto materials = options.get<sol::optional<sol::table>>( "materials" ) ) {
+            write_item_materials( json, *materials, false );
+        }
+    }
+    if( has_complex( c_replace_materials ) ) {
+        if( const auto replace = options.get<sol::optional<sol::table>>( "replace_materials" ) ) {
+            write_item_keyed_values<std::string>( json, "replace_materials", *replace );
+        }
+    }
+    if( has_complex( c_melee_damage ) ) {
+        if( const auto damage = options.get<sol::optional<sol::table>>( "melee_damage" ) ) {
+            write_item_keyed_values<double>( json, "melee_damage", *damage );
+        }
+    }
+    if( has_complex( c_thrown_damage ) ) {
+        write_item_damage( json, options, "thrown_damage", "thrown_damage" );
+    }
+    if( has_complex( c_mounted_charge ) ) {
+        const sol::object mounted = options.raw_get<sol::object>( "mounted_charge" );
+        if( mounted.get_type() == sol::type::table ) {
+            const sol::table charge = mounted.as<sol::table>();
+            json.member( "mounted_charge" );
             json.start_object();
-            json.member( "id", entry.get<std::string>( "id" ) );
-            write_item_text( json, "text", entry.raw_get<sol::object>( "text" ), false );
+            json.member( "max_steps", charge.get<int>( "max_steps" ) );
+            json.member( "damage_type", charge.get<std::string>( "damage_type" ) );
+            json.member( "multiplier_per_step", charge.get<double>( "multiplier_per_step" ) );
+            json.member( "max_multiplier", charge.get<double>( "max_multiplier" ) );
+            json.end_object();
+        } else if( mounted.get_type() == sol::type::boolean && !mounted.as<bool>() ) {
+            json.member( "mounted_charge" );
+            json.write_null();
+        } else if( mounted.get_type() != sol::type::nil ) {
+            throw std::invalid_argument( "mounted_charge requires a profile or false" );
+        }
+    }
+    if( has_complex( c_pockets ) ) {
+        if( const auto pockets = options.get<sol::optional<sol::table>>( "pockets" ) ) {
+            write_item_pockets( json, *pockets );
+        }
+    }
+    if( has_complex( c_variants ) ) {
+        write_item_variants( json, options );
+    }
+    if( has_complex( c_conditional_names ) ) {
+        if( const auto names = options.get<sol::optional<sol::table>>( "conditional_names" ) ) {
+            write_item_conditional_names( json, *names );
+        }
+    }
+    if( has_complex( c_faults ) ) {
+        if( const auto faults = options.get<sol::optional<sol::table>>( "faults" ) ) {
+            write_item_faults( json, *faults );
+        }
+    }
+    if( has_complex( c_qualities ) ) {
+        if( const auto qualities = options.get<sol::optional<sol::table>>( "qualities" ) ) {
+            write_item_qualities( json, *qualities );
+        }
+    }
+    if( has_complex( c_charged_qualities ) ) {
+        if( const auto qualities = options.get<sol::optional<sol::table>>( "charged_qualities" ) ) {
+            write_item_qualities( json, *qualities, "charged_qualities" );
+        }
+    }
+    if( has_complex( c_properties ) ) {
+        if( const auto properties = options.get<sol::optional<sol::table>>( "properties" ) ) {
+            write_item_keyed_values<std::string>( json, "properties", *properties );
+        }
+    }
+    if( has_complex( c_variables ) ) {
+        if( const auto variables = options.get<sol::optional<sol::table>>( "variables" ) ) {
+            json.member( "variables" );
+            json.start_object();
+            for( const auto &[key, value] : *variables ) {
+                const std::string name = key.as<std::string>();
+                if( value.get_type() == sol::type::string ) {
+                    json.member( name, value.as<std::string>() );
+                } else if( value.get_type() == sol::type::boolean ) {
+                    json.member( name, value.as<bool>() );
+                } else if( value.get_type() == sol::type::number ) {
+                    if( value.is<lua_Integer>() ) {
+                        json.member( name, static_cast<std::int64_t>( value.as<lua_Integer>() ) );
+                    } else {
+                        json.member( name, value.as<double>() );
+                    }
+                } else {
+                    throw std::invalid_argument( "item variable requires a string, number or boolean" );
+                }
+            }
             json.end_object();
         }
-        json.end_array();
     }
-    write_item_fields<bool>( json, options, {
-        { "stackable", "stackable" }, { "expand_snippets", "expand_snippets" },
-        { "sealed_container", "sealed" }, { "explode_in_fire", "explode_in_fire" },
-    } );
-    write_item_fields<int>( json, options, {
-        { "stack_size", "stack_size" }, { "light", "light" }, { "max_worn", "max_worn" },
-        { "min_strength", "min_strength" }, { "throwing_recovery_chance", "thrown_recovery_chance" },
-        { "max_energy_shield_hp", "max_energy_shield_hp" },
-    } );
-    write_item_fields<double>( json, options, {
-        { "fertilizer_quality", "fertilizer_quality" }, { "solar_efficiency", "solar_efficiency" },
-    } );
-    write_item_ids( json, options, {
-        { "flags", "flags" }, { "techniques", "techniques" }, { "repair_materials", "repairs_with" },
-        { "emissions", "emits" }, { "weapon_categories", "weapon_category" },
-        { "e_ports_banned", "e_ports_banned" },
-    } );
-    if( const auto materials = options.get<sol::optional<sol::table>>( "materials" ) ) {
-        write_item_materials( json, *materials, false );
-    }
-    if( const auto replace = options.get<sol::optional<sol::table>>( "replace_materials" ) ) {
-        write_item_keyed_values<std::string>( json, "replace_materials", *replace );
-    }
-    if( const auto damage = options.get<sol::optional<sol::table>>( "melee_damage" ) ) {
-        write_item_keyed_values<double>( json, "melee_damage", *damage );
-    }
-    write_item_damage( json, options, "thrown_damage", "thrown_damage" );
-    const sol::object mounted = options.raw_get<sol::object>( "mounted_charge" );
-    if( mounted.get_type() == sol::type::table ) {
-        const sol::table charge = mounted.as<sol::table>();
-        json.member( "mounted_charge" );
-        json.start_object();
-        json.member( "max_steps", charge.get<int>( "max_steps" ) );
-        json.member( "damage_type", charge.get<std::string>( "damage_type" ) );
-        json.member( "multiplier_per_step", charge.get<double>( "multiplier_per_step" ) );
-        json.member( "max_multiplier", charge.get<double>( "max_multiplier" ) );
-        json.end_object();
-    } else if( mounted.get_type() == sol::type::boolean && !mounted.as<bool>() ) {
-        json.member( "mounted_charge" );
-        json.write_null();
-    } else if( mounted.get_type() != sol::type::nil ) {
-        throw std::invalid_argument( "mounted_charge requires a profile or false" );
-    }
-    if( const auto pockets = options.get<sol::optional<sol::table>>( "pockets" ) ) {
-        write_item_pockets( json, *pockets );
-    }
-    write_item_variants( json, options );
-    if( const auto names = options.get<sol::optional<sol::table>>( "conditional_names" ) ) {
-        write_item_conditional_names( json, *names );
-    }
-    if( const auto faults = options.get<sol::optional<sol::table>>( "faults" ) ) {
-        write_item_faults( json, *faults );
-    }
-    if( const auto qualities = options.get<sol::optional<sol::table>>( "qualities" ) ) {
-        write_item_qualities( json, *qualities );
-    }
-    if( const auto qualities = options.get<sol::optional<sol::table>>( "charged_qualities" ) ) {
-        write_item_qualities( json, *qualities, "charged_qualities" );
-    }
-    if( const auto properties = options.get<sol::optional<sol::table>>( "properties" ) ) {
-        write_item_keyed_values<std::string>( json, "properties", *properties );
-    }
-    if( const auto variables = options.get<sol::optional<sol::table>>( "variables" ) ) {
-        json.member( "variables" );
-        json.start_object();
-        for( const auto &[key, value] : *variables ) {
-            const std::string name = key.as<std::string>();
-            if( value.get_type() == sol::type::string ) {
-                json.member( name, value.as<std::string>() );
-            } else if( value.get_type() == sol::type::boolean ) {
-                json.member( name, value.as<bool>() );
-            } else if( value.get_type() == sol::type::number ) {
-                if( value.is<lua_Integer>() ) {
-                    json.member( name, static_cast<std::int64_t>( value.as<lua_Integer>() ) );
-                } else {
-                    json.member( name, value.as<double>() );
-                }
-            } else {
-                throw std::invalid_argument( "item variable requires a string, number or boolean" );
-            }
+    if( has_complex( c_memory_card ) ) {
+        if( const auto memory_card = options.get<sol::optional<sol::table>>( "memory_card" ) ) {
+            json.member( "memory_card" );
+            json.start_object();
+            write_item_fields<int>( json, *memory_card, {
+                { "data_chance", "data_chance" }, { "recipes_chance", "recipes_chance" },
+                { "recipes_amount", "recipes_amount" }, { "recipes_level_min", "recipes_level_min" },
+                { "recipes_level_max", "recipes_level_max" },
+            } );
+            write_item_ids( json, *memory_card, { { "recipes_categories", "recipes_categories" } } );
+            json.end_object();
         }
-        json.end_object();
     }
-    if( const auto memory_card = options.get<sol::optional<sol::table>>( "memory_card" ) ) {
-        json.member( "memory_card" );
-        json.start_object();
-        write_item_fields<int>( json, *memory_card, {
-            { "data_chance", "data_chance" }, { "recipes_chance", "recipes_chance" },
-            { "recipes_amount", "recipes_amount" }, { "recipes_level_min", "recipes_level_min" },
-            { "recipes_level_max", "recipes_level_max" },
-        } );
-        write_item_ids( json, *memory_card, { { "recipes_categories", "recipes_categories" } } );
-        json.end_object();
+    if( has_complex( c_minimum_skills ) ) {
+        write_item_counted_ids( json, options, "minimum_skills", "min_skills" );
     }
-    write_item_counted_ids( json, options, "minimum_skills", "min_skills" );
-    const sol::object to_hit = options.raw_get<sol::object>( "accuracy" );
-    if( to_hit.get_type() == sol::type::number ) {
-        json.member( "to_hit", to_hit.as<int>() );
-    } else if( to_hit.get_type() == sol::type::table ) {
-        json.member( "to_hit" );
-        json.start_object();
-        write_item_fields<std::string>( json, to_hit.as<sol::table>(), {
-            { "grip", "grip" }, { "length", "length" }, { "surface", "surface" }, { "balance", "balance" },
-        } );
-        json.end_object();
+    if( has_complex( c_accuracy ) ) {
+        const sol::object to_hit = options.raw_get<sol::object>( "accuracy" );
+        if( to_hit.get_type() == sol::type::number ) {
+            json.member( "to_hit", to_hit.as<int>() );
+        } else if( to_hit.get_type() == sol::type::table ) {
+            json.member( "to_hit" );
+            json.start_object();
+            write_item_fields<std::string>( json, to_hit.as<sol::table>(), {
+                { "grip", "grip" }, { "length", "length" }, { "surface", "surface" }, { "balance", "balance" },
+            } );
+            json.end_object();
+        }
     }
     for( const slot_type *slot : slots ) {
         slot->write( json, options.get<sol::table>( slot->field ) );
     }
-    if( const auto transformation = options.get<sol::optional<sol::table>>( "transform_into" ) ) {
-        json.member( "transform_into" );
-        json.start_object();
-        write_item_transformation( json, *transformation );
-        json.end_object();
+    if( has_complex( c_transform_into ) ) {
+        if( const auto transformation = options.get<sol::optional<sol::table>>( "transform_into" ) ) {
+            json.member( "transform_into" );
+            json.start_object();
+            write_item_transformation( json, *transformation );
+            json.end_object();
+        }
     }
-    write_item_blast( json, options );
-    write_item_action_list( json, options, "use_actions", "use_action" );
-    write_item_action_list( json, options, "tick_actions", "tick_action" );
-    for( const char *field : { "countdown_action", "drop_action" } ) {
-        const sol::object action = options.raw_get<sol::object>( field );
+    if( has_complex( c_blast ) ) {
+        write_item_blast( json, options );
+    }
+    if( has_complex( c_use_actions ) ) {
+        write_item_action_list( json, options, "use_actions", "use_action" );
+    }
+    if( has_complex( c_tick_actions ) ) {
+        write_item_action_list( json, options, "tick_actions", "tick_action" );
+    }
+    if( has_complex( c_countdown_action ) ) {
+        const sol::object action = options.raw_get<sol::object>( "countdown_action" );
         if( action.get_type() != sol::type::nil ) {
-            json.member( field );
+            json.member( "countdown_action" );
             write_item_native_action( json, action );
         }
     }
-    write_placement_member<std::string>( json, options, "countdown_interval", "countdown_interval" );
-    if( const auto inheritance = options.get<sol::optional<sol::table>>( "inheritance" ) ) {
-        write_item_inheritance( json, *inheritance );
+    if( has_complex( c_drop_action ) ) {
+        const sol::object action = options.raw_get<sol::object>( "drop_action" );
+        if( action.get_type() != sol::type::nil ) {
+            json.member( "drop_action" );
+            write_item_native_action( json, action );
+        }
+    }
+    if( !used_fast_scan ) {
+        write_placement_member<std::string>( json, options, "countdown_interval", "countdown_interval" );
+    }
+    if( has_complex( c_inheritance ) ) {
+        if( const auto inheritance = options.get<sol::optional<sol::table>>( "inheritance" ) ) {
+            write_item_inheritance( json, *inheritance );
+        }
     }
     json.end_object();
-    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
-    static_cast<void>( definition.get_string( "type" ) );
-    items::load( definition, source );
+    emit_static_fb_record( static_fb_loader::item, json.finish_bytes(), source );
 }
 
 sol::table static_gendered_dialogue_line( sol::this_state state, const std::string &text,
@@ -3581,13 +5044,13 @@ void install_static_dialogue_predicates( sol::state &lua, sol::table &content,
         const std::string &mod_id )
 {
     sol::table predicates = lua.create_table();
-    predicates.set_function( "handler", [mod_id]( const std::string & id ) {
+    predicates.set_function( "handler", [&mod_id]( const std::string & id ) {
         if( id.empty() ) {
             throw std::invalid_argument( "dialogue predicate handler id must not be empty" );
         }
-        return static_dialogue_predicate{ [mod_id, id]( const const_dialogue & d )
+        return static_dialogue_predicate{ [owner = mod_id, id]( const const_dialogue & d )
         {
-            return detail::invoke_ordered_dialogue_predicate( mod_id, id, d );
+            return detail::invoke_ordered_dialogue_predicate( owner, id, d );
         } };
     } );
     predicates.set_function( "all", []( const sol::table & values ) {
@@ -3734,7 +5197,7 @@ dynamic_line_t read_static_dialogue_line( const sol::object &line, const std::st
     }
     const sol::table roles = options.get<sol::table>( "participants" );
     std::vector<std::string> participants = bounded_string_array( roles, "participants", 2,
-                                            "gendered dialogue" );
+        "gendered dialogue" );
     for( std::string &role : participants ) {
         role = dialogue_participant_is_interlocutor( role ) ? "npc" : "u";
     }
@@ -3783,20 +5246,22 @@ void install_static_dialogue_actions( sol::state &lua, sol::table &content,
                                       const std::string &mod_id )
 {
     sol::table actions = lua.create_table();
-    actions.set_function( "handler", [mod_id]( const std::string & id ) {
+    actions.set_function( "handler", [&mod_id]( const std::string & id ) {
         if( id.empty() ) {
             throw std::invalid_argument( "dialogue action handler id must not be empty" );
         }
-        return static_dialogue_action{ talk_effect_fun_t( talk_effect_fun_t::func( [mod_id, id]( ::dialogue & d )
+        return static_dialogue_action{ talk_effect_fun_t( talk_effect_fun_t::func( [owner = mod_id, id]( ::dialogue & d )
         {
-            detail::invoke_ordered_dialogue_action( mod_id, id, d );
+            detail::invoke_ordered_dialogue_action( owner, id, d );
         } ) ) };
     } );
-    actions.set_function( "update_map", []( const sol::object & id, const sol::optional<sol::object> & terrain ) {
+    actions.set_function( "update_map", []( const sol::object & id,
+    const sol::optional<sol::object> &terrain ) {
         return static_dialogue_action{ talk_effect_fun_t( dialogue_action::update_map(
                     read_dialogue_string_value( id ), terrain ? read_dialogue_string_value( *terrain ) : str_or_var{} ) ) };
     } );
-    actions.set_function( "notify_player", []( const sol::object & message, sol::optional<std::string> severity ) {
+    actions.set_function( "notify_player", []( const sol::object & message,
+    sol::optional<std::string> severity ) {
         const auto type = io::string_to_enum_optional<game_message_type>( severity.value_or( "neutral" ) );
         if( !type ) {
             throw std::invalid_argument( "unknown dialogue message severity" );
@@ -3902,13 +5367,13 @@ void install_static_dialogue_actions( sol::state &lua, sol::table &content,
                     dbl_or_var( options.get_or( "intensity", 0.0 ) ) ) ) };
     } );
     actions.set_function( "remove_effects", []( const std::string & role, const sol::table & ids,
-    const sol::optional<sol::object> & body_part ) {
+    const sol::optional<sol::object> &body_part ) {
         return static_dialogue_action{ talk_effect_fun_t( dialogue_action::remove_effects(
                     dialogue_participant_is_interlocutor( role ), read_dialogue_string_values( ids ),
                     body_part ? read_dialogue_string_value( *body_part ) : str_or_var( "bp_null" ) ) ) };
     } );
     actions.set_function( "replace_mutation", []( const std::string & role, const sol::object & id,
-    const sol::optional<sol::object> & variant ) {
+    const sol::optional<sol::object> &variant ) {
         return static_dialogue_action{ talk_effect_fun_t( dialogue_action::replace_mutation(
                     dialogue_participant_is_interlocutor( role ), read_dialogue_string_value( id ),
                     variant ? read_dialogue_string_value( *variant ) : str_or_var{} ) ) };
@@ -3935,8 +5400,7 @@ void install_static_dialogue_actions( sol::state &lua, sol::table &content,
                     dbl_or_var( debt.value_or( 0 ) ) ) ) };
     } );
     actions.set_function( "give_equipment", []( const sol::object & allowance ) {
-        std::ostringstream serialized;
-        JsonOut json( serialized );
+        native_flex_writer json;
         json.start_object();
         json.member( "give_equipment" );
         json.start_object();
@@ -3961,7 +5425,7 @@ void install_static_dialogue_actions( sol::state &lua, sol::table &content,
         }
         json.end_object();
         json.end_object();
-        const JsonObject parsed_json = json_loader::from_string( serialized.str() ).get_object();
+        const JsonObject parsed_json = json.finish().get_object();
         talk_effect_t parsed;
         parsed.parse_sub_effect( parsed_json, {} );
         if( parsed.effects.size() != 1 ) {
@@ -3996,7 +5460,7 @@ std::optional<talk_effect_t> read_static_dialogue_actions( const sol::table &out
     }
     const std::size_t count = checked_dense_array_size( *actions, "dialogue actions",
         std::numeric_limits<std::size_t>::max() );
-    const JsonObject empty = json_loader::from_string( "{}" ).get_object();
+    const JsonObject empty = empty_native_object();
     talk_effect_t result;
     for( std::size_t i = 1; i <= count; ++i ) {
         const sol::object action = actions->raw_get<sol::object>( i );
@@ -4104,12 +5568,12 @@ talk_response_rules read_static_dialogue_rules( const sol::table &reply, const s
     return rules;
 }
 
-void write_static_dialogue_native_actions( JsonOut &json, const sol::table &options,
+void write_static_dialogue_native_actions( native_flex_writer &json, const sol::table &options,
         const char *context )
 {
     if( const auto actions = options.get<sol::optional<sol::table>>( "native_actions" ) ) {
         const auto names = bounded_string_array( *actions, "native_actions",
-                           std::numeric_limits<std::size_t>::max(), context );
+            std::numeric_limits<std::size_t>::max(), context );
         for( const std::string &name : names ) {
             validate_builtin_dialogue_action( name );
         }
@@ -4117,11 +5581,13 @@ void write_static_dialogue_native_actions( JsonOut &json, const sol::table &opti
     }
 }
 
-void write_static_dialogue_outcome( JsonOut &json, const sol::table &outcome )
+void write_static_dialogue_outcome( native_flex_writer &json, const sol::table &outcome )
 {
     write_placement_member<std::string>( json, outcome, "next_topic", "topic" );
     write_static_dialogue_native_actions( json, outcome, "dialogue reply" );
-    for( const char *field : { "opinion", "mission_opinion" } ) {
+    for( const char *field : {
+             "opinion", "mission_opinion"
+         } ) {
         if( const auto opinion = outcome.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
             json.start_object();
@@ -4134,7 +5600,7 @@ void write_static_dialogue_outcome( JsonOut &json, const sol::table &outcome )
     }
 }
 
-void write_static_dialogue_trial( JsonOut &json, const sol::table &trial )
+void write_static_dialogue_trial( native_flex_writer &json, const sol::table &trial )
 {
     static const std::map<std::string_view, std::string_view> trial_kinds = {
         { "none", "NONE" }, { "lie", "LIE" }, { "persuade", "PERSUADE" },
@@ -4167,7 +5633,7 @@ void write_static_dialogue_trial( JsonOut &json, const sol::table &trial )
     json.end_object();
 }
 
-void write_static_dialogue_reply( JsonOut &json, const sol::table &reply )
+void write_static_dialogue_reply( native_flex_writer &json, const sol::table &reply )
 {
     json.start_object();
     write_item_text( json, "text", reply.raw_get<sol::object>( "text" ), false );
@@ -4178,11 +5644,14 @@ void write_static_dialogue_reply( JsonOut &json, const sol::table &reply )
     write_item_fields<std::string>( json, reply, {
         { "show_reason", "show_reason" }, { "failure_topic", "failure_topic" },
     } );
-    write_item_text( json, "failure_explanation", reply.raw_get<sol::object>( "failure_explanation" ), false );
+    write_item_text( json, "failure_explanation", reply.raw_get<sol::object>( "failure_explanation" ),
+                     false );
     if( const auto trial = reply.get<sol::optional<sol::table>>( "trial" ) ) {
         write_static_dialogue_trial( json, *trial );
     }
-    for( const char *field : { "success", "failure" } ) {
+    for( const char *field : {
+             "success", "failure"
+         } ) {
         if( const auto outcome = reply.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
             json.start_object();
@@ -4195,18 +5664,14 @@ void write_static_dialogue_reply( JsonOut &json, const sol::table &reply )
 
 void load_static_dialogue_topic( const sol::table &options, const std::string &source )
 {
-    std::ostringstream serialized;
-    JsonOut json( serialized );
+    native_flex_writer json;
     json.start_object();
     json.member( "type", "talk_topic" );
     const sol::object id = options.raw_get<sol::object>( "id" );
     if( id.get_type() == sol::type::table ) {
-        const auto ids = bounded_string_array( id.as<sol::table>(), "id",
-                         std::numeric_limits<std::size_t>::max(), "dialogue topic" );
-        if( ids.empty() ) {
-            throw std::invalid_argument( "dialogue topic requires at least one id" );
-        }
-        json.member( "id", ids );
+        write_bounded_string_array( json, "id", id.as<sol::table>(), "id",
+                                    std::numeric_limits<std::size_t>::max(), "dialogue topic",
+                                    "dialogue topic requires at least one id" );
     } else {
         json.member( "id", id.as<std::string>() );
     }
@@ -4259,12 +5724,12 @@ void load_static_dialogue_topic( const sol::table &options, const std::string &s
 
     // Use the native accumulator so same-id contributions and aliases retain
     // their JSON/Lua interleaving, including replies inserted above exits.
-    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
+    const JsonObject definition = json.finish().get_object();
     static_cast<void>( definition.get_string( "type" ) );
     load_ordered_talk_topic( definition, source, &rules );
 }
 
-void write_static_mutation_links( JsonOut &json, const sol::table &options )
+void write_static_mutation_links( native_flex_writer &json, const sol::table &options )
 {
     write_item_ids( json, options, {
         { "categories", "category" }, { "prerequisites", "prereqs" },
@@ -4276,7 +5741,8 @@ void write_static_mutation_links( JsonOut &json, const sol::table &options )
 }
 
 template<typename T>
-void write_static_mutation_pairs( JsonOut &json, const sol::table &options, const char *field,
+void write_static_mutation_pairs( native_flex_writer &json, const sol::table &options,
+                                  const char *field,
                                   const char *native )
 {
     if( const auto entries = options.get<sol::optional<sol::table>>( field ) ) {
@@ -4292,7 +5758,7 @@ void write_static_mutation_pairs( JsonOut &json, const sol::table &options, cons
     }
 }
 
-void write_static_mutation_nutrition( JsonOut &json, const sol::table &options )
+void write_static_mutation_nutrition( native_flex_writer &json, const sol::table &options )
 {
     write_static_mutation_pairs<int>( json, options, "vitamin_intervals", "vitamin_rates" );
     if( const auto absorption = options.get<sol::optional<sol::table>>( "vitamin_absorption" ) ) {
@@ -4315,7 +5781,7 @@ void write_static_mutation_nutrition( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_mutation_protection( JsonOut &json, const sol::table &options )
+void write_static_mutation_protection( native_flex_writer &json, const sol::table &options )
 {
     if( const auto armor = options.get<sol::optional<sol::table>>( "armor" ) ) {
         json.member( "armor" );
@@ -4355,7 +5821,7 @@ void write_static_mutation_protection( JsonOut &json, const sol::table &options 
     }
 }
 
-void write_static_mutation_variants( JsonOut &json, const sol::table &options )
+void write_static_mutation_variants( native_flex_writer &json, const sol::table &options )
 {
     if( const auto variants = options.get<sol::optional<sol::table>>( "variants" ) ) {
         json.member( "variants" );
@@ -4381,16 +5847,19 @@ void write_static_mutation_variants( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_mutation_uses( JsonOut &json, const sol::table &options )
+void write_static_mutation_uses( native_flex_writer &json, const sol::table &options )
 {
-    write_item_text( json, "activation_msg", options.raw_get<sol::object>( "activation_message" ), false );
+    write_item_text( json, "activation_msg", options.raw_get<sol::object>( "activation_message" ),
+                     false );
     const sol::object cooldown = options.raw_get<sol::object>( "cooldown" );
     if( cooldown.get_type() == sol::type::string ) {
         json.member( "time", cooldown.as<std::string>() );
     } else if( cooldown.get_type() == sol::type::number ) {
         json.member( "time", cooldown.as<int>() );
     }
-    for( const char *field : { "spawn_item", "ranged_mutation" } ) {
+    for( const char *field : {
+             "spawn_item", "ranged_mutation"
+         } ) {
         if( const auto action = options.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
             json.start_object();
@@ -4410,7 +5879,7 @@ void write_static_mutation_uses( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_mutation_attacks( JsonOut &json, const sol::table &options )
+void write_static_mutation_attacks( native_flex_writer &json, const sol::table &options )
 {
     if( const auto attacks = options.get<sol::optional<sol::table>>( "attacks" ) ) {
         json.member( "attacks" );
@@ -4421,7 +5890,8 @@ void write_static_mutation_attacks( JsonOut &json, const sol::table &options )
             write_item_text( json, "attack_text_u", attack.raw_get<sol::object>( "player_message" ), false );
             write_item_text( json, "attack_text_npc", attack.raw_get<sol::object>( "npc_message" ), false );
             write_item_ids( json, attack, { { "required_mutations", "required_mutations" },
-                { "blocker_mutations", "blocker_mutations" } } );
+                { "blocker_mutations", "blocker_mutations" }
+            } );
             write_placement_member<std::string>( json, attack, "body_part", "body_part" );
             write_placement_member<int>( json, attack, "chance", "chance" );
             write_placement_member<bool>( json, attack, "native_effect", "hardcoded_effect" );
@@ -4433,7 +5903,7 @@ void write_static_mutation_attacks( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_mutation_comfort( JsonOut &json, const sol::table &options )
+void write_static_mutation_comfort( native_flex_writer &json, const sol::table &options )
 {
     if( const auto profiles = options.get<sol::optional<sol::table>>( "comfort" ) ) {
         json.member( "comfort" );
@@ -4461,9 +5931,9 @@ void write_static_mutation_comfort( JsonOut &json, const sol::table &options )
                 json.end_array();
             }
             for( const auto &[field, native] : {
-                     item_field{ "try_message", "msg_try" }, { "hint_message", "msg_hint" },
-                     { "sleep_message", "msg_sleep" },
-                 } ) {
+            item_field{ "try_message", "msg_try" }, { "hint_message", "msg_hint" },
+        { "sleep_message", "msg_sleep" },
+             } ) {
                 if( const auto message = profile.get<sol::optional<sol::table>>( field ) ) {
                     json.member( native );
                     json.start_object();
@@ -4480,8 +5950,7 @@ void write_static_mutation_comfort( JsonOut &json, const sol::table &options )
 
 void load_static_mutation( const sol::table &options, const std::string &source )
 {
-    std::ostringstream serialized;
-    JsonOut json( serialized );
+    native_flex_writer json;
     json.start_object();
     json.member( "type", "mutation" );
     json.member( options.get_or( "abstract", false ) ? "abstract" : "id",
@@ -4517,9 +5986,12 @@ void load_static_mutation( const sol::table &options, const std::string &source 
         { "remove_rigid", "remove_rigid" }, { "allowed_item_flags", "allowed_items" },
         { "integrated_armor", "integrated_armor" },
     } );
-    write_mapgen_range( json, "bodytemp_modifiers", options.raw_get<sol::object>( "body_temperature" ) );
+    write_mapgen_range( json, "bodytemp_modifiers",
+                        options.raw_get<sol::object>( "body_temperature" ) );
     write_static_mutation_links( json, options );
-    for( const auto &[field, native] : { item_field{ "add", "extend" }, { "remove", "delete" } } ) {
+    for( const auto &[field, native] : {
+             item_field{ "add", "extend" }, { "remove", "delete" }
+         } ) {
         if( const auto changes = options.get<sol::optional<sol::table>>( field ) ) {
             json.member( native );
             json.start_object();
@@ -4580,12 +6052,11 @@ void load_static_mutation( const sol::table &options, const std::string &source 
         json.end_object();
     }
     json.end_object();
-    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
-    static_cast<void>( definition.get_string( "type" ) );
-    mutation_branch::load_trait( definition, source );
+    emit_static_fb_record( static_fb_loader::mutation, json.finish_bytes(), source );
 }
 
-void write_static_monster_spell( JsonOut &json, const sol::table &options, const char *field,
+void write_static_monster_spell( native_flex_writer &json, const sol::table &options,
+                                 const char *field,
                                  const char *native )
 {
     if( const auto spell = options.get<sol::optional<sol::table>>( field ) ) {
@@ -4602,7 +6073,8 @@ void write_static_monster_spell( JsonOut &json, const sol::table &options, const
     }
 }
 
-void write_static_monster_effect_list( JsonOut &json, const sol::table &options, const char *field,
+void write_static_monster_effect_list( native_flex_writer &json, const sol::table &options,
+                                       const char *field,
                                        const char *native )
 {
     if( const auto effects = options.get<sol::optional<sol::table>>( field ) ) {
@@ -4626,7 +6098,7 @@ void write_static_monster_effect_list( JsonOut &json, const sol::table &options,
     }
 }
 
-void write_monster_gun_attack( JsonOut &json, const sol::table &gun )
+void write_monster_gun_attack( native_flex_writer &json, const sol::table &gun )
 {
     write_item_fields<std::string>( json, gun, { { "weapon", "gun_type" }, { "ammo", "ammo_type" } } );
     write_item_fields<int>( json, gun, {
@@ -4640,17 +6112,18 @@ void write_monster_gun_attack( JsonOut &json, const sol::table &gun )
         { "lock_monster", "require_targeting_monster" }, { "laser_lock", "laser_lock" },
         { "target_moving_vehicles", "target_moving_vehicles" }, { "require_sunlight", "require_sunlight" }
     } );
-    for( const auto &[field, native] : { item_field{ "description", "description" },
-             { "failure_message", "failure_msg" }, { "empty_sound", "no_ammo_sound" },
-             { "targeting_sound", "targeting_sound" }
-         } ) {
+    for( const auto &[field, native] : {
+    item_field{ "description", "description" },
+{ "failure_message", "failure_msg" }, { "empty_sound", "no_ammo_sound" },
+{ "targeting_sound", "targeting_sound" }
+     } ) {
         write_item_text( json, native, gun.raw_get<sol::object>( field ), false );
     }
     if( const auto skills = gun.get<sol::optional<sol::table>>( "skills" ) ) {
         json.member( "fake_skills" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *skills, "monster gun skills",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t index = 1; index <= count; ++index ) {
             const sol::table skill = skills->raw_get<sol::table>( index );
             json.start_array();
@@ -4664,7 +6137,7 @@ void write_monster_gun_attack( JsonOut &json, const sol::table &gun )
         json.member( "ranges" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *ranges, "monster gun ranges",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t index = 1; index <= count; ++index ) {
             const sol::table range = ranges->raw_get<sol::table>( index );
             json.start_array();
@@ -4679,7 +6152,7 @@ void write_monster_gun_attack( JsonOut &json, const sol::table &gun )
     }
 }
 
-void write_monster_attack_cooldown( JsonOut &json, const sol::object &cooldown )
+void write_monster_attack_cooldown( native_flex_writer &json, const sol::object &cooldown )
 {
     if( cooldown.get_type() != sol::type::table ) {
         json.write( cooldown.as<double>() );
@@ -4695,7 +6168,8 @@ void write_monster_attack_cooldown( JsonOut &json, const sol::object &cooldown )
     json.end_array();
 }
 
-void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack, const char *kind_field )
+void write_static_monster_attack_fields( native_flex_writer &json, const sol::table &attack,
+        const char *kind_field )
 {
     const auto kind = attack.get<sol::optional<std::string>>( "kind" );
     if( kind ) {
@@ -4751,19 +6225,19 @@ void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack
     write_item_damage( json, attack, "damage", "damage_max_instance" );
     write_static_monster_spell( json, attack, "spell", "spell_data" );
     for( const auto &[field, native] : {
-             item_field{ "message", "message" }, { "casting_message", "monster_message" },
-             { "avatar_hit", "hit_dmg_u" }, { "avatar_miss", "miss_msg_u" },
-             { "avatar_no_damage", "no_dmg_msg_u" }, { "npc_hit", "hit_dmg_npc" },
-             { "npc_miss", "miss_msg_npc" }, { "npc_no_damage", "no_dmg_msg_npc" },
-             { "avatar_thrown", "throw_msg_u" }, { "npc_thrown", "throw_msg_npc" },
-         } ) {
+    item_field{ "message", "message" }, { "casting_message", "monster_message" },
+{ "avatar_hit", "hit_dmg_u" }, { "avatar_miss", "miss_msg_u" },
+{ "avatar_no_damage", "no_dmg_msg_u" }, { "npc_hit", "hit_dmg_npc" },
+{ "npc_miss", "miss_msg_npc" }, { "npc_no_damage", "no_dmg_msg_npc" },
+{ "avatar_thrown", "throw_msg_u" }, { "npc_thrown", "throw_msg_npc" },
+     } ) {
         write_item_text( json, native, attack.raw_get<sol::object>( field ), false );
     }
     for( const auto &[field, native] : {
-             item_field{ "effects", "effects" }, { "self_effects", "self_effects" },
-             { "self_effects_always", "self_effects_always" }, { "self_effects_on_hit", "self_effects_onhit" },
-             { "self_effects_on_damage", "self_effects_ondmg" },
-         } ) {
+    item_field{ "effects", "effects" }, { "self_effects", "self_effects" },
+{ "self_effects_always", "self_effects_always" }, { "self_effects_on_hit", "self_effects_onhit" },
+{ "self_effects_on_damage", "self_effects_ondmg" },
+     } ) {
         write_static_monster_effect_list( json, attack, field, native );
     }
     if( const auto grab = attack.get<sol::optional<sol::table>>( "grab_settings" ) ) {
@@ -4785,7 +6259,7 @@ void write_static_monster_attack_fields( JsonOut &json, const sol::table &attack
     }
 }
 
-void write_static_monster_attacks( JsonOut &json, const sol::table &options )
+void write_static_monster_attacks( native_flex_writer &json, const sol::table &options )
 {
     if( const auto attacks = options.get<sol::optional<sol::table>>( "attacks" ) ) {
         json.member( "special_attacks" );
@@ -4807,7 +6281,7 @@ void write_static_monster_attacks( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_monster_drop_entries( JsonOut &json, const sol::table &entries )
+void write_static_monster_drop_entries( native_flex_writer &json, const sol::table &entries )
 {
     json.start_array();
     for( std::size_t i = 1, count = entries.size(); i <= count; ++i ) {
@@ -4815,7 +6289,9 @@ void write_static_monster_drop_entries( JsonOut &json, const sol::table &entries
         json.start_object();
         write_item_fields<std::string>( json, entry, { { "item", "item" }, { "group", "group" } } );
         write_placement_member<int>( json, entry, "probability", "prob" );
-        for( const char *field : { "count", "charges", "damage" } ) {
+        for( const char *field : {
+                 "count", "charges", "damage"
+             } ) {
             write_mapgen_range( json, field, entry.raw_get<sol::object>( field ) );
         }
         json.end_object();
@@ -4823,7 +6299,7 @@ void write_static_monster_drop_entries( JsonOut &json, const sol::table &entries
     json.end_array();
 }
 
-void write_static_monster_death( JsonOut &json, const sol::table &death )
+void write_static_monster_death( native_flex_writer &json, const sol::table &death )
 {
     const sol::object drops = death.raw_get<sol::object>( "drops" );
     if( drops.get_type() == sol::type::string ) {
@@ -4865,7 +6341,7 @@ void write_static_monster_death( JsonOut &json, const sol::table &death )
     }
 }
 
-void write_static_monster_lifecycle( JsonOut &json, const sol::table &options )
+void write_static_monster_lifecycle( native_flex_writer &json, const sol::table &options )
 {
     const sol::object upgrades = options.raw_get<sol::object>( "upgrade" );
     if( upgrades.get_type() == sol::type::boolean && !upgrades.as<bool>() ) {
@@ -4920,7 +6396,7 @@ void write_static_monster_lifecycle( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_monster_traits( JsonOut &json, const sol::table &options )
+void write_static_monster_traits( native_flex_writer &json, const sol::table &options )
 {
     write_item_ids( json, options, {
         { "flags", "flags" }, { "species", "species" }, { "categories", "categories" },
@@ -4932,7 +6408,7 @@ void write_static_monster_traits( JsonOut &json, const sol::table &options )
         json.member( "families" );
         json.start_array();
         const std::size_t count = checked_dense_array_size( *families, "weakpoint families",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t i = 1; i <= count; ++i ) {
             const sol::object value = families->raw_get<sol::object>( i );
             if( value.get_type() == sol::type::string ) {
@@ -4958,7 +6434,7 @@ void write_static_monster_traits( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_monster_effects( JsonOut &json, const sol::table &options )
+void write_static_monster_effects( native_flex_writer &json, const sol::table &options )
 {
     write_static_monster_effect_list( json, options, "attack_effects", "attack_effs" );
     if( const auto emissions = options.get<sol::optional<sol::table>>( "emissions" ) ) {
@@ -4979,7 +6455,7 @@ void write_static_monster_effects( JsonOut &json, const sol::table &options )
 }
 
 template<typename T>
-void write_static_monster_stat_changes( JsonOut &json, const sol::table &change )
+void write_static_monster_stat_changes( native_flex_writer &json, const sol::table &change )
 {
     write_item_fields<T>( json, change, {
         { "speed", "speed" }, { "hp", "hp" }, { "morale", "morale" },
@@ -4994,9 +6470,9 @@ void write_static_monster_stat_changes( JsonOut &json, const sol::table &change 
     write_item_damage( json, change, "melee_damage", "melee_damage" );
 }
 
-void write_inline_monster_weakpoints( JsonOut &json, const sol::table &options );
+void write_inline_monster_weakpoints( native_flex_writer &json, const sol::table &options );
 
-void write_static_monster_inheritance( JsonOut &json, const sol::table &inheritance )
+void write_static_monster_inheritance( native_flex_writer &json, const sol::table &inheritance )
 {
     if( const auto add = inheritance.get<sol::optional<sol::table>>( "add" ) ) {
         json.member( "extend" );
@@ -5044,8 +6520,7 @@ void write_static_monster_inheritance( JsonOut &json, const sol::table &inherita
 
 void load_static_monster( const sol::table &options, const std::string &source )
 {
-    std::ostringstream serialized;
-    JsonOut json( serialized );
+    native_flex_writer json;
     json.start_object();
     json.member( "type", "MONSTER" );
     json.member( options.get_or( "abstract", false ) ? "abstract" : "id",
@@ -5212,9 +6687,7 @@ void load_static_monster( const sol::table &options, const std::string &source )
         write_static_monster_inheritance( json, *inheritance );
     }
     json.end_object();
-    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
-    static_cast<void>( definition.get_string( "type" ) );
-    MonsterGenerator::generator().load_monster( definition, source );
+    emit_static_fb_record( static_fb_loader::monster, json.finish_bytes(), source );
 }
 
 void load_static_overmap_terrain( const sol::table &options, const std::string &source,
@@ -5231,8 +6704,7 @@ void load_static_overmap_terrain( const sol::table &options, const std::string &
                                   "overmap terrain requires exactly one of id or abstract" );
     }
 
-    std::ostringstream serialized;
-    JsonOut json( serialized );
+    native_flex_writer json;
     json.start_object();
     json.member( "type", "overmap_terrain" );
     if( abstract ) {
@@ -5268,23 +6740,29 @@ void load_static_overmap_terrain( const sol::table &options, const std::string &
     const sol::object looks_like = options.raw_get<sol::object>( "looks_like" );
     if( looks_like.get_type() == sol::type::table ) {
         json.member( "looks_like", bounded_string_array( looks_like.as<sol::table>(),
-                     "looks_like", 256, context ) );
+                "looks_like", 256, context ) );
     } else if( looks_like.valid() && looks_like.get_type() != sol::type::nil ) {
         json.member( "looks_like", looks_like.as<std::string>() );
     }
     if( const auto density = options.get<sol::optional<int>>( "monster_density" ) ) {
         json.member( "mondensity", *density );
     }
-    for( const char *key : { "flags", "post_process_generators" } ) {
+    for( const char *key : {
+             "flags", "post_process_generators"
+         } ) {
         if( const auto values = options.get<sol::optional<sol::table>>( key ) ) {
             json.member( key, bounded_string_array( *values, key, 256, context ) );
         }
     }
-    for( const char *operation : { "extend", "delete" } ) {
+    for( const char *operation : {
+             "extend", "delete"
+         } ) {
         if( const auto changes = options.get<sol::optional<sol::table>>( operation ) ) {
             json.member( operation );
             json.start_object();
-            for( const char *key : { "flags", "post_process_generators" } ) {
+            for( const char *key : {
+                     "flags", "post_process_generators"
+                 } ) {
                 if( const auto values = changes->get<sol::optional<sol::table>>( key ) ) {
                     json.member( key, bounded_string_array( *values, key, 256, context ) );
                 }
@@ -5302,8 +6780,9 @@ void load_static_overmap_terrain( const sol::table &options, const std::string &
             if( population->size() != 2 ) {
                 throw std::runtime_error( "overmap terrain spawn population requires {minimum, maximum}" );
             }
-            json.member( "population", std::array<int, 2>{ population->get<int>( 1 ),
-                         population->get<int>( 2 ) } );
+            json.member( "population", std::array<int, 2> { population->get<int>( 1 ),
+                    population->get<int>( 2 )
+                                                          } );
         }
         if( const auto chance = spawns->get<sol::optional<int>>( "chance" ) ) {
             json.member( "chance", *chance );
@@ -5327,13 +6806,11 @@ void load_static_overmap_terrain( const sol::table &options, const std::string &
     json.end_object();
 
     // The native loader preserves inheritance, deferred parents and mapgen registration order.
-    const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
-    static_cast<void>( definition.get_string( "type" ) );
-    overmap_terrains::load( definition, source );
+    emit_static_fb_record( static_fb_loader::overmap_terrain, json.finish_bytes(), source );
 }
 
 template<typename Value, typename Writer>
-void write_static_values( JsonOut &json, const sol::table &values, const char *field,
+void write_static_values( native_flex_writer &json, const sol::table &values, const char *field,
                           Writer write_value )
 {
     const std::size_t count = checked_dense_array_size( values, field,
@@ -5346,7 +6823,8 @@ void write_static_values( JsonOut &json, const sol::table &values, const char *f
 }
 
 template<typename Writer>
-void write_static_catalog_array( JsonOut &json, const sol::table &options, const char *field,
+void write_static_catalog_array( native_flex_writer &json, const sol::table &options,
+                                 const char *field,
                                  const char *native, Writer write_entry )
 {
     const auto entries = options.get<sol::optional<sol::table>>( field );
@@ -5357,7 +6835,7 @@ void write_static_catalog_array( JsonOut &json, const sol::table &options, const
     write_static_values<sol::table>( json, *entries, field, write_entry );
 }
 
-void write_static_trait_group_entry( JsonOut &json, const sol::table &entry )
+void write_static_trait_group_entry( native_flex_writer &json, const sol::table &entry )
 {
     json.start_object();
     write_item_fields<std::string>( json, entry, {
@@ -5372,7 +6850,7 @@ void write_static_trait_group_entry( JsonOut &json, const sol::table &entry )
     json.end_object();
 }
 
-void write_static_trait_group( JsonOut &json, const sol::table &options )
+void write_static_trait_group( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     const std::string kind = options.get<std::string>( "kind" );
@@ -5384,14 +6862,15 @@ void write_static_trait_group( JsonOut &json, const sol::table &options )
 }
 
 template<typename Number>
-void write_static_weakpoint_range( JsonOut &json, const sol::table &options, const char *field,
+void write_static_weakpoint_range( native_flex_writer &json, const sol::table &options,
+                                   const char *field,
                                    const char *native, bool duration = false )
 {
     const sol::object range = options.raw_get<sol::object>( field );
     if( range.get_type() == sol::type::nil ) {
         return;
     }
-    const auto write_endpoint = [&]( const sol::object &value ) {
+    const auto write_endpoint = [&]( const sol::object & value ) {
         if( duration && value.get_type() == sol::type::string ) {
             json.write( value.as<std::string>() );
         } else {
@@ -5413,7 +6892,7 @@ void write_static_weakpoint_range( JsonOut &json, const sol::table &options, con
     }
 }
 
-void write_static_weakpoint_effect( JsonOut &json, const sol::table &entry )
+void write_static_weakpoint_effect( native_flex_writer &json, const sol::table &entry )
 {
     json.start_object();
     write_placement_member<std::string>( json, entry, "effect", "effect" );
@@ -5427,17 +6906,17 @@ void write_static_weakpoint_effect( JsonOut &json, const sol::table &entry )
     json.end_object();
 }
 
-void write_weakpoint_members( JsonOut &json, const sol::table &entry )
+void write_weakpoint_members( native_flex_writer &json, const sol::table &entry )
 {
     json.member( "id", entry.get<std::string>( "id" ) );
     write_item_text( json, "name", entry.raw_get<sol::object>( "name" ), false );
     write_placement_member<double>( json, entry, "coverage", "coverage" );
     write_item_fields<bool>( json, entry, { { "good", "is_good" }, { "head", "is_head" } } );
     for( const auto &[field, native] : {
-             item_field{ "armor_multiplier", "armor_mult" }, { "armor_penalty", "armor_penalty" },
-             { "damage_multiplier", "damage_mult" }, { "critical_multiplier", "crit_mult" },
-             { "attack_coverage", "coverage_mult" }, { "difficulty", "difficulty" }
-         } ) {
+    item_field{ "armor_multiplier", "armor_mult" }, { "armor_penalty", "armor_penalty" },
+{ "damage_multiplier", "damage_mult" }, { "critical_multiplier", "crit_mult" },
+{ "attack_coverage", "coverage_mult" }, { "difficulty", "difficulty" }
+     } ) {
         if( const auto values = entry.get<sol::optional<sol::table>>( field ) ) {
             write_item_keyed_values<double>( json, native, *values );
         }
@@ -5445,13 +6924,14 @@ void write_weakpoint_members( JsonOut &json, const sol::table &entry )
     write_static_catalog_array( json, entry, "effects", "effects", write_static_weakpoint_effect );
 }
 
-void write_inline_monster_weakpoints( JsonOut &json, const sol::table &options )
+void write_inline_monster_weakpoints( native_flex_writer &json, const sol::table &options )
 {
     write_static_catalog_array( json, options, "weakpoints", "weakpoints",
-    []( JsonOut & out, const sol::table & entry ) {
+    []( native_flex_writer & out, const sol::table & entry ) {
         out.start_object();
         write_weakpoint_members( out, entry );
-        write_placement_member<std::string>( out, entry, "target_effect", "//ccb_lua_weakpoint_target_effect" );
+        write_placement_member<std::string>( out, entry, "target_effect",
+                                             "//ccb_lua_weakpoint_target_effect" );
         out.end_object();
     } );
 }
@@ -5459,14 +6939,12 @@ void write_inline_monster_weakpoints( JsonOut &json, const sol::table &options )
 weakpoint read_static_weakpoint( const sol::table &entry, const std::string &source,
                                  const std::string &set_id )
 {
-    std::ostringstream serialized;
-    JsonOut json( serialized );
-    serialized << std::defaultfloat << std::setprecision( std::numeric_limits<double>::max_digits10 );
+    native_flex_writer json;
     json.start_object();
     write_weakpoint_members( json, entry );
     json.end_object();
     weakpoint point;
-    point.load( json_loader::from_string( serialized.str() ).get_object() );
+    point.load( json.finish().get_object() );
     if( const auto predicate = entry.get<sol::optional<static_dialogue_predicate>>( "when" ) ) {
         point.condition = predicate->test;
         point.has_condition = true;
@@ -5496,16 +6974,16 @@ void load_static_weakpoint_set( const sol::table &options, const std::string &so
     mod_tracker::assign_src( definition, source );
     const sol::table entries = options.get<sol::table>( "points" );
     const std::size_t count = checked_dense_array_size( entries, "weakpoints",
-                              std::numeric_limits<std::size_t>::max() );
+        std::numeric_limits<std::size_t>::max() );
     for( std::size_t index = 1; index <= count; ++index ) {
         definition.add_point( read_static_weakpoint( entries.raw_get<sol::table>( index ), source,
-                              definition.id.str() ) );
+            definition.id.str() ) );
     }
     definition.sort_by_coverage();
     detail::weakpoint_set_registry().insert( definition );
 }
 
-void write_static_monster_faction_relations( JsonOut &json, const sol::table &options )
+void write_static_monster_faction_relations( native_flex_writer &json, const sol::table &options )
 {
     for( const char *kind : {
              "by_mood", "neutral", "friendly", "hate"
@@ -5519,7 +6997,7 @@ void write_static_monster_faction_relations( JsonOut &json, const sol::table &op
     }
 }
 
-void write_static_monster_faction( JsonOut &json, const sol::table &options )
+void write_static_monster_faction( native_flex_writer &json, const sol::table &options )
 {
     json.member( "name", options.get<std::string>( "id" ) );
     write_placement_member<std::string>( json, options, "base", "base_faction" );
@@ -5537,7 +7015,8 @@ void write_static_monster_faction( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_int_triplet( JsonOut &json, const sol::table &entry, const char *field )
+void write_static_int_triplet( native_flex_writer &json, const sol::table &entry,
+                               const char *field )
 {
     if( const auto point = entry.get<sol::optional<sol::table>>( field ) ) {
         if( checked_dense_array_size( *point, field, 3 ) != 3 ) {
@@ -5552,7 +7031,7 @@ void write_static_int_triplet( JsonOut &json, const sol::table &entry, const cha
     }
 }
 
-void write_static_overmap_tile( JsonOut &json, const sol::table &tile )
+void write_static_overmap_tile( native_flex_writer &json, const sol::table &tile )
 {
     json.start_object();
     write_static_int_triplet( json, tile, "point" );
@@ -5563,7 +7042,7 @@ void write_static_overmap_tile( JsonOut &json, const sol::table &tile )
     json.end_object();
 }
 
-void write_static_overmap_connection( JsonOut &json, const sol::table &connection )
+void write_static_overmap_connection( native_flex_writer &json, const sol::table &connection )
 {
     json.start_object();
     write_static_int_triplet( json, connection, "point" );
@@ -5575,7 +7054,7 @@ void write_static_overmap_connection( JsonOut &json, const sol::table &connectio
     json.end_object();
 }
 
-void write_static_fixed_overmap_layout( JsonOut &json, const sol::table &options )
+void write_static_fixed_overmap_layout( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_ids( json, options, { { "locations", "locations" }, { "flags", "flags" } } );
@@ -5594,7 +7073,7 @@ void write_static_fixed_overmap_layout( JsonOut &json, const sol::table &options
     }
 }
 
-void write_static_fixed_overmap_special( JsonOut &json, const sol::table &options )
+void write_static_fixed_overmap_special( native_flex_writer &json, const sol::table &options )
 {
     write_static_fixed_overmap_layout( json, options );
     write_mapgen_range( json, "occurrences", options.raw_get<sol::object>( "occurrences" ) );
@@ -5602,7 +7081,7 @@ void write_static_fixed_overmap_special( JsonOut &json, const sol::table &option
     write_placement_member<int>( json, options, "priority", "priority" );
 }
 
-void write_static_mutable_overmap_join_entry( JsonOut &json, const sol::object &entry )
+void write_static_mutable_overmap_join_entry( native_flex_writer &json, const sol::object &entry )
 {
     if( entry.get_type() == sol::type::string ) {
         json.write( entry.as<std::string>() );
@@ -5616,7 +7095,8 @@ void write_static_mutable_overmap_join_entry( JsonOut &json, const sol::object &
     json.end_object();
 }
 
-void write_static_mutable_terrain_join( JsonOut &json, const char *dir, const sol::object &entry )
+void write_static_mutable_terrain_join( native_flex_writer &json, const char *dir,
+                                        const sol::object &entry )
 {
     if( entry.get_type() == sol::type::nil ) {
         return;
@@ -5634,7 +7114,7 @@ void write_static_mutable_terrain_join( JsonOut &json, const char *dir, const so
     json.end_object();
 }
 
-void write_static_mutable_phase_max( JsonOut &json, const sol::object &value )
+void write_static_mutable_phase_max( native_flex_writer &json, const sol::object &value )
 {
     if( value.get_type() == sol::type::nil ) {
         return;
@@ -5673,7 +7153,7 @@ void write_static_mutable_phase_max( JsonOut &json, const sol::object &value )
     json.end_object();
 }
 
-void write_static_mutable_overmap_special( JsonOut &json, const sol::table &options )
+void write_static_mutable_overmap_special( native_flex_writer &json, const sol::table &options )
 {
     json.member( "subtype", "mutable" );
     json.member( "id", options.get<std::string>( "id" ) );
@@ -5696,7 +7176,7 @@ void write_static_mutable_overmap_special( JsonOut &json, const sol::table &opti
     if( const auto checks = options.get<sol::optional<sol::table>>( "check_for_locations" ) ) {
         json.member( "check_for_locations" );
         write_static_values<sol::table>( json, *checks, "check_for_locations",
-        []( JsonOut & out, const sol::table & entry ) {
+        []( native_flex_writer & out, const sol::table & entry ) {
             out.start_array();
             const sol::table point = entry.get<sol::table>( "point" );
             if( checked_dense_array_size( point, "point", 3 ) != 3 ) {
@@ -5715,7 +7195,7 @@ void write_static_mutable_overmap_special( JsonOut &json, const sol::table &opti
     }
     write_static_catalog_array( json, options, "check_for_locations_area",
                                 "check_for_locations_area",
-    []( JsonOut & out, const sol::table & area ) {
+    []( native_flex_writer & out, const sol::table & area ) {
         out.start_object();
         write_static_int_triplet( out, area, "from" );
         write_static_int_triplet( out, area, "to" );
@@ -5726,7 +7206,7 @@ void write_static_mutable_overmap_special( JsonOut &json, const sol::table &opti
         }
         const sol::table &targets = locs ? *locs : *legacy_type;
         out.member( "type", bounded_string_array( targets, "locations",
-                    std::numeric_limits<std::size_t>::max(), "check_for_locations_area" ) );
+                std::numeric_limits<std::size_t>::max(), "check_for_locations_area" ) );
         out.end_object();
     } );
     if( const auto joins = options.get<sol::optional<sol::table>>( "joins" ) ) {
@@ -5748,7 +7228,9 @@ void write_static_mutable_overmap_special( JsonOut &json, const sol::table &opti
                 { "overmap", "overmap" }, { "camp", "camp" }, { "camp_name", "camp_name" }
             } );
             write_item_ids( json, tile, { { "locations", "locations" } } );
-            for( const char *dir : { "north", "south", "east", "west", "above", "below" } ) {
+            for( const char *dir : {
+                     "north", "south", "east", "west", "above", "below"
+                 } ) {
                 write_static_mutable_terrain_join( json, dir, tile.raw_get<sol::object>( dir ) );
             }
             if( const auto conns = tile.get<sol::optional<sol::table>>( "connections" ) ) {
@@ -5771,15 +7253,15 @@ void write_static_mutable_overmap_special( JsonOut &json, const sol::table &opti
     if( const auto phases = options.get<sol::optional<sol::table>>( "phases" ) ) {
         json.member( "phases" );
         write_static_values<sol::table>( json, *phases, "phases",
-        []( JsonOut & out, const sol::table & phase ) {
+        []( native_flex_writer & out, const sol::table & phase ) {
             write_static_values<sol::table>( out, phase, "phase",
-            []( JsonOut & rule_out, const sol::table & rule ) {
+            []( native_flex_writer & rule_out, const sol::table & rule ) {
                 rule_out.start_object();
                 write_item_fields<std::string>( rule_out, rule, {
                     { "name", "name" }, { "overmap", "overmap" }
                 } );
                 write_static_catalog_array( rule_out, rule, "chunk", "chunk",
-                []( JsonOut & chunk_out, const sol::table & piece ) {
+                []( native_flex_writer & chunk_out, const sol::table & piece ) {
                     chunk_out.start_object();
                     chunk_out.member( "overmap", piece.get<std::string>( "overmap" ) );
                     write_static_int_triplet( chunk_out, piece, "pos" );
@@ -5794,7 +7276,7 @@ void write_static_mutable_overmap_special( JsonOut &json, const sol::table &opti
     }
 }
 
-void write_static_external_option( JsonOut &json, const sol::table &options )
+void write_static_external_option( native_flex_writer &json, const sol::table &options )
 {
     json.member( "name", options.get<std::string>( "id" ) );
     const std::string kind = options.get<std::string>( "kind" );
@@ -5813,13 +7295,15 @@ void write_static_external_option( JsonOut &json, const sol::table &options )
 }
 
 template<typename Weight>
-void write_static_weighted_ids( JsonOut &json, const char *field, const sol::table &entries )
+void write_static_weighted_ids( native_flex_writer &json, const char *field,
+                                const sol::table &entries )
 {
     checked_dense_array_size( entries, field, std::numeric_limits<std::size_t>::max() );
     write_mapgen_weighted_choices<Weight, false>( json, field, entries );
 }
 
-void write_modifier_operation( JsonOut &json, const char *field, const std::string &operation )
+void write_modifier_operation( native_flex_writer &json, const char *field,
+                               const std::string &operation )
 {
     if( operation == "multiply" ) {
         json.member( field, "MULT" );
@@ -5832,7 +7316,7 @@ void write_modifier_operation( JsonOut &json, const char *field, const std::stri
     }
 }
 
-void write_static_character_modifier( JsonOut &json, const sol::table &options )
+void write_static_character_modifier( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
@@ -5858,7 +7342,9 @@ void write_static_character_modifier( JsonOut &json, const sol::table &options )
         write_item_fields<double>( json, options, {
             { "numerator", "nominator" }, { "denominator", "denominator" }, { "subtract", "subtract" }
         } );
-        for( const char *bound : { "min", "max" } ) {
+        for( const char *bound : {
+                 "min", "max"
+             } ) {
             const sol::object value = options.raw_get<sol::object>( bound );
             if( value.get_type() == sol::type::string ) {
                 json.member( bound, value.as<std::string>() );
@@ -5870,14 +7356,14 @@ void write_static_character_modifier( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_ammunition_type( JsonOut &json, const sol::table &options )
+void write_static_ammunition_type( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
     json.member( "default", options.get<std::string>( "default_item" ) );
 }
 
-void write_static_vehicle_part_location( JsonOut &json, const sol::table &options )
+void write_static_vehicle_part_location( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
@@ -5885,21 +7371,21 @@ void write_static_vehicle_part_location( JsonOut &json, const sol::table &option
     write_item_fields<int>( json, options, { { "z_order", "z_order" }, { "list_order", "list_order" } } );
 }
 
-void write_forest_weights( JsonOut &json, const sol::table &options, const char *field )
+void write_forest_weights( native_flex_writer &json, const sol::table &options, const char *field )
 {
     if( const auto entries = options.get<sol::optional<sol::table>>( field ) ) {
         write_static_weighted_ids<int>( json, field, *entries );
     }
 }
 
-void write_region_identity( JsonOut &json, const sol::table &options )
+void write_region_identity( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
 }
 
 template<typename Value>
-void write_region_fields( JsonOut &json, const sol::table &options,
+void write_region_fields( native_flex_writer &json, const sol::table &options,
                           std::initializer_list<const char *> fields )
 {
     for( const char *field : fields ) {
@@ -5907,7 +7393,8 @@ void write_region_fields( JsonOut &json, const sol::table &options,
     }
 }
 
-void write_region_set_change( JsonOut &json, const sol::table &options, const char *field,
+void write_region_set_change( native_flex_writer &json, const sol::table &options,
+                              const char *field,
                               const char *native, const char *operation )
 {
     if( options.get<sol::optional<sol::table>>( field ) ) {
@@ -5918,7 +7405,7 @@ void write_region_set_change( JsonOut &json, const sol::table &options, const ch
     }
 }
 
-void write_static_region_settings_river( JsonOut &json, const sol::table &options )
+void write_static_region_settings_river( native_flex_writer &json, const sol::table &options )
 {
     write_region_identity( json, options );
     write_placement_member<int>( json, options, "river_scale", "river_scale" );
@@ -5928,7 +7415,7 @@ void write_static_region_settings_river( JsonOut &json, const sol::table &option
     } );
 }
 
-void write_static_region_settings_lake( JsonOut &json, const sol::table &options )
+void write_static_region_settings_lake( native_flex_writer &json, const sol::table &options )
 {
     write_region_identity( json, options );
     write_placement_member<double>( json, options, "noise_threshold_lake", "noise_threshold_lake" );
@@ -5936,8 +7423,9 @@ void write_static_region_settings_lake( JsonOut &json, const sol::table &options
         "lake_size_min", "lake_depth"
     } );
     write_mapgen_string_array( json, options, "shore_terrains", "shore_extendable_overmap_terrain" );
-    write_static_catalog_array( json, options, "shore_aliases", "shore_extendable_overmap_terrain_aliases",
-    []( JsonOut &out, const sol::table &alias ) {
+    write_static_catalog_array( json, options, "shore_aliases",
+                                "shore_extendable_overmap_terrain_aliases",
+    []( native_flex_writer & out, const sol::table & alias ) {
         out.start_object();
         write_item_fields<std::string>( out, alias, {
             { "terrain", "om_terrain" }, { "match", "om_terrain_match_type" }, { "alias", "alias" }
@@ -5946,14 +7434,16 @@ void write_static_region_settings_lake( JsonOut &json, const sol::table &options
     } );
 }
 
-void write_static_region_settings_ocean( JsonOut &json, const sol::table &options )
+void write_static_region_settings_ocean( native_flex_writer &json, const sol::table &options )
 {
     write_region_identity( json, options );
     write_placement_member<double>( json, options, "noise_threshold_ocean", "noise_threshold_ocean" );
     write_region_fields<int>( json, options, {
         "ocean_size_min", "ocean_depth", "sandy_beach_width"
     } );
-    for( const char *field : { "ocean_start_north", "ocean_start_east", "ocean_start_west", "ocean_start_south" } ) {
+    for( const char *field : {
+             "ocean_start_north", "ocean_start_east", "ocean_start_west", "ocean_start_south"
+         } ) {
         const sol::object value = options.raw_get<sol::object>( field );
         if( value.get_type() == sol::type::boolean && !value.as<bool>() ) {
             json.member( field );
@@ -5964,7 +7454,7 @@ void write_static_region_settings_ocean( JsonOut &json, const sol::table &option
     }
 }
 
-void write_static_region_settings_ravine( JsonOut &json, const sol::table &options )
+void write_static_region_settings_ravine( native_flex_writer &json, const sol::table &options )
 {
     write_region_identity( json, options );
     write_region_fields<int>( json, options, {
@@ -5973,7 +7463,7 @@ void write_static_region_settings_ravine( JsonOut &json, const sol::table &optio
     write_placement_member<std::string>( json, options, "bottom_terrain", "ravine_bottom_terrain_id" );
 }
 
-void write_static_region_settings_forest( JsonOut &json, const sol::table &options )
+void write_static_region_settings_forest( native_flex_writer &json, const sol::table &options )
 {
     write_region_identity( json, options );
     write_region_fields<double>( json, options, {
@@ -5988,13 +7478,14 @@ void write_static_region_settings_forest( JsonOut &json, const sol::table &optio
         if( checked_dense_array_size( *values, "forest_threshold_increase", 4 ) != 4 ) {
             throw std::invalid_argument( "forest_threshold_increase requires four cardinal values" );
         }
-        json.member( "forest_threshold_increase", std::array<float, 4>{
+        json.member( "forest_threshold_increase", std::array<float, 4> {
             values->get<float>( 1 ), values->get<float>( 2 ), values->get<float>( 3 ), values->get<float>( 4 )
         } );
     }
 }
 
-void write_static_region_settings_forest_trail( JsonOut &json, const sol::table &options )
+void write_static_region_settings_forest_trail( native_flex_writer &json,
+        const sol::table &options )
 {
     write_region_identity( json, options );
     write_region_fields<int>( json, options, {
@@ -6007,20 +7498,22 @@ void write_static_region_settings_forest_trail( JsonOut &json, const sol::table 
     }
 }
 
-void write_static_region_settings_forest_mapgen( JsonOut &json, const sol::table &options )
+void write_static_region_settings_forest_mapgen( native_flex_writer &json,
+        const sol::table &options )
 {
     write_region_identity( json, options );
     write_mapgen_string_array( json, options, "biomes", "biomes" );
     write_region_set_change( json, options, "add_biomes", "biomes", "extend" );
 }
 
-void write_static_region_settings_terrain_furniture( JsonOut &json, const sol::table &options )
+void write_static_region_settings_terrain_furniture( native_flex_writer &json,
+        const sol::table &options )
 {
     write_region_identity( json, options );
     write_mapgen_string_array( json, options, "replacements", "ter_furn" );
 }
 
-void write_static_region_terrain_furniture( JsonOut &json, const sol::table &options )
+void write_static_region_terrain_furniture( native_flex_writer &json, const sol::table &options )
 {
     write_region_identity( json, options );
     write_placement_member<std::string>( json, options, "terrain", "ter_id" );
@@ -6046,7 +7539,7 @@ void write_static_region_terrain_furniture( JsonOut &json, const sol::table &opt
     }
 }
 
-void write_static_region_settings_map_extras( JsonOut &json, const sol::table &options )
+void write_static_region_settings_map_extras( native_flex_writer &json, const sol::table &options )
 {
     write_region_identity( json, options );
     write_mapgen_string_array( json, options, "extras", "extras" );
@@ -6054,7 +7547,7 @@ void write_static_region_settings_map_extras( JsonOut &json, const sol::table &o
     write_region_set_change( json, options, "remove_extras", "extras", "delete" );
 }
 
-void write_static_forest_biome_component( JsonOut &json, const sol::table &options )
+void write_static_forest_biome_component( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
@@ -6062,7 +7555,7 @@ void write_static_forest_biome_component( JsonOut &json, const sol::table &optio
     write_forest_weights( json, options, "types" );
 }
 
-void write_static_forest_biome_mapgen( JsonOut &json, const sol::table &options )
+void write_static_forest_biome_mapgen( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
@@ -6096,7 +7589,7 @@ void write_static_forest_biome_mapgen( JsonOut &json, const sol::table &options 
     }
 }
 
-void write_static_map_extra( JsonOut &json, const sol::table &options )
+void write_static_map_extra( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
@@ -6121,12 +7614,12 @@ void write_static_map_extra( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_map_extra_collection( JsonOut &json, const sol::table &options )
+void write_static_map_extra_collection( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
     write_placement_member<int>( json, options, "chance", "chance" );
-    const auto write_entry = []( JsonOut & out, const sol::table & entry ) {
+    const auto write_entry = []( native_flex_writer & out, const sol::table & entry ) {
         out.start_array();
         out.write( entry.get<std::string>( "extra" ) );
         out.write( entry.get<int>( "weight" ) );
@@ -6141,7 +7634,7 @@ void write_static_map_extra_collection( JsonOut &json, const sol::table &options
     }
 }
 
-void write_static_trait_migration( JsonOut &json, const sol::table &options )
+void write_static_trait_migration( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
@@ -6150,7 +7643,7 @@ void write_static_trait_migration( JsonOut &json, const sol::table &options )
     write_placement_member<bool>( json, options, "remove", "remove" );
 }
 
-void write_static_camp_migration( JsonOut &json, const sol::table &options )
+void write_static_camp_migration( native_flex_writer &json, const sol::table &options )
 {
     json.member( "camp_migrations" );
     json.start_object();
@@ -6160,14 +7653,14 @@ void write_static_camp_migration( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_mod_migration( JsonOut &json, const sol::table &options )
+void write_static_mod_migration( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_placement_member<std::string>( json, options, "replace_with", "new_id" );
     write_item_text( json, "removal_reason", options.raw_get<sol::object>( "removal_reason" ), false );
 }
 
-void write_static_climate_station( JsonOut &json, const sol::table &options )
+void write_static_climate_station( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     json.member( "name", options.get<std::string>( "name" ) );
@@ -6175,7 +7668,7 @@ void write_static_climate_station( JsonOut &json, const sol::table &options )
     json.member( "latitude", options.get<double>( "latitude" ) );
     json.member( "longitude", options.get<double>( "longitude" ) );
     write_static_catalog_array( json, options, "months", "months",
-    []( JsonOut & out, const sol::table & month ) {
+    []( native_flex_writer & out, const sol::table & month ) {
         if( checked_dense_array_size( month, "climate monthly normal", 5 ) != 5 ) {
             throw std::runtime_error( "A climate monthly normal requires five entries" );
         }
@@ -6188,17 +7681,17 @@ void write_static_climate_station( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_ascii_art( JsonOut &json, const sol::table &options )
+void write_static_ascii_art( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_ids( json, options, { { "lines", "picture" } } );
 }
 
-void write_static_vehicle_group( JsonOut &json, const sol::table &options )
+void write_static_vehicle_group( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_static_catalog_array( json, options, "vehicles", "vehicles",
-    []( JsonOut & out, const sol::table & entry ) {
+    []( native_flex_writer & out, const sol::table & entry ) {
         out.start_array();
         out.write( entry.get<std::string>( "id" ) );
         out.write( entry.get<int>( "weight" ) );
@@ -6206,12 +7699,13 @@ void write_static_vehicle_group( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_mutation_type( JsonOut &json, const sol::table &options )
+void write_static_mutation_type( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
 }
 
-void write_static_string_or_ids( JsonOut &json, const sol::table &options, const char *field,
+void write_static_string_or_ids( native_flex_writer &json, const sol::table &options,
+                                 const char *field,
                                  const char *native )
 {
     if( const sol::object value = options.raw_get<sol::object>( field );
@@ -6229,32 +7723,38 @@ void install_static_widget_conditions( sol::state &lua, sol::table &content )
     const sol::optional<std::string> &arg ) {
         using comparison = bool ( * )( double, double );
         static const std::map<std::string, comparison> comparisons = {
-            { "==", []( double a, double b )
+            {
+                "==", []( double a, double b )
                 {
                     return a == b;
                 }
             },
-            { "!=", []( double a, double b )
+            {
+                "!=", []( double a, double b )
                 {
                     return a != b;
                 }
             },
-            { ">", []( double a, double b )
+            {
+                ">", []( double a, double b )
                 {
                     return a > b;
                 }
             },
-            { ">=", []( double a, double b )
+            {
+                ">=", []( double a, double b )
                 {
                     return a >= b;
                 }
             },
-            { "<", []( double a, double b )
+            {
+                "<", []( double a, double b )
                 {
                     return a < b;
                 }
             },
-            { "<=", []( double a, double b )
+            {
+                "<=", []( double a, double b )
                 {
                     return a <= b;
                 }
@@ -6284,7 +7784,7 @@ void install_static_widget_conditions( sol::state &lua, sol::table &content )
     content["widget_conditions"] = std::move( predicates );
 }
 
-void write_static_widget_clause( JsonOut &json, const sol::table &options )
+void write_static_widget_clause( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -6310,7 +7810,7 @@ void write_static_widget_clause( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_widget( JsonOut &json, const sol::table &options )
+void write_static_widget( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
@@ -6330,7 +7830,7 @@ void write_static_widget( JsonOut &json, const sol::table &options )
     write_static_string_or_ids( json, options, "widgets", "widgets" );
     if( const auto breaks = options.get<sol::optional<sol::table>>( "breaks" ) ) {
         json.member( "breaks" );
-        write_static_values<int>( json, *breaks, "breaks", []( JsonOut & out, int value ) {
+        write_static_values<int>( json, *breaks, "breaks", []( native_flex_writer & out, int value ) {
             out.write( value );
         } );
     }
@@ -6373,7 +7873,8 @@ void write_static_widget( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_harvest_range( JsonOut &json, const sol::table &entry, const char *field,
+void write_static_harvest_range( native_flex_writer &json, const sol::table &entry,
+                                 const char *field,
                                  const char *native )
 {
     if( const auto range = entry.get<sol::optional<sol::table>>( field ) ) {
@@ -6388,7 +7889,7 @@ void write_static_harvest_range( JsonOut &json, const sol::table &entry, const c
     }
 }
 
-void write_static_harvest_drop( JsonOut &json, const sol::table &entry )
+void write_static_harvest_drop( native_flex_writer &json, const sol::table &entry )
 {
     json.start_object();
     json.member( "drop", entry.get<std::string>( "output" ) );
@@ -6401,7 +7902,7 @@ void write_static_harvest_drop( JsonOut &json, const sol::table &entry )
     json.end_object();
 }
 
-void write_static_harvest( JsonOut &json, const sol::table &options )
+void write_static_harvest( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
@@ -6422,7 +7923,7 @@ void write_static_harvest( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_construction_requirement( JsonOut &json, const sol::table &entry )
+void write_static_construction_requirement( native_flex_writer &json, const sol::table &entry )
 {
     const std::size_t size = checked_dense_array_size( entry, "construction requirement",
         std::numeric_limits<std::size_t>::max() );
@@ -6438,7 +7939,7 @@ void write_static_construction_requirement( JsonOut &json, const sol::table &ent
     json.end_array();
 }
 
-void write_static_construction_quality( JsonOut &json, const sol::table &options )
+void write_static_construction_quality( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     json.member( "id", options.get<std::string>( "id" ) );
@@ -6446,7 +7947,7 @@ void write_static_construction_quality( JsonOut &json, const sol::table &options
     json.end_object();
 }
 
-void write_static_construction_byproduct( JsonOut &json, const sol::table &options )
+void write_static_construction_byproduct( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, { { "item", "item" }, { "group", "group" } } );
@@ -6458,7 +7959,7 @@ void write_static_construction_byproduct( JsonOut &json, const sol::table &optio
     json.end_object();
 }
 
-void write_static_requirement_groups( JsonOut &json, const sol::table &options )
+void write_static_requirement_groups( native_flex_writer &json, const sol::table &options )
 {
     for( const char *field : {
              "components", "tools", "qualities"
@@ -6470,13 +7971,13 @@ void write_static_requirement_groups( JsonOut &json, const sol::table &options )
         const bool quality = std::string_view( field ) == "qualities";
         json.member( field );
         write_static_values<sol::table>( json, *groups, field,
-        [quality, field]( JsonOut & out, const sol::table & group ) {
+        [quality, field]( native_flex_writer & out, const sol::table & group ) {
             if( quality && group.raw_get<sol::object>( "id" ).get_type() == sol::type::string ) {
                 write_static_construction_quality( out, group );
                 return;
             }
             write_static_values<sol::object>( out, group, field,
-            [quality]( JsonOut & dest, const sol::object & choice ) {
+            [quality]( native_flex_writer & dest, const sol::object & choice ) {
                 if( quality ) {
                     write_static_construction_quality( dest, choice.as<sol::table>() );
                 } else if( choice.get_type() == sol::type::string ) {
@@ -6489,7 +7990,7 @@ void write_static_requirement_groups( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_fault_modifier( JsonOut &json, const sol::table &entry )
+void write_static_fault_modifier( native_flex_writer &json, const sol::table &entry )
 {
     json.start_object();
     json.member( "damage_id", entry.get<std::string>( "damage_type" ) );
@@ -6498,14 +7999,16 @@ void write_static_fault_modifier( JsonOut &json, const sol::table &entry )
     json.end_object();
 }
 
-void write_static_fault( JsonOut &json, const sol::table &options )
+void write_static_fault( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
         { "copy_from", "copy-from" }, { "fault_type", "fault_type" }, { "severity", "severity" },
         { "color", "color" }
     } );
-    for( const char *field : { "name", "description", "message", "item_prefix", "item_suffix" } ) {
+    for( const char *field : {
+             "name", "description", "message", "item_prefix", "item_suffix"
+         } ) {
         write_item_text( json, field, options.raw_get<sol::object>( field ), false );
     }
     write_item_ids( json, options, { { "flags", "flags" }, { "blocks", "block_faults" } } );
@@ -6523,7 +8026,7 @@ void write_static_fault( JsonOut &json, const sol::table &options )
     write_static_catalog_array( json, options, "armor", "armor_mod", write_static_fault_modifier );
 }
 
-void write_static_fault_fix_requirement( JsonOut &json, const sol::table &entry )
+void write_static_fault_fix_requirement( native_flex_writer &json, const sol::table &entry )
 {
     if( const auto ref = entry.get<sol::optional<std::string>>( "id" ) ) {
         json.start_array();
@@ -6537,7 +8040,7 @@ void write_static_fault_fix_requirement( JsonOut &json, const sol::table &entry 
     }
 }
 
-void write_static_fault_fix( JsonOut &json, const sol::table &options )
+void write_static_fault_fix( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
@@ -6552,9 +8055,11 @@ void write_static_fault_fix( JsonOut &json, const sol::table &options )
     if( const auto skills = options.get<sol::optional<sol::table>>( "skills" ) ) {
         write_item_keyed_values<int>( json, "skills", *skills );
     }
-    for( const auto &[field, native] : { item_field{ "proficiency_time_factors", "time_save_profs" },
-                                        { "flag_time_factors", "time_save_flags" },
-                                        { "multiply_variables", "adjust_variables_multiply" } } ) {
+    for( const auto &[field, native] : {
+    item_field{ "proficiency_time_factors", "time_save_profs" },
+{ "flag_time_factors", "time_save_flags" },
+{ "multiply_variables", "adjust_variables_multiply" }
+     } ) {
         if( const auto values = options.get<sol::optional<sol::table>>( field ) ) {
             write_item_keyed_values<double>( json, native, *values );
         }
@@ -6584,7 +8089,7 @@ void write_static_fault_fix( JsonOut &json, const sol::table &options )
                                 write_static_fault_fix_requirement );
 }
 
-void write_static_construction( JsonOut &json, const sol::table &options )
+void write_static_construction( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     json.member( "group", options.get<std::string>( "group" ) );
@@ -6639,7 +8144,8 @@ void write_static_construction( JsonOut &json, const sol::table &options )
 }
 
 template<typename Writer>
-void write_static_tile_object( JsonOut &json, const sol::table &options, const char *field,
+void write_static_tile_object( native_flex_writer &json, const sol::table &options,
+                               const char *field,
                                const char *native, Writer write_fields )
 {
     if( const auto value = options.get<sol::optional<sol::table>>( field ) ) {
@@ -6648,7 +8154,7 @@ void write_static_tile_object( JsonOut &json, const sol::table &options, const c
     }
 }
 
-void write_static_tile_unit( JsonOut &json, const sol::table &options, const char *field,
+void write_static_tile_unit( native_flex_writer &json, const sol::table &options, const char *field,
                              const char *native )
 {
     if( const sol::object value = options.raw_get<sol::object>( field );
@@ -6659,7 +8165,8 @@ void write_static_tile_unit( JsonOut &json, const sol::table &options, const cha
     }
 }
 
-void write_static_tile_field( JsonOut &json, const sol::table &options, const char *field,
+void write_static_tile_field( native_flex_writer &json, const sol::table &options,
+                              const char *field,
                               const char *native )
 {
     if( const auto value = options.get<sol::optional<sol::table>>( field ) ) {
@@ -6674,13 +8181,14 @@ void write_static_tile_field( JsonOut &json, const sol::table &options, const ch
     }
 }
 
-void write_static_tile_temperatures( JsonOut &json, const sol::table &options, const char *field,
+void write_static_tile_temperatures( native_flex_writer &json, const sol::table &options,
+                                     const char *field,
                                      const char *native )
 {
     if( const auto values = options.get<sol::optional<sol::table>>( field ) ) {
         json.member( native );
         write_static_values<sol::object>( json, *values, field,
-        []( JsonOut & out, const sol::object & value ) {
+        []( native_flex_writer & out, const sol::object & value ) {
             if( value.get_type() == sol::type::string ) {
                 out.write( value.as<std::string>() );
             } else {
@@ -6690,7 +8198,7 @@ void write_static_tile_temperatures( JsonOut &json, const sol::table &options, c
     }
 }
 
-void write_static_tile_drop( JsonOut &json, const sol::table &options )
+void write_static_tile_drop( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -6706,7 +8214,8 @@ void write_static_tile_drop( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_drops( JsonOut &json, const sol::table &options, const char *field,
+void write_static_tile_drops( native_flex_writer &json, const sol::table &options,
+                              const char *field,
                               const char *native )
 {
     if( const sol::object value = options.raw_get<sol::object>( field );
@@ -6717,7 +8226,7 @@ void write_static_tile_drops( JsonOut &json, const sol::table &options, const ch
     }
 }
 
-void write_static_bash_fields( JsonOut &json, const sol::table &options )
+void write_static_bash_fields( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "profile", "profile" }, { "terrain", "ter_set" },
@@ -6745,28 +8254,30 @@ void write_static_bash_fields( JsonOut &json, const sol::table &options )
     write_static_tile_drops( json, options, "drops", "items" );
 }
 
-void write_static_tile_bash( JsonOut &json, const sol::table &options )
+void write_static_tile_bash( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_static_bash_fields( json, options );
     json.end_object();
 }
 
-void write_static_field_immunity( JsonOut &json, const sol::table &options )
+void write_static_field_immunity( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_ids( json, options, { { "flags", "flags" } } );
     write_static_catalog_array( json, options, "resistances", "body_part_env_resistance",
-    []( JsonOut & out, const sol::table & entry ) {
+    []( native_flex_writer & out, const sol::table & entry ) {
         out.start_array();
         out.write( entry.get<std::string>( "part" ) );
         out.write( entry.get<int>( "minimum" ) );
         out.end_array();
     } );
-    for( const auto &[field, native] : { item_field{ "worn_flags", "immunity_flags_worn" },
-                                        { "any_worn_flags", "immunity_flags_worn_any" } } ) {
+    for( const auto &[field, native] : {
+    item_field{ "worn_flags", "immunity_flags_worn" },
+{ "any_worn_flags", "immunity_flags_worn_any" }
+     } ) {
         write_static_catalog_array( json, options, field, native,
-        []( JsonOut & out, const sol::table & entry ) {
+        []( native_flex_writer & out, const sol::table & entry ) {
             out.start_array();
             out.write( entry.get<std::string>( "part" ) );
             out.write( entry.get<std::string>( "flag" ) );
@@ -6776,7 +8287,7 @@ void write_static_field_immunity( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_field_effect( JsonOut &json, const sol::table &options )
+void write_static_field_effect( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -6800,7 +8311,7 @@ void write_static_field_effect( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_field_level( JsonOut &json, const sol::table &options )
+void write_static_field_level( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -6827,13 +8338,14 @@ void write_static_field_level( JsonOut &json, const sol::table &options )
     } );
     write_static_tile_unit( json, options, "intensity_upgrade_duration", "intensity_upgrade_duration" );
     write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
-    write_item_text( json, "radiation_hurt_message", options.raw_get<sol::object>( "radiation_hurt_message" ), false );
+    write_item_text( json, "radiation_hurt_message",
+                     options.raw_get<sol::object>( "radiation_hurt_message" ), false );
     write_static_int_triplet( json, options, "light_color" );
     write_static_catalog_array( json, options, "effects", "effects", write_static_field_effect );
     json.end_object();
 }
 
-void write_static_field_complaint( JsonOut &json, const sol::table &options )
+void write_static_field_complaint( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -6847,7 +8359,7 @@ void write_static_field_complaint( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_field_fire_reaction( JsonOut &json, const sol::table &options )
+void write_static_field_fire_reaction( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<int>( json, options, {
@@ -6857,7 +8369,7 @@ void write_static_field_fire_reaction( JsonOut &json, const sol::table &options 
     json.end_object();
 }
 
-void write_static_field_bash( JsonOut &json, const sol::table &options )
+void write_static_field_bash( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_static_bash_fields( json, options );
@@ -6865,7 +8377,7 @@ void write_static_field_bash( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_field_type( JsonOut &json, const sol::table &options )
+void write_static_field_type( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
@@ -6895,12 +8407,14 @@ void write_static_field_type( JsonOut &json, const sol::table &options )
     } );
     write_static_catalog_array( json, options, "levels", "intensity_levels", write_static_field_level );
     write_static_tile_object( json, options, "immunity", "immunity_data", write_static_field_immunity );
-    write_static_tile_object( json, options, "complaint", "npc_complain", write_static_field_complaint );
-    write_static_tile_object( json, options, "fire_reaction", "fire_reaction", write_static_field_fire_reaction );
+    write_static_tile_object( json, options, "complaint", "npc_complain",
+                              write_static_field_complaint );
+    write_static_tile_object( json, options, "fire_reaction", "fire_reaction",
+                              write_static_field_fire_reaction );
     write_static_tile_object( json, options, "bash", "bash", write_static_field_bash );
 }
 
-void write_static_tile_practice( JsonOut &json, const sol::table &options )
+void write_static_tile_practice( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_placement_member<std::string>( json, options, "id", "skill" );
@@ -6911,7 +8425,7 @@ void write_static_tile_practice( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_deconstruct( JsonOut &json, const sol::table &options )
+void write_static_tile_deconstruct( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -6923,7 +8437,7 @@ void write_static_tile_deconstruct( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_shoot( JsonOut &json, const sol::table &options )
+void write_static_tile_shoot( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_placement_member<int>( json, options, "chance_to_hit", "chance_to_hit" );
@@ -6935,7 +8449,7 @@ void write_static_tile_shoot( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_liquid( JsonOut &json, const sol::table &options )
+void write_static_tile_liquid( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -6946,7 +8460,7 @@ void write_static_tile_liquid( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_seasonal_harvest( JsonOut &json, const sol::table &options )
+void write_static_tile_seasonal_harvest( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_placement_member<std::string>( json, options, "harvest", "id" );
@@ -6954,7 +8468,7 @@ void write_static_tile_seasonal_harvest( JsonOut &json, const sol::table &option
     json.end_object();
 }
 
-void write_static_tile_pry( JsonOut &json, const sol::table &options )
+void write_static_tile_pry( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<int>( json, options, {
@@ -6968,7 +8482,7 @@ void write_static_tile_pry( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_tool_drop( JsonOut &json, const sol::table &options )
+void write_static_tile_tool_drop( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_placement_member<std::string>( json, options, "item", "item" );
@@ -6976,7 +8490,7 @@ void write_static_tile_tool_drop( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_tool_action( JsonOut &json, const sol::table &options )
+void write_static_tile_tool_action( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -6990,7 +8504,7 @@ void write_static_tile_tool_action( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_plant( JsonOut &json, const sol::table &options )
+void write_static_tile_plant( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -7005,7 +8519,7 @@ void write_static_tile_plant( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_workbench( JsonOut &json, const sol::table &options )
+void write_static_tile_workbench( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_placement_member<double>( json, options, "multiplier", "multiplier" );
@@ -7014,7 +8528,7 @@ void write_static_tile_workbench( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_growth( JsonOut &json, const sol::table &options )
+void write_static_tile_growth( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<std::string>( json, options, {
@@ -7025,7 +8539,7 @@ void write_static_tile_growth( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_crop_climate( JsonOut &json, const sol::table &options )
+void write_static_tile_crop_climate( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_placement_member<int>( json, options, "growing_days", "growing_days" );
@@ -7037,7 +8551,7 @@ void write_static_tile_crop_climate( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_fruit_climate( JsonOut &json, const sol::table &options )
+void write_static_tile_fruit_climate( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_placement_member<std::string>( json, options, "harvest", "harvest" );
@@ -7046,7 +8560,7 @@ void write_static_tile_fruit_climate( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_extends( JsonOut &json, const sol::table &options )
+void write_static_tile_extends( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_ids( json, options, {
@@ -7058,7 +8572,7 @@ void write_static_tile_extends( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_appliance( JsonOut &json, const sol::table &options )
+void write_static_tile_appliance( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     json.member( "type", "appliance_convert" );
@@ -7068,7 +8582,7 @@ void write_static_tile_appliance( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_card_reader( JsonOut &json, const sol::table &options )
+void write_static_tile_card_reader( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     json.member( "type", "cardreader" );
@@ -7095,7 +8609,7 @@ void write_static_tile_card_reader( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_mortar( JsonOut &json, const sol::table &options )
+void write_static_tile_mortar( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     json.member( "type", "mortar" );
@@ -7138,7 +8652,7 @@ void write_static_tile_mortar( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_tile_examine( JsonOut &json, const sol::table &options )
+void write_static_tile_examine( native_flex_writer &json, const sol::table &options )
 {
     const sol::object builtin = options.raw_get<sol::object>( "builtin_examine" );
     const auto appliance = options.get<sol::optional<sol::table>>( "appliance_conversion" );
@@ -7169,7 +8683,7 @@ void write_static_tile_examine( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_tile_shared( JsonOut &json, const sol::table &options )
+void write_static_tile_shared( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
@@ -7214,7 +8728,7 @@ void write_static_tile_shared( JsonOut &json, const sol::table &options )
     write_static_tile_examine( json, options );
 }
 
-void write_static_tile_terrain( JsonOut &json, const sol::table &options )
+void write_static_tile_terrain( native_flex_writer &json, const sol::table &options )
 {
     write_static_tile_shared( json, options );
     write_item_fields<std::string>( json, options, {
@@ -7233,7 +8747,7 @@ void write_static_tile_terrain( JsonOut &json, const sol::table &options )
                               write_static_tile_fruit_climate );
 }
 
-void write_static_tile_furniture( JsonOut &json, const sol::table &options )
+void write_static_tile_furniture( native_flex_writer &json, const sol::table &options )
 {
     write_static_tile_shared( json, options );
     write_item_fields<std::string>( json, options, {
@@ -7251,7 +8765,7 @@ void write_static_tile_furniture( JsonOut &json, const sol::table &options )
     write_static_tile_object( json, options, "workbench", "workbench", write_static_tile_workbench );
 }
 
-void write_static_trap_vehicle( JsonOut &json, const sol::table &options )
+void write_static_trap_vehicle( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_item_fields<bool>( json, options, {
@@ -7268,7 +8782,7 @@ void write_static_trap_vehicle( JsonOut &json, const sol::table &options )
     if( const auto items = options.get<sol::optional<sol::table>>( "spawn_items" ) ) {
         json.member( "spawn_items" );
         write_static_values<sol::object>( json, *items, "spawn_items",
-        []( JsonOut & out, const sol::object & value ) {
+        []( native_flex_writer & out, const sol::object & value ) {
             if( value.get_type() == sol::type::string ) {
                 out.write( value.as<std::string>() );
                 return;
@@ -7283,7 +8797,7 @@ void write_static_trap_vehicle( JsonOut &json, const sol::table &options )
     json.end_object();
 }
 
-void write_static_trap( JsonOut &json, const sol::table &options )
+void write_static_trap( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "copy_from", "copy-from" }, { "color", "color" },
@@ -7299,15 +8813,15 @@ void write_static_trap( JsonOut &json, const sol::table &options )
     } );
     write_static_tile_unit( json, options, "trigger_weight", "trigger_weight" );
     for( const auto &[field, native] : {
-             item_field{ "memorial_male", "memorial_male" }, { "memorial_female", "memorial_female" },
-             { "avatar_message", "trigger_message_u" }, { "npc_message", "trigger_message_npc" }
-         } ) {
+    item_field{ "memorial_male", "memorial_male" }, { "memorial_female", "memorial_female" },
+{ "avatar_message", "trigger_message_u" }, { "npc_message", "trigger_message_npc" }
+     } ) {
         write_item_text( json, native, options.raw_get<sol::object>( field ), false );
     }
     if( const auto drops = options.get<sol::optional<sol::table>>( "drops" ) ) {
         json.member( "drops" );
         write_static_values<sol::object>( json, *drops, "trap drops",
-        []( JsonOut & out, const sol::object & value ) {
+        []( native_flex_writer & out, const sol::object & value ) {
             if( value.get_type() == sol::type::string ) {
                 out.write( value.as<std::string>() );
                 return;
@@ -7340,19 +8854,19 @@ void write_static_trap( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_named_definition( JsonOut &json, const sol::table &options )
+void write_static_named_definition( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
 }
 
-void write_static_proficiency_category( JsonOut &json, const sol::table &options )
+void write_static_proficiency_category( native_flex_writer &json, const sol::table &options )
 {
     write_static_named_definition( json, options );
     write_item_text( json, "description", options.raw_get<sol::object>( "description" ), false );
 }
 
-void write_static_proficiency_bonus( JsonOut &json, const sol::table &bonus )
+void write_static_proficiency_bonus( native_flex_writer &json, const sol::table &bonus )
 {
     json.start_object();
     json.member( "type", bonus.get<std::string>( "attribute" ) );
@@ -7360,7 +8874,7 @@ void write_static_proficiency_bonus( JsonOut &json, const sol::table &bonus )
     json.end_object();
 }
 
-void write_static_proficiency( JsonOut &json, const sol::table &options )
+void write_static_proficiency( native_flex_writer &json, const sol::table &options )
 {
     write_static_proficiency_category( json, options );
     write_item_fields<std::string>( json, options, {
@@ -7388,7 +8902,7 @@ void write_static_proficiency( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_start_location_target( JsonOut &json, const sol::object &target )
+void write_static_start_location_target( native_flex_writer &json, const sol::object &target )
 {
     if( target.get_type() == sol::type::string ) {
         json.write( target.as<std::string>() );
@@ -7411,7 +8925,7 @@ void write_static_start_location_target( JsonOut &json, const sol::object &targe
     json.end_object();
 }
 
-void write_static_start_location( JsonOut &json, const sol::table &options )
+void write_static_start_location( native_flex_writer &json, const sol::table &options )
 {
     write_static_named_definition( json, options );
     write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
@@ -7433,7 +8947,7 @@ void write_static_start_location( JsonOut &json, const sol::table &options )
         json.start_object();
         if( extend_flags ) {
             json.member( "flags", bounded_string_array( *extend_flags, "extend_flags",
-                         std::numeric_limits<std::size_t>::max(), "start location" ) );
+                    std::numeric_limits<std::size_t>::max(), "start location" ) );
         }
         if( extend_targets ) {
             json.member( "terrain" );
@@ -7444,7 +8958,7 @@ void write_static_start_location( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_pet_slot( JsonOut &json, const sol::table &options )
+void write_static_pet_slot( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_text( json, "name", options.raw_get<sol::object>( "name" ), false );
@@ -7474,7 +8988,7 @@ void write_static_pet_slot( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_riding_config( JsonOut &json, const sol::table &options )
+void write_static_riding_config( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<int>( json, options, {
         { "saddled_mount_difficulty", "saddled_mount_difficulty" },
@@ -7519,7 +9033,7 @@ void write_static_riding_config( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_ter_furn_migration( JsonOut &json, const sol::table &options )
+void write_static_ter_furn_migration( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "from_ter", "from_ter" }, { "from_furn", "from_furn" },
@@ -7527,7 +9041,7 @@ void write_static_ter_furn_migration( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_recipe_category( JsonOut &json, const sol::table &options )
+void write_static_recipe_category( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, { { "copy_from", "copy-from" } } );
@@ -7540,19 +9054,19 @@ void write_static_recipe_category( JsonOut &json, const sol::table &options )
         json.member( "extend" );
         json.start_object();
         json.member( "recipe_subcategories", bounded_string_array( *extend, "extend_subcategories",
-                     std::numeric_limits<std::size_t>::max(), "recipe category" ) );
+                std::numeric_limits<std::size_t>::max(), "recipe category" ) );
         json.end_object();
     }
     if( const auto del = options.get<sol::optional<sol::table>>( "delete_subcategories" ) ) {
         json.member( "delete" );
         json.start_object();
         json.member( "recipe_subcategories", bounded_string_array( *del, "delete_subcategories",
-                     std::numeric_limits<std::size_t>::max(), "recipe category" ) );
+                std::numeric_limits<std::size_t>::max(), "recipe category" ) );
         json.end_object();
     }
 }
 
-void write_static_addiction_type( JsonOut &json, const sol::table &options )
+void write_static_addiction_type( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_fields<std::string>( json, options, {
@@ -7571,7 +9085,8 @@ void write_static_addiction_type( JsonOut &json, const sol::table &options )
     write_item_ids( json, options, { { "satisfying_effects", "satisfying_effects" } } );
 }
 
-void write_static_profession_text( JsonOut &json, const sol::table &options, const char *field )
+void write_static_profession_text( native_flex_writer &json, const sol::table &options,
+                                   const char *field )
 {
     const sol::object text = options.raw_get<sol::object>( field );
     if( text.get_type() == sol::type::nil ) {
@@ -7584,13 +9099,15 @@ void write_static_profession_text( JsonOut &json, const sol::table &options, con
     const sol::table gendered = text.as<sol::table>();
     json.member( field );
     json.start_object();
-    for( const char *gender : { "male", "female" } ) {
+    for( const char *gender : {
+             "male", "female"
+         } ) {
         json.member( gender, gendered.get<std::string>( gender ) );
     }
     json.end_object();
 }
 
-void write_static_spawn_entry( JsonOut &json, const sol::object &value )
+void write_static_spawn_entry( native_flex_writer &json, const sol::object &value )
 {
     if( value.get_type() == sol::type::string ) {
         json.write( value.as<std::string>() );
@@ -7607,13 +9124,15 @@ void write_static_spawn_entry( JsonOut &json, const sol::object &value )
     write_item_ids( json, entry, { { "custom_flags", "custom-flags" } } );
     write_static_string_or_ids( json, entry, "contents_items", "contents-item" );
     write_static_string_or_ids( json, entry, "contents_groups", "contents-group" );
-    for( const char *field : { "count", "charges", "damage" } ) {
+    for( const char *field : {
+             "count", "charges", "damage"
+         } ) {
         write_mapgen_range( json, field, entry.raw_get<sol::object>( field ) );
     }
     json.end_object();
 }
 
-void write_static_profession_legacy_item( JsonOut &json, const sol::object &value )
+void write_static_profession_legacy_item( native_flex_writer &json, const sol::object &value )
 {
     if( value.get_type() == sol::type::string ) {
         json.write( value.as<std::string>() );
@@ -7626,7 +9145,7 @@ void write_static_profession_legacy_item( JsonOut &json, const sol::object &valu
     json.end_array();
 }
 
-void write_static_profession_loadout( JsonOut &json, const sol::table &loadout )
+void write_static_profession_loadout( native_flex_writer &json, const sol::table &loadout )
 {
     if( const auto legacy = loadout.get<sol::optional<sol::table>>( "legacy" ) ) {
         write_static_values<sol::object>( json, *legacy, "legacy", write_static_profession_legacy_item );
@@ -7634,7 +9153,9 @@ void write_static_profession_loadout( JsonOut &json, const sol::table &loadout )
     }
     json.start_object();
     write_item_fields<int>( json, loadout, { { "ammo_chance", "ammo" }, { "magazine_chance", "magazine" } } );
-    for( const char *field : { "entries", "items" } ) {
+    for( const char *field : {
+             "entries", "items"
+         } ) {
         if( const auto entries = loadout.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
             write_static_values<sol::object>( json, *entries, field, write_static_spawn_entry );
@@ -7643,7 +9164,7 @@ void write_static_profession_loadout( JsonOut &json, const sol::table &loadout )
     json.end_object();
 }
 
-void write_static_profession_skill( JsonOut &json, const sol::table &skill )
+void write_static_profession_skill( native_flex_writer &json, const sol::table &skill )
 {
     json.start_object();
     json.member( "name", skill.get<std::string>( "id" ) );
@@ -7651,7 +9172,8 @@ void write_static_profession_skill( JsonOut &json, const sol::table &skill )
     json.end_object();
 }
 
-void write_static_mission_phase( JsonOut &json, const sol::table &options, const char *field,
+void write_static_mission_phase( native_flex_writer &json, const sol::table &options,
+                                 const char *field,
                                  const char *native, const std::string &source )
 {
     const sol::object phase = options.raw_get<sol::object>( field );
@@ -7675,14 +9197,14 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
             actions.emplace();
         }
         const std::size_t count = checked_dense_array_size( *rewards, "mission item rewards",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t i = 1; i <= count; ++i ) {
             actions->set_effect( read_static_mission_reward( rewards->raw_get<sol::table>( i ) ) );
         }
     }
     if( actions ) {
         json.member( "//ccb_lua_mission_actions", detail::stage_mission_actions( std::move( *actions ),
-                     std::move( handlers ) ) );
+                std::move( handlers ) ) );
     }
     write_static_string_or_ids( json, rules, "before_rewards", "//ccb_lua_mission_before_rewards" );
     write_static_string_or_ids( json, rules, "handler", "//ccb_lua_mission_handler" );
@@ -7713,7 +9235,7 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
         json.end_object();
     }
     write_static_catalog_array( json, rules, "map_updates", "update_mapgen",
-    []( JsonOut & out, const sol::table & update ) {
+    []( native_flex_writer & out, const sol::table & update ) {
         const auto layout = update.get<sol::optional<sol::table>>( "layout" );
         const auto id = update.get<sol::optional<std::string>>( "id" );
         if( layout.has_value() == id.has_value() ) {
@@ -7731,7 +9253,8 @@ void write_static_mission_phase( JsonOut &json, const sol::table &options, const
     json.end_object();
 }
 
-void write_static_mission( JsonOut &json, const sol::table &options, const std::string &source )
+void write_static_mission( native_flex_writer &json, const sol::table &options,
+                           const std::string &source )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" }, { "goal", "goal" },
@@ -7754,8 +9277,10 @@ void write_static_mission( JsonOut &json, const sol::table &options, const std::
     if( const auto lines = options.get<sol::optional<sol::table>>( "dialogue" ) ) {
         json.member( "dialogue" );
         json.start_object();
-        for( const char *line : { "describe", "offer", "accepted", "rejected", "advice", "inquire",
-                                  "success", "success_lie", "failure" } ) {
+        for( const char *line : {
+                 "describe", "offer", "accepted", "rejected", "advice", "inquire",
+                 "success", "success_lie", "failure"
+             } ) {
             write_item_text( json, line, lines->raw_get<sol::object>( line ), false );
         }
         json.end_object();
@@ -7766,7 +9291,7 @@ void write_static_mission( JsonOut &json, const sol::table &options, const std::
     write_static_mission_phase( json, options, "failure", "fail", source );
 }
 
-void write_static_scenario_lists( JsonOut &json, const sol::table &options )
+void write_static_scenario_lists( native_flex_writer &json, const sol::table &options )
 {
     write_item_ids( json, options, {
         { "professions", "professions" }, { "hobbies", "hobbies" }, { "traits", "traits" },
@@ -7775,7 +9300,7 @@ void write_static_scenario_lists( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_scenario( JsonOut &json, const sol::table &options )
+void write_static_scenario( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
@@ -7791,7 +9316,9 @@ void write_static_scenario( JsonOut &json, const sol::table &options )
         { "points", "points" }, { "initial_visibility", "distance_initial_visibility" }
     } );
     write_static_scenario_lists( json, options );
-    for( const char *operation : { "extend", "delete" } ) {
+    for( const char *operation : {
+             "extend", "delete"
+         } ) {
         if( const auto lists = options.get<sol::optional<sol::table>>( operation ) ) {
             json.member( operation );
             json.start_object();
@@ -7799,7 +9326,9 @@ void write_static_scenario( JsonOut &json, const sol::table &options )
             json.end_object();
         }
     }
-    for( const char *field : { "start_of_cataclysm", "start_of_game" } ) {
+    for( const char *field : {
+             "start_of_cataclysm", "start_of_game"
+         } ) {
         if( const auto date = options.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
             json.start_object();
@@ -7816,7 +9345,7 @@ void write_static_scenario( JsonOut &json, const sol::table &options )
         json.end_array();
     }
     write_static_catalog_array( json, options, "surround_groups", "surround_groups",
-    []( JsonOut & out, const sol::table & group ) {
+    []( native_flex_writer & out, const sol::table & group ) {
         out.start_array();
         out.write( group.get<std::string>( "group" ) );
         out.write( group.get<double>( "expected_points" ) );
@@ -7824,7 +9353,7 @@ void write_static_scenario( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_profession( JsonOut &json, const sol::table &options )
+void write_static_profession( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_static_profession_text( json, options, "name" );
@@ -7850,21 +9379,21 @@ void write_static_profession( JsonOut &json, const sol::table &options )
     write_static_string_or_ids( json, options, "requirements", "requirement" );
     write_static_catalog_array( json, options, "skills", "skills", write_static_profession_skill );
     write_static_catalog_array( json, options, "addictions", "addictions",
-    []( JsonOut & out, const sol::table & addiction ) {
+    []( native_flex_writer & out, const sol::table & addiction ) {
         out.start_object();
         out.member( "type", addiction.get<std::string>( "id" ) );
         out.member( "intensity", addiction.get<int>( "intensity" ) );
         out.end_object();
     } );
     write_static_catalog_array( json, options, "pets", "pets",
-    []( JsonOut & out, const sol::table & pet ) {
+    []( native_flex_writer & out, const sol::table & pet ) {
         out.start_object();
         out.member( "name", pet.get<std::string>( "monster" ) );
         out.member( "amount", pet.get<int>( "count" ) );
         out.end_object();
     } );
     write_static_catalog_array( json, options, "spells", "spells",
-    []( JsonOut & out, const sol::table & spell ) {
+    []( native_flex_writer & out, const sol::table & spell ) {
         out.start_object();
         out.member( "id", spell.get<std::string>( "id" ) );
         out.member( "level", spell.get<int>( "level" ) );
@@ -7873,7 +9402,9 @@ void write_static_profession( JsonOut &json, const sol::table &options )
     if( const auto items = options.get<sol::optional<sol::table>>( "items" ) ) {
         json.member( "items" );
         json.start_object();
-        for( const char *gender : { "both", "male", "female" } ) {
+        for( const char *gender : {
+                 "both", "male", "female"
+             } ) {
             if( const auto loadout = items->get<sol::optional<sol::table>>( gender ) ) {
                 json.member( gender );
                 write_static_profession_loadout( json, *loadout );
@@ -7890,7 +9421,7 @@ void write_static_profession( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_vehicle_part_variant( JsonOut &json, const sol::table &variant )
+void write_static_vehicle_part_variant( native_flex_writer &json, const sol::table &variant )
 {
     json.start_object();
     write_item_fields<std::string>( json, variant, {
@@ -7900,7 +9431,7 @@ void write_static_vehicle_part_variant( JsonOut &json, const sol::table &variant
     json.end_object();
 }
 
-void write_static_vehicle_part_requirement( JsonOut &json, const sol::table &options )
+void write_static_vehicle_part_requirement( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
     write_placement_member<std::string>( json, options, "duration", "time" );
@@ -7911,41 +9442,49 @@ void write_static_vehicle_part_requirement( JsonOut &json, const sol::table &opt
         write_static_catalog_array( json, options, "using_requirements", "using",
                                     write_static_construction_requirement );
     }
-    write_static_catalog_array( json, options, "skills", "skills", write_static_construction_requirement );
-    write_static_catalog_array( json, options, "qualities", "qualities", write_static_construction_quality );
+    write_static_catalog_array( json, options, "skills", "skills",
+                                write_static_construction_requirement );
+    write_static_catalog_array( json, options, "qualities", "qualities",
+                                write_static_construction_quality );
     write_static_catalog_array( json, options, "components", "components",
-    []( JsonOut & out, const sol::table & alternatives ) {
+    []( native_flex_writer & out, const sol::table & alternatives ) {
         write_static_values<sol::table>( out, alternatives, "component choices",
                                          write_static_construction_requirement );
     } );
     json.end_object();
 }
 
-void write_static_vehicle_part_requirements( JsonOut &json, const sol::table &options )
+void write_static_vehicle_part_requirements( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
-    for( const char *operation : { "install", "removal", "repair" } ) {
-        write_static_tile_object( json, options, operation, operation, write_static_vehicle_part_requirement );
+    for( const char *operation : {
+             "install", "removal", "repair"
+         } ) {
+        write_static_tile_object( json, options, operation, operation,
+                                  write_static_vehicle_part_requirement );
     }
     json.end_object();
 }
 
-void write_static_vehicle_part_controls( JsonOut &json, const sol::table &options )
+void write_static_vehicle_part_controls( native_flex_writer &json, const sol::table &options )
 {
     json.start_object();
-    for( const char *kind : { "air", "land" } ) {
-        write_static_tile_object( json, options, kind, kind, []( JsonOut & out, const sol::table & controls ) {
+    for( const char *kind : {
+             "air", "land"
+         } ) {
+        write_static_tile_object( json, options, kind, kind, []( native_flex_writer & out,
+        const sol::table & controls ) {
             out.start_object();
             write_item_ids( out, controls, { { "proficiencies", "proficiencies" } } );
             write_static_catalog_array( out, controls, "skills", "skills",
-                                         write_static_construction_requirement );
+                                        write_static_construction_requirement );
             out.end_object();
         } );
     }
     json.end_object();
 }
 
-void write_static_vehicle_part( JsonOut &json, const sol::table &options )
+void write_static_vehicle_part( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
@@ -7979,8 +9518,11 @@ void write_static_vehicle_part( JsonOut &json, const sol::table &options )
         { "folding_tools", "folding_tools" }, { "unfolding_tools", "unfolding_tools" },
         { "allowed_tools", "allowed_tools" }
     } );
-    for( const char *field : { "extend", "delete" } ) {
-        write_static_tile_object( json, options, field, field, []( JsonOut & out, const sol::table & edit ) {
+    for( const char *field : {
+             "extend", "delete"
+         } ) {
+        write_static_tile_object( json, options, field, field, []( native_flex_writer & out,
+        const sol::table & edit ) {
             out.start_object();
             write_item_ids( out, edit, {
                 { "flags", "flags" }, { "categories", "categories" }, { "allowed_tools", "allowed_tools" }
@@ -7989,7 +9531,7 @@ void write_static_vehicle_part( JsonOut &json, const sol::table &options )
         } );
     }
     write_static_tile_object( json, options, "proportional", "proportional",
-    []( JsonOut & out, const sol::table & scale ) {
+    []( native_flex_writer & out, const sol::table & scale ) {
         out.start_object();
         write_item_fields<double>( out, scale, {
             { "durability", "durability" }, { "damage_modifier", "damage_modifier" },
@@ -7997,12 +9539,14 @@ void write_static_vehicle_part( JsonOut &json, const sol::table &options )
         } );
         out.end_object();
     } );
-    write_static_catalog_array( json, options, "variants", "variants", write_static_vehicle_part_variant );
+    write_static_catalog_array( json, options, "variants", "variants",
+                                write_static_vehicle_part_variant );
     write_static_catalog_array( json, options, "variant_bases", "variants_bases",
                                 write_static_vehicle_part_variant );
-    write_static_catalog_array( json, options, "qualities", "qualities", write_static_construction_requirement );
+    write_static_catalog_array( json, options, "qualities", "qualities",
+                                write_static_construction_requirement );
     write_static_catalog_array( json, options, "pseudo_tools", "pseudo_tools",
-    []( JsonOut & out, const sol::table & tool ) {
+    []( native_flex_writer & out, const sol::table & tool ) {
         out.start_object();
         out.member( "id", tool.get<std::string>( "id" ) );
         write_placement_member<std::string>( out, tool, "hotkey", "hotkey" );
@@ -8014,7 +9558,7 @@ void write_static_vehicle_part( JsonOut &json, const sol::table &options )
                               write_static_vehicle_part_controls );
     write_static_tile_object( json, options, "workbench", "workbench", write_static_tile_workbench );
     write_static_tile_object( json, options, "transform_terrain", "transform_terrain",
-    []( JsonOut & out, const sol::table & transform ) {
+    []( native_flex_writer & out, const sol::table & transform ) {
         out.start_object();
         write_item_ids( out, transform, { { "pre_flags", "pre_flags" } } );
         write_item_fields<std::string>( out, transform, {
@@ -8023,7 +9567,7 @@ void write_static_vehicle_part( JsonOut &json, const sol::table &options )
         out.end_object();
     } );
     write_static_tile_object( json, options, "damage_reduction", "damage_reduction",
-    []( JsonOut & out, const sol::table & damage ) {
+    []( native_flex_writer & out, const sol::table & damage ) {
         out.start_object();
         for( const auto &[type, amount] : damage ) {
             out.member( type.as<std::string>(), amount.as<double>() );
@@ -8031,14 +9575,14 @@ void write_static_vehicle_part( JsonOut &json, const sol::table &options )
         out.end_object();
     } );
     write_static_tile_object( json, options, "wheel_terrain_modifiers", "wheel_terrain_modifiers",
-    []( JsonOut & out, const sol::table & modifiers ) {
+    []( native_flex_writer & out, const sol::table & modifiers ) {
         const std::size_t size = checked_dense_array_size( modifiers, "wheel_terrain_modifiers",
-                                 std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         out.start_object();
         for( std::size_t i = 1; i <= size; ++i ) {
             const sol::table modifier = modifiers.raw_get<sol::table>( i );
             out.member( modifier.get<std::string>( "flag" ),
-                        std::array<int, 2>{ modifier.get<int>( "move_override" ), modifier.get<int>( "move_penalty" ) } );
+                        std::array<int, 2> { modifier.get<int>( "move_override" ), modifier.get<int>( "move_penalty" ) } );
         }
         out.end_object();
     } );
@@ -8047,11 +9591,12 @@ void write_static_vehicle_part( JsonOut &json, const sol::table &options )
         json.member( "breaks_into", drops.as<std::string>() );
     } else if( drops.get_type() == sol::type::table ) {
         json.member( "breaks_into" );
-        write_static_values<sol::object>( json, drops.as<sol::table>(), "breaks_into", write_static_spawn_entry );
+        write_static_values<sol::object>( json, drops.as<sol::table>(), "breaks_into",
+                                          write_static_spawn_entry );
     }
 }
 
-void write_static_vehicle_part_placement( JsonOut &json, const sol::object &placement )
+void write_static_vehicle_part_placement( native_flex_writer &json, const sol::object &placement )
 {
     if( placement.get_type() == sol::type::string ) {
         json.write( placement.as<std::string>() );
@@ -8068,17 +9613,17 @@ void write_static_vehicle_part_placement( JsonOut &json, const sol::object &plac
     json.end_object();
 }
 
-void write_static_vehicle_mount( JsonOut &json, const sol::table &mount )
+void write_static_vehicle_mount( native_flex_writer &json, const sol::table &mount )
 {
     json.start_object();
     write_item_fields<int>( json, mount, { { "x", "x" }, { "y", "y" }, { "z", "z" } } );
     json.member( "parts" );
     write_static_values<sol::object>( json, mount.get<sol::table>( "parts" ), "mounted parts",
-                                     write_static_vehicle_part_placement );
+                                      write_static_vehicle_part_placement );
     json.end_object();
 }
 
-void write_static_vehicle_item_spawn( JsonOut &json, const sol::table &spawn )
+void write_static_vehicle_item_spawn( native_flex_writer &json, const sol::table &spawn )
 {
     json.start_object();
     write_item_fields<int>( json, spawn, {
@@ -8092,7 +9637,7 @@ void write_static_vehicle_item_spawn( JsonOut &json, const sol::table &spawn )
     } else if( items.get_type() == sol::type::table ) {
         json.member( "items" );
         write_static_values<sol::object>( json, items.as<sol::table>(), "vehicle spawn items",
-        []( JsonOut & out, const sol::object & value ) {
+        []( native_flex_writer & out, const sol::object & value ) {
             if( value.get_type() == sol::type::string ) {
                 out.write( value.as<std::string>() );
                 return;
@@ -8107,7 +9652,7 @@ void write_static_vehicle_item_spawn( JsonOut &json, const sol::table &spawn )
     json.end_object();
 }
 
-void write_static_vehicle_zone( JsonOut &json, const sol::table &zone )
+void write_static_vehicle_zone( native_flex_writer &json, const sol::table &zone )
 {
     json.start_object();
     json.member( "type", zone.get<std::string>( "type" ) );
@@ -8116,7 +9661,7 @@ void write_static_vehicle_zone( JsonOut &json, const sol::table &zone )
     json.end_object();
 }
 
-void write_static_vehicle( JsonOut &json, const sol::table &options )
+void write_static_vehicle( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
@@ -8126,21 +9671,22 @@ void write_static_vehicle( JsonOut &json, const sol::table &options )
     if( const auto blueprint = options.get<sol::optional<sol::table>>( "blueprint" ) ) {
         json.member( "blueprint" );
         write_static_values<sol::object>( json, *blueprint, "blueprint",
-        []( JsonOut & out, const sol::object & row ) {
+        []( native_flex_writer & out, const sol::object & row ) {
             if( row.get_type() == sol::type::string ) {
                 out.write( row.as<std::string>() );
             } else {
                 out.write( bounded_string_array( row.as<sol::table>(), "row",
-                           std::numeric_limits<std::size_t>::max(), "vehicle blueprint" ) );
+                                                 std::numeric_limits<std::size_t>::max(), "vehicle blueprint" ) );
             }
         } );
     }
     write_static_catalog_array( json, options, "mounts", "parts", write_static_vehicle_mount );
-    write_static_catalog_array( json, options, "item_spawns", "items", write_static_vehicle_item_spawn );
+    write_static_catalog_array( json, options, "item_spawns", "items",
+                                write_static_vehicle_item_spawn );
     write_static_catalog_array( json, options, "zones", "zones", write_static_vehicle_zone );
 }
 
-void write_static_npc( JsonOut &json, const sol::table &options )
+void write_static_npc( native_flex_writer &json, const sol::table &options )
 {
     json.member( "id", options.get<std::string>( "id" ) );
     write_item_text( json, "name_unique", options.raw_get<sol::object>( "unique_name" ), false );
@@ -8163,16 +9709,18 @@ void write_static_npc( JsonOut &json, const sol::table &options )
         json.member( "//ccb_lua_npc_death_handler", *handler );
     }
     write_static_tile_object( json, options, "personality", "personality",
-    []( JsonOut & out, const sol::table & value ) {
+    []( native_flex_writer & out, const sol::table & value ) {
         out.start_object();
-        for( const char *field : { "aggression", "bravery", "collector", "altruism" } ) {
+        for( const char *field : {
+                 "aggression", "bravery", "collector", "altruism"
+             } ) {
             out.member( field, value.get<int>( field ) );
         }
         out.end_object();
     } );
 }
 
-void write_static_npc_distribution( JsonOut &json, const sol::object &value )
+void write_static_npc_distribution( native_flex_writer &json, const sol::object &value )
 {
     if( value.get_type() == sol::type::number ) {
         json.write( value.as<double>() );
@@ -8183,7 +9731,9 @@ void write_static_npc_distribution( JsonOut &json, const sol::object &value )
     write_item_fields<double>( json, expression, { { "constant", "constant" }, { "one_in", "one_in" } } );
     write_mapgen_range( json, "dice", expression.raw_get<sol::object>( "dice" ) );
     write_mapgen_range( json, "rng", expression.raw_get<sol::object>( "rng" ) );
-    for( const char *field : { "sum", "mul" } ) {
+    for( const char *field : {
+             "sum", "mul"
+         } ) {
         if( const auto terms = expression.get<sol::optional<sol::table>>( field ) ) {
             json.member( field );
             write_static_values<sol::object>( json, *terms, field, write_static_npc_distribution );
@@ -8192,7 +9742,8 @@ void write_static_npc_distribution( JsonOut &json, const sol::object &value )
     json.end_object();
 }
 
-void write_static_npc_distribution_field( JsonOut &json, const sol::table &options, const char *field,
+void write_static_npc_distribution_field( native_flex_writer &json, const sol::table &options,
+        const char *field,
         const char *native )
 {
     const sol::object value = options.raw_get<sol::object>( field );
@@ -8202,7 +9753,7 @@ void write_static_npc_distribution_field( JsonOut &json, const sol::table &optio
     }
 }
 
-void write_static_shop_condition( JsonOut &json, const sol::table &options,
+void write_static_shop_condition( native_flex_writer &json, const sol::table &options,
                                   const std::string &mod, const std::string &class_id )
 {
     if( const auto handler = options.get<sol::optional<std::string>>( "condition_handler" ) ) {
@@ -8218,8 +9769,8 @@ void write_static_shop_condition( JsonOut &json, const sol::table &options,
     }
 }
 
-void write_static_npc_shop_group( JsonOut &json, const sol::table &group,
-                                 const std::string &mod, const std::string &class_id )
+void write_static_npc_shop_group( native_flex_writer &json, const sol::table &group,
+                                  const std::string &mod, const std::string &class_id )
 {
     json.start_object();
     json.member( "group", group.get<std::string>( "id" ) );
@@ -8230,8 +9781,8 @@ void write_static_npc_shop_group( JsonOut &json, const sol::table &group,
     json.end_object();
 }
 
-void write_static_npc_price_rule( JsonOut &json, const sol::table &rule,
-                                 const std::string &mod, const std::string &class_id )
+void write_static_npc_price_rule( native_flex_writer &json, const sol::table &rule,
+                                  const std::string &mod, const std::string &class_id )
 {
     json.start_object();
     write_item_fields<std::string>( json, rule, {
@@ -8245,10 +9796,12 @@ void write_static_npc_price_rule( JsonOut &json, const sol::table &rule,
     json.end_object();
 }
 
-void write_static_npc_class( JsonOut &json, const sol::table &options, const std::string &mod )
+void write_static_npc_class( native_flex_writer &json, const sol::table &options,
+                             const std::string &mod )
 {
     write_static_named_definition( json, options );
-    write_item_text( json, "job_description", options.raw_get<sol::object>( "job_description" ), false );
+    write_item_text( json, "job_description", options.raw_get<sol::object>( "job_description" ),
+                     false );
     write_placement_member<std::string>( json, options, "copy_from", "copy-from" );
     write_item_fields<bool>( json, options, { { "common", "common" }, { "sells_belongings", "sells_belongings" } } );
     write_placement_member<double>( json, options, "spawn_weight", "common_spawn_weight" );
@@ -8274,12 +9827,12 @@ void write_static_npc_class( JsonOut &json, const sol::table &options, const std
         json.member( "shopkeeper_item_group", shop_groups.as<std::string>() );
     } else {
         write_static_catalog_array( json, options, "shop_groups", "shopkeeper_item_group",
-        [&mod, &class_id]( JsonOut & out, const sol::table & group ) {
+        [&mod, &class_id]( native_flex_writer & out, const sol::table & group ) {
             write_static_npc_shop_group( out, group, mod, class_id );
         } );
     }
     write_static_catalog_array( json, options, "price_rules", "shopkeeper_price_rules",
-    [&mod, &class_id]( JsonOut & out, const sol::table & rule ) {
+    [&mod, &class_id]( native_flex_writer & out, const sol::table & rule ) {
         write_static_npc_price_rule( out, rule, mod, class_id );
     } );
     const sol::object traits = options.raw_get<sol::object>( "traits" );
@@ -8287,7 +9840,7 @@ void write_static_npc_class( JsonOut &json, const sol::table &options, const std
         json.member( "traits", traits.as<std::string>() );
     } else {
         write_static_catalog_array( json, options, "traits", "traits",
-        []( JsonOut & out, const sol::table & entry ) {
+        []( native_flex_writer & out, const sol::table & entry ) {
             if( entry.raw_get<sol::object>( 1 ).get_type() == sol::type::string ) {
                 write_static_construction_requirement( out, entry );
             } else {
@@ -8296,7 +9849,7 @@ void write_static_npc_class( JsonOut &json, const sol::table &options, const std
         } );
     }
     write_static_catalog_array( json, options, "skills", "skills",
-    []( JsonOut & out, const sol::table & row ) {
+    []( native_flex_writer & out, const sol::table & row ) {
         out.start_object();
         write_static_string_or_ids( out, row, "skill", "skill" );
         write_static_npc_distribution_field( out, row, "level", "level" );
@@ -8304,14 +9857,14 @@ void write_static_npc_class( JsonOut &json, const sol::table &options, const std
         out.end_object();
     } );
     write_static_catalog_array( json, options, "spells", "spells",
-    []( JsonOut & out, const sol::table & spell ) {
+    []( native_flex_writer & out, const sol::table & spell ) {
         out.start_object();
         out.member( "id", spell.get<std::string>( "id" ) );
         out.member( "level", spell.get<int>( "level" ) );
         out.end_object();
     } );
     write_static_catalog_array( json, options, "bionics", "bionics",
-    []( JsonOut & out, const sol::table & bionic ) {
+    []( native_flex_writer & out, const sol::table & bionic ) {
         out.start_object();
         write_static_string_or_ids( out, bionic, "id", "id" );
         out.member( "chance", bionic.get<int>( "chance" ) );
@@ -8319,7 +9872,7 @@ void write_static_npc_class( JsonOut &json, const sol::table &options, const std
     } );
 }
 
-void write_static_achievement( JsonOut &json, const sol::table &options )
+void write_static_achievement( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" }
@@ -8337,7 +9890,7 @@ void write_static_achievement( JsonOut &json, const sol::table &options )
         json.end_object();
     }
     write_static_catalog_array( json, options, "requirements", "requirements",
-    []( JsonOut & out, const sol::table & requirement ) {
+    []( native_flex_writer & out, const sol::table & requirement ) {
         out.start_object();
         out.member( "event_statistic", requirement.get<std::string>( "statistic" ) );
         out.member( "is", requirement.get<std::string>( "comparison" ) );
@@ -8364,7 +9917,7 @@ void write_static_achievement( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_technique( JsonOut &json, const sol::table &options )
+void write_static_technique( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
@@ -8379,7 +9932,7 @@ void write_static_technique( JsonOut &json, const sol::table &options )
     if( const auto messages = options.get<sol::optional<sol::table>>( "messages" ) ) {
         json.member( "messages" );
         write_static_values<sol::object>( json, *messages, "technique messages",
-        []( JsonOut & out, const sol::object & message ) {
+        []( native_flex_writer & out, const sol::object & message ) {
             write_item_text_value( out, "technique message", message, false );
         } );
     }
@@ -8410,20 +9963,20 @@ void write_static_technique( JsonOut &json, const sol::table &options )
         { "forbidden_char_flags", "forbidden_char_flags" }
     } );
     write_static_catalog_array( json, options, "skills", "skill_requirements",
-    []( JsonOut & out, const sol::table & requirement ) {
+    []( native_flex_writer & out, const sol::table & requirement ) {
         out.start_object();
         out.member( "name", requirement.get<std::string>( "id" ) );
         out.member( "level", requirement.get<int>( "level" ) );
         out.end_object();
     } );
     write_static_catalog_array( json, options, "weapon_damage", "weapon_damage_requirements",
-    []( JsonOut & out, const sol::table & requirement ) {
+    []( native_flex_writer & out, const sol::table & requirement ) {
         out.start_object();
         out.member( "type", requirement.get<std::string>( "type" ) );
         out.member( "min", requirement.get<int>( "minimum" ) );
         out.end_object();
     } );
-    const auto bonus = []( JsonOut & out, const sol::table & entry ) {
+    const auto bonus = []( native_flex_writer & out, const sol::table & entry ) {
         out.start_object();
         out.member( "stat", entry.get<std::string>( "stat" ) );
         out.member( "scale", entry.get<double>( "scale" ) );
@@ -8435,7 +9988,7 @@ void write_static_technique( JsonOut &json, const sol::table &options )
     write_static_catalog_array( json, options, "flat_bonuses", "flat_bonuses", bonus );
     write_static_catalog_array( json, options, "mult_bonuses", "mult_bonuses", bonus );
     write_static_catalog_array( json, options, "effects", "tech_effects",
-    []( JsonOut & out, const sol::table & effect ) {
+    []( native_flex_writer & out, const sol::table & effect ) {
         out.start_object();
         out.member( "id", effect.get<std::string>( "id" ) );
         write_item_fields<int>( out, effect, { { "duration_turns", "duration" }, { "chance", "chance" } } );
@@ -8447,7 +10000,7 @@ void write_static_technique( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_martial_art_buff( JsonOut &json, const sol::table &buff )
+void write_static_martial_art_buff( native_flex_writer &json, const sol::table &buff )
 {
     json.start_object();
     write_item_fields<std::string>( json, buff, { { "id", "id" } } );
@@ -8489,7 +10042,7 @@ void write_static_martial_art_buff( JsonOut &json, const sol::table &buff )
         { "forbidden_char_flags", "forbidden_char_flags" }
     } );
     write_static_catalog_array( json, buff, "skill_requirements", "skill_requirements",
-    []( JsonOut & out, const sol::table & req ) {
+    []( native_flex_writer & out, const sol::table & req ) {
         out.start_object();
         if( const auto name = req.get<sol::optional<std::string>>( "name" ) ) {
             out.member( "name", *name );
@@ -8501,7 +10054,7 @@ void write_static_martial_art_buff( JsonOut &json, const sol::table &buff )
     } );
     write_static_catalog_array( json, buff, "weapon_damage_requirements",
                                 "weapon_damage_requirements",
-    []( JsonOut & out, const sol::table & req ) {
+    []( native_flex_writer & out, const sol::table & req ) {
         out.start_object();
         out.member( "type", req.get<std::string>( "type" ) );
         if( const auto min_val = req.get<sol::optional<int>>( "min" ) ) {
@@ -8511,7 +10064,7 @@ void write_static_martial_art_buff( JsonOut &json, const sol::table &buff )
         }
         out.end_object();
     } );
-    const auto write_bonus = []( JsonOut & out, const sol::table & entry ) {
+    const auto write_bonus = []( native_flex_writer & out, const sol::table & entry ) {
         out.start_object();
         out.member( "stat", entry.get<std::string>( "stat" ) );
         out.member( "scale", entry.get<double>( "scale" ) );
@@ -8532,7 +10085,7 @@ void write_static_martial_art_buff( JsonOut &json, const sol::table &buff )
     json.end_object();
 }
 
-void write_static_martial_art( JsonOut &json, const sol::table &options )
+void write_static_martial_art( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "copy_from", "copy-from" }, { "primary_skill", "primary_skill" }
@@ -8542,12 +10095,12 @@ void write_static_martial_art( JsonOut &json, const sol::table &options )
     if( const auto initiate = options.get<sol::optional<sol::table>>( "initiate" ) ) {
         json.member( "initiate" );
         write_static_values<sol::object>( json, *initiate, "martial art initiate",
-        []( JsonOut & out, const sol::object & msg ) {
+        []( native_flex_writer & out, const sol::object & msg ) {
             write_item_text_value( out, "martial art initiate", msg, false );
         } );
     }
     write_static_catalog_array( json, options, "autolearn", "autolearn",
-    []( JsonOut & out, const sol::table & entry ) {
+    []( native_flex_writer & out, const sol::table & entry ) {
         out.start_array();
         if( const auto skill = entry.get<sol::optional<std::string>>( "skill" ) ) {
             out.write( *skill );
@@ -8586,7 +10139,9 @@ void write_static_martial_art( JsonOut &json, const sol::table &options )
         write_static_catalog_array( json, options, buff_list, buff_list,
                                     write_static_martial_art_buff );
     }
-    for( const char *operation : { "extend", "delete" } ) {
+    for( const char *operation : {
+             "extend", "delete"
+         } ) {
         if( const auto op = options.get<sol::optional<sol::table>>( operation ) ) {
             json.member( operation );
             json.start_object();
@@ -8599,7 +10154,7 @@ void write_static_martial_art( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_spell_energy( JsonOut &json, const sol::table &options )
+void write_static_spell_energy( native_flex_writer &json, const sol::table &options )
 {
     const sol::object energy = options.raw_get<sol::object>( "energy_source" );
     if( energy.is<std::string>() ) {
@@ -8614,7 +10169,7 @@ void write_static_spell_energy( JsonOut &json, const sol::table &options )
     }
 }
 
-void write_static_magic_type( JsonOut &json, const sol::table &options )
+void write_static_magic_type( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
@@ -8631,7 +10186,7 @@ void write_static_magic_type( JsonOut &json, const sol::table &options )
     } );
 }
 
-void write_static_spell( JsonOut &json, const sol::table &options )
+void write_static_spell( native_flex_writer &json, const sol::table &options )
 {
     write_item_fields<std::string>( json, options, {
         { "id", "id" }, { "abstract", "abstract" }, { "copy_from", "copy-from" },
@@ -8652,8 +10207,10 @@ void write_static_spell( JsonOut &json, const sol::table &options )
         }
         json.member( "effect", *effect );
     }
-    for( const char *field : { "name", "description", "message", "sound_description",
-                              "caster_condition_fail_message", "target_condition_fail_message" } ) {
+    for( const char *field : {
+             "name", "description", "message", "sound_description",
+             "caster_condition_fail_message", "target_condition_fail_message"
+         } ) {
         write_item_text( json, field, options.raw_get<sol::object>( field ), false );
     }
     write_item_fields<bool>( json, options, {
@@ -8719,7 +10276,7 @@ void write_static_spell( JsonOut &json, const sol::table &options )
         json.member( "extend" );
         json.start_object();
         json.member( "flags", bounded_string_array( *flags, "extend_flags",
-                     std::numeric_limits<std::size_t>::max(), "static spell" ) );
+                std::numeric_limits<std::size_t>::max(), "static spell" ) );
         json.end_object();
     }
     write_static_spell_energy( json, options );
@@ -8735,7 +10292,7 @@ void write_static_spell( JsonOut &json, const sol::table &options )
         json.end_object();
     }
     write_static_catalog_array( json, options, "extra_spells", "extra_effects",
-    []( JsonOut & out, const sol::table & spell ) {
+    []( native_flex_writer & out, const sol::table & spell ) {
         out.start_object();
         out.member( "id", spell.get<std::string>( "spell" ) );
         write_placement_member<bool>( out, spell, "self", "hit_self" );
@@ -8750,7 +10307,7 @@ void write_static_spell( JsonOut &json, const sol::table &options )
         json.member( "learn_spells" );
         json.start_object();
         const std::size_t count = checked_dense_array_size( *learned, "learned_spells",
-                                  std::numeric_limits<std::size_t>::max() );
+            std::numeric_limits<std::size_t>::max() );
         for( std::size_t index = 1; index <= count; ++index ) {
             const sol::table spell = learned->raw_get<sol::table>( index );
             json.member( spell.get<std::string>( "spell" ), spell.get<int>( "level" ) );
@@ -8759,25 +10316,257 @@ void write_static_spell( JsonOut &json, const sol::table &options )
     }
 }
 
-template<typename Writer, typename Loader>
-auto static_catalog_definition( const std::string &source, const char *type,
-                                Writer write_fields, Loader load )
+template<typename Loader>
+void invoke_static_fb_loader( Loader load, const JsonObject &definition, const std::string &source )
 {
-    return [&source, type, write_fields, load]( const sol::table & options ) {
-        std::ostringstream serialized;
-        JsonOut json( serialized );
-        serialized << std::defaultfloat << std::setprecision( std::numeric_limits<double>::max_digits10 );
+    static_cast<void>( definition.get_string( "type" ) );
+    if constexpr( std::is_invocable_v<Loader, const JsonObject &, const std::string &> ) {
+        load( definition, source );
+    } else {
+        load( definition );
+    }
+}
+
+void dispatch_static_fb_loader( static_fb_loader kind, const JsonObject &definition,
+                                const std::string &source )
+{
+    switch( kind ) {
+        case static_fb_loader::mapgen:
+            load_mapgen( definition );
+            return;
+        case static_fb_loader::mapgen_palette:
+            mapgen_palette::load( definition, source );
+            return;
+        case static_fb_loader::item:
+            invoke_static_fb_loader( &items::load, definition, source );
+            return;
+        case static_fb_loader::mutation:
+            invoke_static_fb_loader( &mutation_branch::load_trait, definition, source );
+            return;
+        case static_fb_loader::monster:
+            invoke_static_fb_loader( []( const JsonObject & def, const std::string & src ) {
+                MonsterGenerator::generator().load_monster( def, src );
+            }, definition, source );
+            return;
+        case static_fb_loader::overmap_terrain:
+            invoke_static_fb_loader( &overmap_terrains::load, definition, source );
+            return;
+        case static_fb_loader::external_option:
+            invoke_static_fb_loader( &load_external_option, definition, source );
+            return;
+        case static_fb_loader::character_modifier:
+            invoke_static_fb_loader( &character_modifier::load_character_modifiers, definition, source );
+            return;
+        case static_fb_loader::ammunition_type:
+            invoke_static_fb_loader( &ammunition_type::load_ammunition_type, definition, source );
+            return;
+        case static_fb_loader::vehicle_part_location:
+            invoke_static_fb_loader( &vpart_location::load_vehicle_part_locations, definition, source );
+            return;
+        case static_fb_loader::region_settings_river:
+            invoke_static_fb_loader( &region_settings_river::load_region_settings_river, definition, source );
+            return;
+        case static_fb_loader::region_settings_lake:
+            invoke_static_fb_loader( &region_settings_lake::load_region_settings_lake, definition, source );
+            return;
+        case static_fb_loader::region_settings_ocean:
+            invoke_static_fb_loader( &region_settings_ocean::load_region_settings_ocean, definition, source );
+            return;
+        case static_fb_loader::region_settings_ravine:
+            invoke_static_fb_loader( &region_settings_ravine::load_region_settings_ravine, definition, source );
+            return;
+        case static_fb_loader::region_settings_forest:
+            invoke_static_fb_loader( &region_settings_forest::load_region_settings_forest, definition, source );
+            return;
+        case static_fb_loader::region_settings_forest_trail:
+            invoke_static_fb_loader( &region_settings_forest_trail::load_region_settings_forest_trail,
+                                     definition, source );
+            return;
+        case static_fb_loader::region_settings_forest_mapgen:
+            invoke_static_fb_loader( &region_settings_forest_mapgen::load_region_settings_forest_mapgen,
+                                     definition, source );
+            return;
+        case static_fb_loader::region_settings_terrain_furniture:
+            invoke_static_fb_loader(
+                &region_settings_terrain_furniture::load_region_settings_terrain_furniture,
+                definition, source );
+            return;
+        case static_fb_loader::region_terrain_furniture:
+            invoke_static_fb_loader( &region_terrain_furniture::load_region_terrain_furniture,
+                                     definition, source );
+            return;
+        case static_fb_loader::region_settings_map_extras:
+            invoke_static_fb_loader( &region_settings_map_extras::load_region_settings_map_extras,
+                                     definition, source );
+            return;
+        case static_fb_loader::monster_attack:
+            invoke_static_fb_loader( []( const JsonObject & def, const std::string & src ) {
+                MonsterGenerator::generator().load_monster_attack( def, src );
+            }, definition, source );
+            return;
+        case static_fb_loader::magic_type:
+            invoke_static_fb_loader( &magic_type::load_magic_type, definition, source );
+            return;
+        case static_fb_loader::forest_biome_component:
+            invoke_static_fb_loader( &forest_biome_component::load_forest_biome_feature, definition, source );
+            return;
+        case static_fb_loader::forest_biome_mapgen:
+            invoke_static_fb_loader( &forest_biome_mapgen::load_forest_biome_mapgen, definition, source );
+            return;
+        case static_fb_loader::map_extra:
+            invoke_static_fb_loader( &MapExtras::load, definition, source );
+            return;
+        case static_fb_loader::map_extra_collection:
+            invoke_static_fb_loader( &map_extra_collection::load_map_extra_collection, definition, source );
+            return;
+        case static_fb_loader::trait_migration:
+            invoke_static_fb_loader( &mutation_branch::load_trait_migration, definition, source );
+            return;
+        case static_fb_loader::camp_migration:
+            invoke_static_fb_loader( &overmap::load_oter_id_camp_migration, definition, source );
+            return;
+        case static_fb_loader::mod_migration:
+            invoke_static_fb_loader( &mod_migrations::load, definition, source );
+            return;
+        case static_fb_loader::climate_station:
+            invoke_static_fb_loader( &regional_climate::load_station, definition, source );
+            return;
+        case static_fb_loader::ascii_art:
+            invoke_static_fb_loader( &ascii_art::load_ascii_art, definition, source );
+            return;
+        case static_fb_loader::city_building:
+            invoke_static_fb_loader( &city_buildings::load, definition, source );
+            return;
+        case static_fb_loader::overmap_special:
+            invoke_static_fb_loader( &overmap_specials::load, definition, source );
+            return;
+        case static_fb_loader::pet_slot:
+            invoke_static_fb_loader( &load_pet_slots, definition, source );
+            return;
+        case static_fb_loader::riding_config:
+            invoke_static_fb_loader( &load_riding_config, definition, source );
+            return;
+        case static_fb_loader::ter_furn_migration:
+            invoke_static_fb_loader( &ter_furn_migrations::load, definition, source );
+            return;
+        case static_fb_loader::recipe_category:
+            invoke_static_fb_loader( &load_recipe_category, definition, source );
+            return;
+        case static_fb_loader::addiction_type:
+            invoke_static_fb_loader( &add_type::load_add_types, definition, source );
+            return;
+        case static_fb_loader::monster_faction:
+            invoke_static_fb_loader( &monfactions::load_monster_faction, definition, source );
+            return;
+        case static_fb_loader::mutation_type:
+            invoke_static_fb_loader( &load_mutation_type, definition, source );
+            return;
+        case static_fb_loader::trait_group:
+            invoke_static_fb_loader(
+                static_cast<void ( * )( const JsonObject & )>( &mutation_branch::load_trait_group ),
+                definition, source );
+            return;
+        case static_fb_loader::fault:
+            invoke_static_fb_loader( &faults::load_fault, definition, source );
+            return;
+        case static_fb_loader::fault_fix:
+            invoke_static_fb_loader( &faults::load_fix, definition, source );
+            return;
+        case static_fb_loader::vehicle_group:
+            invoke_static_fb_loader( &VehicleGroup::load, definition, source );
+            return;
+        case static_fb_loader::construction:
+            invoke_static_fb_loader( &load_construction, definition, source );
+            return;
+        case static_fb_loader::harvest:
+            invoke_static_fb_loader( &harvest_list::load_harvest_list, definition, source );
+            return;
+        case static_fb_loader::field_type:
+            invoke_static_fb_loader( &field_types::load, definition, source );
+            return;
+        case static_fb_loader::terrain:
+            invoke_static_fb_loader( &load_terrain, definition, source );
+            return;
+        case static_fb_loader::furniture:
+            invoke_static_fb_loader( &load_furniture, definition, source );
+            return;
+        case static_fb_loader::trap:
+            invoke_static_fb_loader( &trap::load_trap, definition, source );
+            return;
+        case static_fb_loader::proficiency_category:
+            invoke_static_fb_loader( &proficiency_category::load_proficiency_categories, definition, source );
+            return;
+        case static_fb_loader::proficiency:
+            invoke_static_fb_loader( &proficiency::load_proficiencies, definition, source );
+            return;
+        case static_fb_loader::item_action:
+            invoke_static_fb_loader( []( const JsonObject & jo ) {
+                item_action_generator::generator().load_item_action( jo );
+            }, definition, source );
+            return;
+        case static_fb_loader::start_location:
+            invoke_static_fb_loader( &start_locations::load, definition, source );
+            return;
+        case static_fb_loader::scenario:
+            invoke_static_fb_loader( &scenario::load_scenario, definition, source );
+            return;
+        case static_fb_loader::profession:
+            invoke_static_fb_loader( &profession::load_profession, definition, source );
+            return;
+        case static_fb_loader::vehicle_part:
+            invoke_static_fb_loader( &vehicles::parts::load, definition, source );
+            return;
+        case static_fb_loader::vehicle:
+            invoke_static_fb_loader( &vehicles::load_prototype, definition, source );
+            return;
+        case static_fb_loader::spell:
+            invoke_static_fb_loader( &spell_type::load_spell, definition, source );
+            return;
+        case static_fb_loader::technique:
+            invoke_static_fb_loader( &load_technique, definition, source );
+            return;
+        case static_fb_loader::martial_art:
+            invoke_static_fb_loader( &load_martial_art, definition, source );
+            return;
+        case static_fb_loader::achievement:
+            invoke_static_fb_loader( &achievement::load_achievement, definition, source );
+            return;
+        case static_fb_loader::npc:
+            invoke_static_fb_loader( &npc_template::load, definition, source );
+            return;
+        case static_fb_loader::count:
+            break;
+    }
+    throw std::runtime_error( "Invalid static FlexBuffer loader kind" );
+}
+
+template<typename Writer>
+auto static_catalog_definition( const std::string &source, const char *type,
+                                static_fb_loader kind, Writer write_fields )
+{
+    return [&source, type, kind, write_fields]( const sol::table & options ) {
+        native_flex_writer json;
         json.start_object();
         json.member( "type", type );
         write_fields( json, options );
         json.end_object();
-        const JsonObject definition = json_loader::from_string( serialized.str() ).get_object();
-        static_cast<void>( definition.get_string( "type" ) );
-        if constexpr( std::is_invocable_v<Loader, const JsonObject &, const std::string &> ) {
-            load( definition, source );
-        } else {
-            load( definition );
-        }
+        emit_static_fb_record( kind, json.finish_bytes(), source );
+    };
+}
+
+template<typename Writer, typename Loader>
+auto tainted_catalog_definition( const std::string &source, const char *type,
+                                 Writer write_fields, Loader load )
+{
+    return [&source, type, write_fields, load]( const sol::table & options ) {
+        taint_static_fb_capture();
+        native_flex_writer json;
+        json.start_object();
+        json.member( "type", type );
+        write_fields( json, options );
+        json.end_object();
+        const JsonObject definition = json.finish().get_object();
+        invoke_static_fb_loader( load, definition, source );
     };
 }
 
@@ -8799,12 +10588,516 @@ runtime_state load_source( const mod_source &source,
     result.platform = make_runtime( resolved.id, generation_counter + 1,
                                     *result.lua, resolved.root );
     initialize_state( *result.lua, resolved.root, result.platform, result.selected_mod_ids,
-                      result.type );
+                      result.type, true );
+    // Pause GC while executing the Mod entry script: avoids GC churn during
+    // bulk content registration and prevents mid-chain collection of fluent
+    // builder userdata whose C++ methods return non-owning *this references.
+    lua_State *L = result.lua->lua_state();
+    lua_gc( L, LUA_GCSTOP );
+    on_out_of_scope restore_gc( [L]() {
+        lua_gc( L, LUA_GCCOLLECT );
+        lua_gc( L, LUA_GCRESTART );
+    } );
     execute_file( *result.lua, resolved.entry, "Lua-first Mod '" + resolved.id + "' entry" );
     return result;
 }
 
+bool valid_ordered_mod_segment( std::string_view id )
+{
+    return !id.empty() && id.size() <= 256 &&
+           id.find( '#' ) == std::string_view::npos &&
+           id.find( '\0' ) == std::string_view::npos;
+}
+
+bool valid_ordered_source_id( std::string_view id )
+{
+    const std::size_t separator = id.find( '#' );
+    if( separator != std::string_view::npos ) {
+        return valid_ordered_mod_segment( id.substr( 0, separator ) ) &&
+               valid_ordered_mod_segment( id.substr( separator + 1 ) );
+    }
+    return valid_ordered_mod_segment( id );
+}
+
+void taint_static_table_factories( sol::state &lua, const sol::table &tbl )
+{
+    sol::load_result wrapper = lua.load( R"lua(
+return function(t, taint)
+    for k, fn in pairs(t) do
+        t[k] = function(...)
+            taint()
+            return fn(...)
+        end
+    end
+end
+)lua" );
+    if( !wrapper.valid() ) {
+        const sol::error err = wrapper;
+        throw std::runtime_error( err.what() );
+    }
+    sol::protected_function factory = wrapper;
+    sol::protected_function_result factory_result = factory();
+    if( !factory_result.valid() ) {
+        const sol::error err = factory_result;
+        throw std::runtime_error( err.what() );
+    }
+    sol::protected_function wrap = factory_result.get<sol::protected_function>();
+    sol::protected_function_result applied = wrap( tbl, &taint_static_fb_capture );
+    if( !applied.valid() ) {
+        const sol::error err = applied;
+        throw std::runtime_error( err.what() );
+    }
+}
+
+void install_ordered_require_taint_hook( sol::state &lua )
+{
+    sol::load_result wrapper = lua.load( R"lua(
+return function(prev_require, taint)
+    return function(name)
+        if name ~= "ccb" then
+            taint()
+        end
+        return prev_require(name)
+    end
+end
+)lua" );
+    if( !wrapper.valid() ) {
+        const sol::error err = wrapper;
+        throw std::runtime_error( err.what() );
+    }
+    sol::protected_function factory = wrapper;
+    sol::protected_function_result factory_result = factory();
+    if( !factory_result.valid() ) {
+        const sol::error err = factory_result;
+        throw std::runtime_error( err.what() );
+    }
+    sol::protected_function bind = factory_result.get<sol::protected_function>();
+    sol::protected_function_result bound = bind( lua["require"], &taint_static_fb_capture );
+    if( !bound.valid() ) {
+        const sol::error err = bound;
+        throw std::runtime_error( err.what() );
+    }
+    lua["require"] = bound.get<sol::function>();
+}
+
+void install_ordered_data_api( sol::state &lua, sol::table &content,
+                               const std::string &source_id,
+                               const std::set<std::string> &selected_mod_ids )
+{
+    content.set_function( "is_mod_active", [&selected_mod_ids]( const std::string & id ) {
+        taint_static_fb_capture();
+        return selected_mod_ids.count( id ) != 0;
+    } );
+    content.set_function( "define_mapgen", load_static_mapgen );
+    content.set_function( "define_external_option", static_catalog_definition(
+                              source_id, "EXTERNAL_OPTION", static_fb_loader::external_option,
+                              write_static_external_option ) );
+    content.set_function( "define_character_modifier", static_catalog_definition(
+                              source_id, "character_mod", static_fb_loader::character_modifier,
+                              write_static_character_modifier ) );
+    content.set_function( "define_ammunition_type", static_catalog_definition(
+                              source_id, "ammunition_type", static_fb_loader::ammunition_type,
+                              write_static_ammunition_type ) );
+    content.set_function( "define_vehicle_part_location", static_catalog_definition(
+                              source_id, "vehicle_part_location", static_fb_loader::vehicle_part_location,
+                              write_static_vehicle_part_location ) );
+    content.set_function( "define_region_settings_river", static_catalog_definition(
+                              source_id, "region_settings_river", static_fb_loader::region_settings_river,
+                              write_static_region_settings_river ) );
+    content.set_function( "define_region_settings_lake", static_catalog_definition(
+                              source_id, "region_settings_lake", static_fb_loader::region_settings_lake,
+                              write_static_region_settings_lake ) );
+    content.set_function( "define_region_settings_ocean", static_catalog_definition(
+                              source_id, "region_settings_ocean", static_fb_loader::region_settings_ocean,
+                              write_static_region_settings_ocean ) );
+    content.set_function( "define_region_settings_ravine", static_catalog_definition(
+                              source_id, "region_settings_ravine", static_fb_loader::region_settings_ravine,
+                              write_static_region_settings_ravine ) );
+    content.set_function( "define_region_settings_forest", static_catalog_definition(
+                              source_id, "region_settings_forest", static_fb_loader::region_settings_forest,
+                              write_static_region_settings_forest ) );
+    content.set_function( "define_region_settings_forest_trail", static_catalog_definition(
+                              source_id, "region_settings_forest_trail",
+                              static_fb_loader::region_settings_forest_trail,
+                              write_static_region_settings_forest_trail ) );
+    content.set_function( "define_region_settings_forest_mapgen", static_catalog_definition(
+                              source_id, "region_settings_forest_mapgen",
+                              static_fb_loader::region_settings_forest_mapgen,
+                              write_static_region_settings_forest_mapgen ) );
+    content.set_function( "define_region_settings_terrain_furniture", static_catalog_definition(
+                              source_id, "region_settings_terrain_furniture",
+                              static_fb_loader::region_settings_terrain_furniture,
+                              write_static_region_settings_terrain_furniture ) );
+    content.set_function( "define_region_terrain_furniture", static_catalog_definition(
+                              source_id, "region_terrain_furniture",
+                              static_fb_loader::region_terrain_furniture,
+                              write_static_region_terrain_furniture ) );
+    content.set_function( "define_region_settings_map_extras", static_catalog_definition(
+                              source_id, "region_settings_map_extras",
+                              static_fb_loader::region_settings_map_extras,
+                              write_static_region_settings_map_extras ) );
+    content.set_function( "define_monster_attack", static_catalog_definition(
+                              source_id, "monster_attack", static_fb_loader::monster_attack,
+    []( native_flex_writer & json, const sol::table & attack ) {
+        write_static_monster_attack_fields( json, attack, "attack_type" );
+    } ) );
+    content.set_function( "define_magic_type", static_catalog_definition(
+                              source_id, "magic_type", static_fb_loader::magic_type,
+                              write_static_magic_type ) );
+    content.set_function( "define_forest_biome_component", static_catalog_definition(
+                              source_id, "forest_biome_component", static_fb_loader::forest_biome_component,
+                              write_static_forest_biome_component ) );
+    content.set_function( "define_forest_biome_mapgen", static_catalog_definition(
+                              source_id, "forest_biome_mapgen", static_fb_loader::forest_biome_mapgen,
+                              write_static_forest_biome_mapgen ) );
+    content.set_function( "define_map_extra", static_catalog_definition(
+                              source_id, "map_extra", static_fb_loader::map_extra,
+                              write_static_map_extra ) );
+    content.set_function( "define_map_extra_collection", static_catalog_definition(
+                              source_id, "map_extra_collection", static_fb_loader::map_extra_collection,
+                              write_static_map_extra_collection ) );
+    content.set_function( "define_trait_migration", static_catalog_definition(
+                              source_id, "TRAIT_MIGRATION", static_fb_loader::trait_migration,
+                              write_static_trait_migration ) );
+    content.set_function( "define_camp_migration", static_catalog_definition(
+                              source_id, "camp_migration", static_fb_loader::camp_migration,
+                              write_static_camp_migration ) );
+    content.set_function( "define_mod_migration", static_catalog_definition(
+                              source_id, "mod_migration", static_fb_loader::mod_migration,
+                              write_static_mod_migration ) );
+    content.set_function( "define_climate_station", static_catalog_definition(
+                              source_id, "regional_climate_station", static_fb_loader::climate_station,
+                              write_static_climate_station ) );
+    content.set_function( "define_ascii_art", static_catalog_definition(
+                              source_id, "ascii_art", static_fb_loader::ascii_art,
+                              write_static_ascii_art ) );
+    content.set_function( "define_city_building", static_catalog_definition(
+                              source_id, "city_building", static_fb_loader::city_building,
+                              write_static_fixed_overmap_layout ) );
+    content.set_function( "define_fixed_overmap_special", static_catalog_definition(
+                              source_id, "overmap_special", static_fb_loader::overmap_special,
+                              write_static_fixed_overmap_special ) );
+    content.set_function( "define_mutable_overmap_special", static_catalog_definition(
+                              source_id, "overmap_special", static_fb_loader::overmap_special,
+                              write_static_mutable_overmap_special ) );
+    content.set_function( "define_pet_slot", static_catalog_definition(
+                              source_id, "pet_slot", static_fb_loader::pet_slot,
+                              write_static_pet_slot ) );
+    content.set_function( "define_riding_config", static_catalog_definition(
+                              source_id, "riding_config", static_fb_loader::riding_config,
+                              write_static_riding_config ) );
+    content.set_function( "define_ter_furn_migration", static_catalog_definition(
+                              source_id, "ter_furn_migration", static_fb_loader::ter_furn_migration,
+                              write_static_ter_furn_migration ) );
+    content.set_function( "define_recipe_category", static_catalog_definition(
+                              source_id, "recipe_category", static_fb_loader::recipe_category,
+                              write_static_recipe_category ) );
+    content.set_function( "define_addiction_type", static_catalog_definition(
+                              source_id, "addiction_type", static_fb_loader::addiction_type,
+                              write_static_addiction_type ) );
+    content.set_function( "define_weakpoint_set", [&source_id]( const sol::table & options ) {
+        taint_static_fb_capture();
+        load_static_weakpoint_set( options, source_id );
+    } );
+    content.set_function( "define_monster_faction", static_catalog_definition(
+                              source_id, "MONSTER_FACTION", static_fb_loader::monster_faction,
+                              write_static_monster_faction ) );
+    content.set_function( "define_mutation_type", static_catalog_definition(
+                              source_id, "mutation_type", static_fb_loader::mutation_type,
+                              write_static_mutation_type ) );
+    content.set_function( "define_trait_group", static_catalog_definition(
+                              source_id, "trait_group", static_fb_loader::trait_group,
+                              write_static_trait_group ) );
+    content.set_function( "define_fault", static_catalog_definition(
+                              source_id, "fault", static_fb_loader::fault,
+                              write_static_fault ) );
+    content.set_function( "define_fault_fix", static_catalog_definition(
+                              source_id, "fault_fix", static_fb_loader::fault_fix,
+                              write_static_fault_fix ) );
+    content.set_function( "define_vehicle_group", static_catalog_definition(
+                              source_id, "vehicle_group", static_fb_loader::vehicle_group,
+                              write_static_vehicle_group ) );
+    content.set_function( "define_construction", static_catalog_definition(
+                              source_id, "construction", static_fb_loader::construction,
+                              write_static_construction ) );
+    content.set_function( "define_harvest", static_catalog_definition(
+                              source_id, "harvest", static_fb_loader::harvest,
+                              write_static_harvest ) );
+    content.set_function( "define_widget", tainted_catalog_definition(
+                              source_id, "widget", write_static_widget, widget::load_widget ) );
+    content.set_function( "define_field_type", static_catalog_definition(
+                              source_id, "field_type", static_fb_loader::field_type,
+                              write_static_field_type ) );
+    content.set_function( "define_terrain", static_catalog_definition(
+                              source_id, "terrain", static_fb_loader::terrain,
+                              write_static_tile_terrain ) );
+    content.set_function( "define_furniture", static_catalog_definition(
+                              source_id, "furniture", static_fb_loader::furniture,
+                              write_static_tile_furniture ) );
+    content.set_function( "define_trap", static_catalog_definition(
+                              source_id, "trap", static_fb_loader::trap,
+                              write_static_trap ) );
+    content.set_function( "define_proficiency_category", static_catalog_definition(
+                              source_id, "proficiency_category", static_fb_loader::proficiency_category,
+                              write_static_proficiency_category ) );
+    content.set_function( "define_proficiency", static_catalog_definition(
+                              source_id, "proficiency", static_fb_loader::proficiency,
+                              write_static_proficiency ) );
+    content.set_function( "define_item_action", static_catalog_definition(
+                              source_id, "item_action", static_fb_loader::item_action,
+                              write_static_named_definition ) );
+    content.set_function( "define_start_location", static_catalog_definition(
+                              source_id, "start_location", static_fb_loader::start_location,
+                              write_static_start_location ) );
+    content.set_function( "define_mission", tainted_catalog_definition(
+                              source_id, "mission_definition", [&source_id]( native_flex_writer & json,
+    const sol::table & options ) {
+        write_static_mission( json, options, source_id );
+    }, mission_type::load_mission_type ) );
+    content.set_function( "define_scenario", static_catalog_definition(
+                              source_id, "scenario", static_fb_loader::scenario,
+                              write_static_scenario ) );
+    content.set_function( "define_profession", static_catalog_definition(
+                              source_id, "profession", static_fb_loader::profession,
+                              write_static_profession ) );
+    content.set_function( "define_vehicle_part", static_catalog_definition(
+                              source_id, "vehicle_part", static_fb_loader::vehicle_part,
+                              write_static_vehicle_part ) );
+    content.set_function( "define_vehicle", static_catalog_definition(
+                              source_id, "vehicle", static_fb_loader::vehicle,
+                              write_static_vehicle ) );
+    content.set_function( "define_spell", static_catalog_definition(
+                              source_id, "SPELL", static_fb_loader::spell,
+                              write_static_spell ) );
+    content.set_function( "define_technique", static_catalog_definition(
+                              source_id, "technique", static_fb_loader::technique,
+                              write_static_technique ) );
+    content.set_function( "define_martial_art", static_catalog_definition(
+                              source_id, "martial_art", static_fb_loader::martial_art,
+                              write_static_martial_art ) );
+    content.set_function( "define_achievement", static_catalog_definition(
+                              source_id, "achievement", static_fb_loader::achievement,
+                              write_static_achievement ) );
+    content.set_function( "define_conduct", static_catalog_definition(
+                              source_id, "conduct", static_fb_loader::achievement,
+                              write_static_achievement ) );
+    content.set_function( "set_martial_art_handler",
+    [&source_id]( const std::string & id, const std::string & phase, const std::string & handler ) {
+        taint_static_fb_capture();
+        set_ordered_martial_art_handler( matype_id( id ), phase, source_id, handler );
+    } );
+    content.set_function( "define_npc", static_catalog_definition(
+                              source_id, "npc", static_fb_loader::npc,
+                              write_static_npc ) );
+    content.set_function( "define_npc_class", tainted_catalog_definition(
+    source_id, "npc_class", [&source_id]( native_flex_writer & json, const sol::table & options ) {
+        write_static_npc_class( json, options, source_id );
+    }, npc_class::load_npc_class ) );
+    install_static_dialogue_predicates( lua, content, source_id );
+    install_static_widget_conditions( lua, content );
+    install_static_dialogue_actions( lua, content, source_id );
+    taint_static_table_factories( lua, content["dialogue_predicates"] );
+    taint_static_table_factories( lua, content["widget_conditions"] );
+    taint_static_table_factories( lua, content["dialogue_actions"] );
+    content.set_function( "gendered_line", static_gendered_dialogue_line );
+    content.set_function( "define_dialogue_topic", [&source_id]( const sol::table & options ) {
+        taint_static_fb_capture();
+        load_static_dialogue_topic( options, source_id );
+    } );
+    content.set_function( "define_item", [&source_id]( const sol::table & options ) {
+        load_static_item( options, source_id );
+    } );
+    content.set_function( "define_mutation", [&source_id]( const sol::table & options ) {
+        load_static_mutation( options, source_id );
+    } );
+    content.set_function( "define_monster", [&source_id]( const sol::table & options ) {
+        load_static_monster( options, source_id );
+    } );
+    content.set_function( "define_mapgen_palette", [&source_id]( const sol::table & options ) {
+        load_static_mapgen_palette( options, source_id );
+    } );
+    content.set_function( "define_overmap_terrain", [&source_id]( const sol::table & options ) {
+        load_static_overmap_terrain( options, source_id, false );
+    } );
+    content.set_function( "patch_overmap_terrain", [&source_id]( const sol::table & options ) {
+        load_static_overmap_terrain( options, source_id, true );
+    } );
+}
+
 } // namespace
+
+struct ordered_data_session::impl {
+    fs::path canonical_root;
+    fs::path cwd_root;
+    std::string current_source_id;
+    std::set<std::string> selected_mod_ids;
+    mod_source_type source_type = mod_source_type::mod;
+    std::size_t files_executed = 0;
+    // Destroy Lua state before current_source_id / selected_mod_ids captured by lambdas.
+    std::unique_ptr<sol::state> lua;
+    sol::table env_mt;
+
+    impl( const std::string &mod_id, const fs::path &root,
+          const std::set<std::string> &selected, mod_source_type type ) {
+        if( !valid_ordered_source_id( mod_id ) ) {
+            throw std::runtime_error( "Invalid Lua-first Mod id '" + mod_id + "'" );
+        }
+        std::error_code ec;
+        canonical_root = fs::canonical( root, ec );
+        if( ec || !fs::is_directory( canonical_root, ec ) || ec ) {
+            throw std::runtime_error( "Cannot resolve Lua-first Mod root for '" + mod_id + "'" );
+        }
+        cwd_root = fs::current_path( ec );
+        current_source_id = mod_id;
+        selected_mod_ids = selected;
+        source_type = type;
+    }
+
+    sol::state &ensure_lua_initialized() {
+        if( lua ) {
+            return *lua;
+        }
+        auto state = std::make_unique<sol::state>();
+        initialize_state( *state, canonical_root, nullptr, nullptr, source_type, true );
+        const sol::table package = ( *state )["package"];
+        const sol::table loaded = package["loaded"];
+        sol::table ccb = loaded["ccb"];
+        sol::table content = ccb["content"];
+        install_ordered_data_api( *state, content, current_source_id, selected_mod_ids );
+        install_ordered_require_taint_hook( *state );
+        env_mt = state->create_table();
+        env_mt["__index"] = state->globals();
+        lua_gc( state->lua_state(), LUA_GCSTOP );
+        lua = std::move( state );
+        return *lua;
+    }
+
+    fs::path resolve_entry( const std::string &source_id, const fs::path &entry ) const {
+        fs::path resolved_entry;
+        if( entry.is_absolute() ) {
+            resolved_entry = entry.lexically_normal();
+        } else {
+            fs::path cwd_candidate = ( cwd_root / entry ).lexically_normal();
+            if( path_is_within( cwd_candidate, canonical_root ) ) {
+                resolved_entry = std::move( cwd_candidate );
+            } else {
+                resolved_entry = ( canonical_root / entry ).lexically_normal();
+            }
+        }
+        std::error_code ec;
+        if( !path_is_within( resolved_entry, canonical_root ) ) {
+            resolved_entry = fs::canonical( entry, ec );
+            if( ( ec || !path_is_within( resolved_entry, canonical_root ) ) && !entry.is_absolute() ) {
+                ec.clear();
+                resolved_entry = fs::canonical( canonical_root / entry, ec );
+            }
+            if( ec || !path_is_within( resolved_entry, canonical_root ) ) {
+                throw std::runtime_error( "Lua-first Mod entry for '" + source_id +
+                                          "' escapes its root or cannot be resolved" );
+            }
+        }
+        if( !fs::is_regular_file( resolved_entry, ec ) || ec ) {
+            throw std::runtime_error( "Lua-first Mod entry for '" + source_id +
+                                      "' is not a regular file" );
+        }
+        return resolved_entry;
+    }
+
+    void load_file( const std::string &source_id, const fs::path &entry ) {
+        if( source_id != current_source_id && !valid_ordered_source_id( source_id ) ) {
+            throw std::runtime_error( "Invalid Lua-first Mod id '" + source_id + "'" );
+        }
+        const fs::path resolved_entry = resolve_entry( source_id, entry );
+        current_source_id = source_id;
+        const std::string previous_mod_id = active_ordered_mod_id;
+        active_ordered_mod_id = source_id;
+        on_out_of_scope restore_mod_id( [&]() {
+            active_ordered_mod_id = previous_mod_id;
+        } );
+
+        const fs::path disk_path = native_file_path( resolved_entry );
+        std::uint64_t src_size = 0;
+        std::int64_t src_mtime_ms = 0;
+        bool is_regular = false;
+        const bool have_stat = stat_lua_file( disk_path, src_size, src_mtime_ms, is_regular ) &&
+                               is_regular;
+        if( have_stat ) {
+            DynamicDataLoader::get_instance().record_loaded_content_file(
+                source_id, disk_path, src_size, src_mtime_ms );
+        }
+        const std::string path_key = resolved_entry.generic_u8string();
+        if( have_stat && try_replay_static_fb( source_id, path_key, src_size, src_mtime_ms ) ) {
+            return;
+        }
+
+        sol::state &lua_ref = ensure_lua_initialized();
+        static_fb_capture capture;
+        static_fb_capture *const previous_capture = active_static_fb_capture;
+        active_static_fb_capture = &capture;
+        on_out_of_scope restore_capture( [previous_capture]() {
+            active_static_fb_capture = previous_capture;
+        } );
+
+        const auto make_context = [&source_id]() {
+            return "Lua-first data entry for '" + source_id + "'";
+        };
+        sol::load_result loaded = load_platform_file( lua_ref, resolved_entry, false );
+        if( !loaded.valid() ) {
+            const sol::error error = loaded;
+            throw std::runtime_error( make_context() + " [" + resolved_entry.generic_u8string() + "]: " +
+                                      error.what() );
+        }
+        sol::protected_function script = loaded;
+        sol::table env = lua_ref.create_table();
+        env[sol::metatable_key] = env_mt;
+        lua_State *L = lua_ref.lua_state();
+        script.push( L );
+        env.push( L );
+        if( lua_setupvalue( L, -2, 1 ) == nullptr ) {
+            lua_pop( L, 1 );
+        }
+        lua_pop( L, 1 );
+        sol::protected_function_result result = script();
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( make_context() + " [" + resolved_entry.generic_u8string() + "]: " +
+                                      error.what() );
+        }
+        if( have_stat && capture.cacheable && capture.record_count > 0 &&
+            capture.serialized_records.size() <= std::numeric_limits<std::uint32_t>::max() ) {
+            const std::string full_key = make_static_fb_key( source_id, path_key );
+            const std::uint32_t payload_len = static_cast<std::uint32_t>(
+                                                  capture.serialized_records.size() );
+            auto shared_payload = std::make_shared<const std::string>(
+                                      std::move( capture.serialized_records ) );
+            static_fb_cache_store &store = lua_static_fb_cache();
+            std::lock_guard<std::mutex> lock( store.mutex );
+            store.entries.insert_or_assign( full_key, cached_static_fb_entry{
+                src_size, src_mtime_ms, std::move( shared_payload ), 0, payload_len,
+                capture.record_count
+            } );
+            store.dirty = true;
+        }
+        if( ( ++files_executed & 127U ) == 0 ) {
+            lua_gc( L, LUA_GCCOLLECT );
+        }
+    }
+};
+
+ordered_data_session::ordered_data_session( const std::string &mod_id, const fs::path &root,
+        const std::set<std::string> &selected_mod_ids, mod_source_type type )
+    : pimpl_( std::make_unique<impl>( mod_id, root, selected_mod_ids, type ) )
+{
+}
+
+ordered_data_session::~ordered_data_session() = default;
+ordered_data_session::ordered_data_session( ordered_data_session && ) noexcept = default;
+ordered_data_session &ordered_data_session::operator=( ordered_data_session && ) noexcept = default;
+
+void ordered_data_session::load_file( const std::string &source_id, const fs::path &entry )
+{
+    pimpl_->load_file( source_id, entry );
+}
 
 void bind_ordered_mutation_lifecycle( mutation_branch &definition, const JsonObject &object,
                                       std::string_view source )
@@ -8818,7 +11111,7 @@ void bind_ordered_mutation_lifecycle( mutation_branch &definition, const JsonObj
     }
     const JsonObject handlers = lifecycle->get_object();
     const auto bind = [&]( const char *field, const char *phase,
-                           mutation_branch::lifecycle_callback &callback ) {
+    mutation_branch::lifecycle_callback & callback ) {
         if( handlers.has_member( field ) ) {
             const std::string name = handlers.get_string( field );
             if( name.empty() || name.find( '\0' ) != std::string::npos ) {
@@ -8856,224 +11149,11 @@ void load_core_content( const fs::path &root )
 }
 
 void load_mod_content_with_data( const mod_source &source,
-                                const std::set<std::string> &selected_mod_ids )
+                                 const std::set<std::string> &selected_mod_ids )
 {
     const mod_source resolved = resolve_source( source );
-    sol::state lua;
-    initialize_state( lua, resolved.root );
-    const sol::table package = lua["package"];
-    const sol::table loaded = package["loaded"];
-    sol::table ccb = loaded["ccb"];
-    sol::table content = ccb["content"];
-    content.set_function( "is_mod_active", [&selected_mod_ids]( const std::string &id ) {
-        return selected_mod_ids.count( id ) != 0;
-    } );
-    content.set_function( "define_mapgen", load_static_mapgen );
-    content.set_function( "define_external_option", static_catalog_definition(
-                              resolved.id, "EXTERNAL_OPTION", write_static_external_option, load_external_option ) );
-    content.set_function( "define_character_modifier", static_catalog_definition(
-                              resolved.id, "character_mod", write_static_character_modifier,
-                              character_modifier::load_character_modifiers ) );
-    content.set_function( "define_ammunition_type", static_catalog_definition(
-                              resolved.id, "ammunition_type", write_static_ammunition_type,
-                              ammunition_type::load_ammunition_type ) );
-    content.set_function( "define_vehicle_part_location", static_catalog_definition(
-                              resolved.id, "vehicle_part_location", write_static_vehicle_part_location,
-                              vpart_location::load_vehicle_part_locations ) );
-    content.set_function( "define_region_settings_river", static_catalog_definition(
-                              resolved.id, "region_settings_river", write_static_region_settings_river,
-                              region_settings_river::load_region_settings_river ) );
-    content.set_function( "define_region_settings_lake", static_catalog_definition(
-                              resolved.id, "region_settings_lake", write_static_region_settings_lake,
-                              region_settings_lake::load_region_settings_lake ) );
-    content.set_function( "define_region_settings_ocean", static_catalog_definition(
-                              resolved.id, "region_settings_ocean", write_static_region_settings_ocean,
-                              region_settings_ocean::load_region_settings_ocean ) );
-    content.set_function( "define_region_settings_ravine", static_catalog_definition(
-                              resolved.id, "region_settings_ravine", write_static_region_settings_ravine,
-                              region_settings_ravine::load_region_settings_ravine ) );
-    content.set_function( "define_region_settings_forest", static_catalog_definition(
-                              resolved.id, "region_settings_forest", write_static_region_settings_forest,
-                              region_settings_forest::load_region_settings_forest ) );
-    content.set_function( "define_region_settings_forest_trail", static_catalog_definition(
-                              resolved.id, "region_settings_forest_trail", write_static_region_settings_forest_trail,
-                              region_settings_forest_trail::load_region_settings_forest_trail ) );
-    content.set_function( "define_region_settings_forest_mapgen", static_catalog_definition(
-                              resolved.id, "region_settings_forest_mapgen", write_static_region_settings_forest_mapgen,
-                              region_settings_forest_mapgen::load_region_settings_forest_mapgen ) );
-    content.set_function( "define_region_settings_terrain_furniture", static_catalog_definition(
-                              resolved.id, "region_settings_terrain_furniture", write_static_region_settings_terrain_furniture,
-                              region_settings_terrain_furniture::load_region_settings_terrain_furniture ) );
-    content.set_function( "define_region_terrain_furniture", static_catalog_definition(
-                              resolved.id, "region_terrain_furniture", write_static_region_terrain_furniture,
-                              region_terrain_furniture::load_region_terrain_furniture ) );
-    content.set_function( "define_region_settings_map_extras", static_catalog_definition(
-                              resolved.id, "region_settings_map_extras", write_static_region_settings_map_extras,
-                              region_settings_map_extras::load_region_settings_map_extras ) );
-    content.set_function( "define_monster_attack", static_catalog_definition(
-    resolved.id, "monster_attack", []( JsonOut & json, const sol::table & attack ) {
-        write_static_monster_attack_fields( json, attack, "attack_type" );
-    }, []( const JsonObject & definition, const std::string & source_id ) {
-        MonsterGenerator::generator().load_monster_attack( definition, source_id );
-    } ) );
-    content.set_function( "define_magic_type", static_catalog_definition(
-                              resolved.id, "magic_type", write_static_magic_type, magic_type::load_magic_type ) );
-    content.set_function( "define_forest_biome_component", static_catalog_definition(
-                              resolved.id, "forest_biome_component", write_static_forest_biome_component,
-                              forest_biome_component::load_forest_biome_feature ) );
-    content.set_function( "define_forest_biome_mapgen", static_catalog_definition(
-                              resolved.id, "forest_biome_mapgen", write_static_forest_biome_mapgen,
-                              forest_biome_mapgen::load_forest_biome_mapgen ) );
-    content.set_function( "define_map_extra", static_catalog_definition(
-                              resolved.id, "map_extra", write_static_map_extra, MapExtras::load ) );
-    content.set_function( "define_map_extra_collection", static_catalog_definition(
-                              resolved.id, "map_extra_collection", write_static_map_extra_collection,
-                              map_extra_collection::load_map_extra_collection ) );
-    content.set_function( "define_trait_migration", static_catalog_definition(
-                              resolved.id, "TRAIT_MIGRATION", write_static_trait_migration, mutation_branch::load_trait_migration ) );
-    content.set_function( "define_camp_migration", static_catalog_definition(
-                              resolved.id, "camp_migration", write_static_camp_migration, overmap::load_oter_id_camp_migration ) );
-    content.set_function( "define_mod_migration", static_catalog_definition(
-                              resolved.id, "mod_migration", write_static_mod_migration, mod_migrations::load ) );
-    content.set_function( "define_climate_station", static_catalog_definition(
-                              resolved.id, "regional_climate_station", write_static_climate_station,
-                              regional_climate::load_station ) );
-    content.set_function( "define_ascii_art", static_catalog_definition(
-                              resolved.id, "ascii_art", write_static_ascii_art,
-                              ascii_art::load_ascii_art ) );
-    content.set_function( "define_city_building", static_catalog_definition(
-                              resolved.id, "city_building", write_static_fixed_overmap_layout,
-                              city_buildings::load ) );
-    content.set_function( "define_fixed_overmap_special", static_catalog_definition(
-                              resolved.id, "overmap_special", write_static_fixed_overmap_special,
-                              overmap_specials::load ) );
-    content.set_function( "define_mutable_overmap_special", static_catalog_definition(
-                              resolved.id, "overmap_special", write_static_mutable_overmap_special,
-                              overmap_specials::load ) );
-    content.set_function( "define_pet_slot", static_catalog_definition(
-                              resolved.id, "pet_slot", write_static_pet_slot,
-                              load_pet_slots ) );
-    content.set_function( "define_riding_config", static_catalog_definition(
-                              resolved.id, "riding_config", write_static_riding_config,
-                              load_riding_config ) );
-    content.set_function( "define_ter_furn_migration", static_catalog_definition(
-                              resolved.id, "ter_furn_migration", write_static_ter_furn_migration,
-                              ter_furn_migrations::load ) );
-    content.set_function( "define_recipe_category", static_catalog_definition(
-                              resolved.id, "recipe_category", write_static_recipe_category,
-                              load_recipe_category ) );
-    content.set_function( "define_addiction_type", static_catalog_definition(
-                              resolved.id, "addiction_type", write_static_addiction_type,
-                              add_type::load_add_types ) );
-    content.set_function( "define_weakpoint_set", [&resolved]( const sol::table & options ) {
-        load_static_weakpoint_set( options, resolved.id );
-    } );
-    content.set_function( "define_monster_faction", static_catalog_definition(
-                              resolved.id, "MONSTER_FACTION", write_static_monster_faction,
-                              monfactions::load_monster_faction ) );
-    content.set_function( "define_mutation_type", static_catalog_definition(
-                              resolved.id, "mutation_type", write_static_mutation_type,
-                              load_mutation_type ) );
-    content.set_function( "define_trait_group", static_catalog_definition(
-                              resolved.id, "trait_group", write_static_trait_group,
-                              static_cast<void ( * )( const JsonObject & )>( mutation_branch::load_trait_group ) ) );
-    content.set_function( "define_fault", static_catalog_definition(
-                              resolved.id, "fault", write_static_fault, faults::load_fault ) );
-    content.set_function( "define_fault_fix", static_catalog_definition(
-                              resolved.id, "fault_fix", write_static_fault_fix, faults::load_fix ) );
-    content.set_function( "define_vehicle_group", static_catalog_definition(
-                              resolved.id, "vehicle_group", write_static_vehicle_group,
-                              VehicleGroup::load ) );
-    content.set_function( "define_construction", static_catalog_definition(
-                              resolved.id, "construction", write_static_construction, load_construction ) );
-    content.set_function( "define_harvest", static_catalog_definition(
-                              resolved.id, "harvest", write_static_harvest, harvest_list::load_harvest_list ) );
-    content.set_function( "define_widget", static_catalog_definition(
-                              resolved.id, "widget", write_static_widget, widget::load_widget ) );
-    content.set_function( "define_field_type", static_catalog_definition(
-                              resolved.id, "field_type", write_static_field_type, field_types::load ) );
-    content.set_function( "define_terrain", static_catalog_definition(
-                              resolved.id, "terrain", write_static_tile_terrain, load_terrain ) );
-    content.set_function( "define_furniture", static_catalog_definition(
-                              resolved.id, "furniture", write_static_tile_furniture, load_furniture ) );
-    content.set_function( "define_trap", static_catalog_definition(
-                              resolved.id, "trap", write_static_trap, trap::load_trap ) );
-    content.set_function( "define_proficiency_category", static_catalog_definition(
-                              resolved.id, "proficiency_category", write_static_proficiency_category,
-                              proficiency_category::load_proficiency_categories ) );
-    content.set_function( "define_proficiency", static_catalog_definition(
-                              resolved.id, "proficiency", write_static_proficiency,
-                              proficiency::load_proficiencies ) );
-    content.set_function( "define_item_action", static_catalog_definition(
-                              resolved.id, "item_action", write_static_named_definition, []( const JsonObject & jo ) {
-        item_action_generator::generator().load_item_action( jo );
-    } ) );
-    content.set_function( "define_start_location", static_catalog_definition(
-                              resolved.id, "start_location", write_static_start_location, start_locations::load ) );
-    content.set_function( "define_mission", static_catalog_definition(
-    resolved.id, "mission_definition", [&resolved]( JsonOut & json, const sol::table & options ) {
-        write_static_mission( json, options, resolved.id );
-    }, mission_type::load_mission_type ) );
-    content.set_function( "define_scenario", static_catalog_definition(
-                              resolved.id, "scenario", write_static_scenario, scenario::load_scenario ) );
-    content.set_function( "define_profession", static_catalog_definition(
-                              resolved.id, "profession", write_static_profession, profession::load_profession ) );
-    content.set_function( "define_vehicle_part", static_catalog_definition(
-                              resolved.id, "vehicle_part", write_static_vehicle_part, vehicles::parts::load ) );
-    content.set_function( "define_vehicle", static_catalog_definition(
-                              resolved.id, "vehicle", write_static_vehicle, vehicles::load_prototype ) );
-    content.set_function( "define_spell", static_catalog_definition(
-                              resolved.id, "SPELL", write_static_spell, spell_type::load_spell ) );
-    content.set_function( "define_technique", static_catalog_definition(
-                              resolved.id, "technique", write_static_technique, load_technique ) );
-    content.set_function( "define_martial_art", static_catalog_definition(
-                              resolved.id, "martial_art", write_static_martial_art,
-                              load_martial_art ) );
-    content.set_function( "define_achievement", static_catalog_definition(
-                              resolved.id, "achievement", write_static_achievement, achievement::load_achievement ) );
-    content.set_function( "define_conduct", static_catalog_definition(
-                              resolved.id, "conduct", write_static_achievement, achievement::load_achievement ) );
-    content.set_function( "set_martial_art_handler",
-    [&resolved]( const std::string & id, const std::string & phase, const std::string & handler ) {
-        set_ordered_martial_art_handler( matype_id( id ), phase, resolved.id, handler );
-    } );
-    content.set_function( "define_npc", static_catalog_definition(
-                              resolved.id, "npc", write_static_npc, npc_template::load ) );
-    content.set_function( "define_npc_class", static_catalog_definition(
-    resolved.id, "npc_class", [&resolved]( JsonOut & json, const sol::table & options ) {
-        write_static_npc_class( json, options, resolved.id );
-    }, npc_class::load_npc_class ) );
-    install_static_dialogue_predicates( lua, content, resolved.id );
-    install_static_widget_conditions( lua, content );
-    install_static_dialogue_actions( lua, content, resolved.id );
-    content.set_function( "gendered_line", static_gendered_dialogue_line );
-    content.set_function( "define_dialogue_topic", [&resolved]( const sol::table &options ) {
-        load_static_dialogue_topic( options, resolved.id );
-    } );
-    content.set_function( "define_item", [&resolved]( const sol::table &options ) {
-        load_static_item( options, resolved.id );
-    } );
-    content.set_function( "define_mutation", [&resolved]( const sol::table &options ) {
-        load_static_mutation( options, resolved.id );
-    } );
-    content.set_function( "define_monster", [&resolved]( const sol::table &options ) {
-        load_static_monster( options, resolved.id );
-    } );
-    content.set_function( "define_mapgen_palette", [&resolved]( const sol::table &options ) {
-        load_static_mapgen_palette( options, resolved.id );
-    } );
-    content.set_function( "define_overmap_terrain", [&resolved]( const sol::table &options ) {
-        load_static_overmap_terrain( options, resolved.id, false );
-    } );
-    content.set_function( "patch_overmap_terrain", [&resolved]( const sol::table &options ) {
-        load_static_overmap_terrain( options, resolved.id, true );
-    } );
-    const std::string previous_mod_id = active_ordered_mod_id;
-    active_ordered_mod_id = resolved.id;
-    on_out_of_scope restore_mod_id( [&]() {
-        active_ordered_mod_id = previous_mod_id;
-    } );
-    execute_file( lua, resolved.entry, "Lua-first data entry for '" + resolved.id + "'" );
+    ordered_data_session session( resolved.id, resolved.root, selected_mod_ids, resolved.type );
+    session.load_file( resolved.id, resolved.entry );
 }
 
 bool read_mod_definition( const fs::path &root, mod_definition &result, std::string &error )
@@ -9096,7 +11176,7 @@ bool read_mod_definition( const fs::path &root, mod_definition &result, std::str
                 << "(with access to the player system): "
                 << path.generic_u8string();
         sol::state lua;
-        initialize_state( lua, canonical_root );
+        initialize_state( lua, canonical_root, nullptr, nullptr, mod_source_type::mod, true );
         const file_execution_result execution = execute_file( lua, path, "Lua-first Mod metadata" );
         if( execution.return_count != 1 ) {
             error = "Lua-first Mod metadata [" + path.generic_u8string() +
@@ -9333,8 +11413,20 @@ bool validate_mods( const std::vector<mod_source> &sources, std::string &error )
     return valid;
 }
 
+void flush_bytecode_cache()
+{
+    flush_disk_bytecode_pack();
+}
+
+void flush_static_fb_cache()
+{
+    flush_disk_static_fb_pack();
+}
+
 void shutdown()
 {
+    flush_bytecode_cache();
+    flush_static_fb_cache();
     discard_prepared_mods();
     clear_active_runtimes();
     active_states.clear();
@@ -9355,7 +11447,7 @@ std::vector<std::string> loaded_mod_ids()
 bool has_primary_mapgen_for( const std::string_view terrain_id )
 {
     const std::vector<runtime_state> &states = candidate_is_prepared ?
-            prepared_states : active_states;
+        prepared_states : active_states;
     return std::any_of( states.begin(), states.end(),
     [terrain_id]( const runtime_state & state ) {
         return runtime_has_primary_mapgen_for( state.platform, terrain_id );
@@ -9615,6 +11707,32 @@ void load_core_content( const std::filesystem::path & )
 }
 
 void load_mod_content_with_data( const mod_source &, const std::set<std::string> & )
+{
+    throw std::runtime_error( "Lua-first Platform support is disabled" );
+}
+
+void flush_bytecode_cache()
+{
+}
+
+void flush_static_fb_cache()
+{
+}
+
+struct ordered_data_session::impl {};
+
+ordered_data_session::ordered_data_session( const std::string &,
+        const std::filesystem::path &,
+        const std::set<std::string> &,
+        mod_source_type )
+{
+}
+
+ordered_data_session::~ordered_data_session() = default;
+ordered_data_session::ordered_data_session( ordered_data_session && ) noexcept = default;
+ordered_data_session &ordered_data_session::operator=( ordered_data_session && ) noexcept = default;
+
+void ordered_data_session::load_file( const std::string &, const std::filesystem::path & )
 {
     throw std::runtime_error( "Lua-first Platform support is disabled" );
 }

@@ -177,7 +177,9 @@ static bool prepare_lua_platform_mods( const std::vector<mod_id> &mods, std::str
             selected_ids.insert( id.str() );
         }
     }
-    return cata::lua_platform::prepare_mods( lua_platform_sources( mods ), error, selected_ids );
+    const bool ok = cata::lua_platform::prepare_mods( lua_platform_sources( mods ), error, selected_ids );
+    cata::lua_platform::flush_bytecode_cache();
+    return ok;
 }
 
 // Load everything that will not depend on any mods
@@ -204,6 +206,7 @@ void game::load_static_data()
 
 bool game::check_mod_data( const std::vector<mod_id> &opts )
 {
+    const DynamicDataLoader::scoped_force_verification force_verify_guard;
     dependency_tree &tree = world_generator->get_mod_manager().get_tree();
     bool data_valid = true;
 
@@ -326,14 +329,19 @@ void game::load_core_data()
     get_options().restore_mod_world_options();
 
     const cata_path core_path = PATH_INFO::jsondir();
+    std::shared_ptr<cata::lua_platform::ordered_data_session> core_session;
     DynamicDataLoader::get_instance().load_data_from_path( core_path, "core",
-    [&core_path]( const std::string & source, const cata_path & entry ) {
-        cata::lua_platform::load_mod_content_with_data( {
-            source, core_path.get_unrelative_path(), entry.get_unrelative_path(),
-            cata::lua_platform::mod_source_type::core_content
-        }, {} );
+    [&core_path, &core_session]( const std::string & source, const cata_path & entry ) {
+        if( !core_session ) {
+            core_session = std::make_shared<cata::lua_platform::ordered_data_session>(
+                               "core", core_path.get_unrelative_path(), std::set<std::string> {},
+                               cata::lua_platform::mod_source_type::core_content );
+        }
+        core_session->load_file( source, entry.get_unrelative_path() );
     } );
     cata::lua_platform::load_core_content( core_path.get_unrelative_path() );
+    cata::lua_platform::flush_bytecode_cache();
+    cata::lua_platform::flush_static_fb_cache();
 }
 
 void game::load_data_from_dir( const cata_path &path, const std::string &src )
@@ -720,13 +728,16 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
     const auto ordered_data_loader = [&selected_mod_ids]( const MOD_INFORMATION & mod ) {
         DynamicDataLoader::lua_data_loader load;
         if( mod.lua_ordered_data_files ) {
-            load = [root = mod.path, id = mod.ident.str(), &selected_mod_ids](
+            auto session = std::make_shared<std::unique_ptr<cata::lua_platform::ordered_data_session>>();
+            load = [root = mod.path.get_unrelative_path(), id = mod.ident.str(),
+                    &selected_mod_ids, session](
             const std::string & source, const cata_path & entry ) {
-                cata::lua_platform::load_mod_content_with_data( {
-                    source, root.get_unrelative_path(), entry.get_unrelative_path(),
-                    source == id ? cata::lua_platform::mod_source_type::mod :
-                    cata::lua_platform::mod_source_type::interaction_content
-                }, selected_mod_ids );
+                if( !*session ) {
+                    *session = std::make_unique<cata::lua_platform::ordered_data_session>(
+                                   id, root, selected_mod_ids,
+                                   cata::lua_platform::mod_source_type::mod );
+                }
+                ( *session )->load_file( source, entry.get_unrelative_path() );
             };
         }
         return load;
@@ -750,6 +761,18 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
                 mod->lua_platform_entry.get_unrelative_path()
             }, selected_mod_ids );
         }
+        if( !mod->lua_world_options.empty() ) {
+            auto &loader = DynamicDataLoader::get_instance();
+            loader.record_loaded_content_token( "mod_world_options", mod.str() );
+            for( const auto &[opt_key, opt_val] : mod->lua_world_options ) {
+                loader.record_loaded_content_token( "mod_opt_key", opt_key );
+                std::visit( [&loader]( const auto & v ) {
+                    std::ostringstream oss;
+                    oss << v;
+                    loader.record_loaded_content_token( "mod_opt_val", oss.str() );
+                }, opt_val );
+            }
+        }
         get_options().apply_mod_world_options( mod.str(), mod->lua_world_options );
     }
     cata_timer::print_stats();
@@ -772,6 +795,8 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
             mod->path / "mod_interactions", mod.str(), mod->lua_interaction_world_options, load_lua,
             ordered_data_loader( *mod ) );
     }
+    cata::lua_platform::flush_bytecode_cache();
+    cata::lua_platform::flush_static_fb_cache();
 }
 
 //Saves all factions and missions and npcs.
