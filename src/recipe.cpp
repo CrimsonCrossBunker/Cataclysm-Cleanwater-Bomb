@@ -910,14 +910,14 @@ void recipe::finalize()
 
         for( recipe_step &step : steps_ ) {
             // Resolve each step's external (using) + inline requirements
-            step.requirements = std::accumulate(
-                                    step.reqs_external.begin(), step.reqs_external.end(),
-                                    step.requirements );
-            step.requirements = std::accumulate(
-                                    step.reqs_internal.begin(), step.reqs_internal.end(),
-                                    step.requirements );
+            for( const auto &req : step.reqs_external ) {
+                step.requirements += req;
+            }
+            for( const auto &req : step.reqs_internal ) {
+                step.requirements += req;
+            }
             // Merge step requirements into recipe-level for whole-recipe gating
-            requirements_ = requirements_ + step.requirements;
+            requirements_ += step.requirements;
             step.reqs_external.clear();
             step.reqs_internal.clear();
         }
@@ -1034,7 +1034,9 @@ void recipe::finalize()
 
 void recipe::add_requirements( const std::vector<std::pair<requirement_id, int>> &reqs )
 {
-    requirements_ = std::accumulate( reqs.begin(), reqs.end(), requirements_ );
+    for( const auto &req : reqs ) {
+        requirements_ += req;
+    }
 }
 
 void recipe::finalize_step_proficiencies()

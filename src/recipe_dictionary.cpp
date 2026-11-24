@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 #include "bodypart.h"
@@ -44,6 +45,7 @@
 #include "string_formatter.h"
 #include "subbodypart.h"
 #include "temp_crafting_inventory.h"
+#include "thread_pool.h"
 #include "translation.h"
 #include "translations.h"
 #include "uistate.h"
@@ -700,15 +702,35 @@ bool recipe_dictionary::is_item_on_loop( const itype_id &i ) const
 
 void recipe_dictionary::finalize_internal( std::map<recipe_id, recipe> &obj )
 {
+    std::vector<recipe *> parallel_recipes;
+    std::vector<recipe *> serial_recipes;
+    parallel_recipes.reserve( obj.size() );
+
     for( auto &elem : obj ) {
         erase_if( elem.second.nested_category_data, [&]( const recipe_id & nest ) {
             return !nest.is_valid() || !nest.obj() || nest->will_be_blacklisted();
         } );
-        elem.second.finalize();
+        recipe &r = elem.second;
+        if( !r.bp_autocalc && r.blueprint.is_empty() && !r.is_nested() && r.name_.empty() &&
+            !( test_mode && r.check_blueprint_needs ) ) {
+            parallel_recipes.push_back( &r );
+        } else {
+            serial_recipes.push_back( &r );
+        }
+    }
+
+    inp_mngr.pump_events();
+    parallel_for_compute( 0, static_cast<int>( parallel_recipes.size() ), [&]( int i ) {
+        parallel_recipes[i]->finalize();
+    } );
+    flush_worker_debugmsgs();
+
+    for( recipe *r : serial_recipes ) {
+        r->finalize();
         inp_mngr.pump_events();
     }
     // remove any blacklisted or invalid recipes...
-    delete_if( []( const recipe & elem ) {
+    ::delete_if( obj, []( const recipe & elem ) {
         if( elem.is_blacklisted() ) {
             return true;
         }
@@ -835,22 +857,18 @@ void recipe_dictionary::finalize()
     }
 
     // Check for nested items without a category to make sure nothing is getting lost
+    std::unordered_set<recipe_id> nested_members;
+    for( const auto &nest : recipe_dict.recipes ) {
+        if( nest.second.is_nested() ) {
+            nested_members.insert( nest.second.nested_category_data.begin(),
+                                   nest.second.nested_category_data.end() );
+        }
+    }
     for( const auto &rec : recipe_dict.recipes ) {
-        if( rec.second.subcategory == "CSC_*_NESTED" ) {
-            bool found = false;
-            for( const auto &nest : recipe_dict.recipes ) {
-                if( nest.second.is_nested() ) {
-                    if( find( nest.second.nested_category_data.begin(), nest.second.nested_category_data.end(),
-                              rec.first ) != nest.second.nested_category_data.end() ) {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if( !found ) {
-                debugmsg( "recipe %s is nested but isn't in a nested group.  It will be impossible to path to by the player.",
-                          rec.first.str() );
-            }
+        if( rec.second.subcategory == "CSC_*_NESTED" &&
+            nested_members.count( rec.first ) == 0 ) {
+            debugmsg( "recipe %s is nested but isn't in a nested group.  It will be impossible to path to by the player.",
+                      rec.first.str() );
         }
     }
 

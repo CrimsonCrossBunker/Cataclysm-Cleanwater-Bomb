@@ -4,6 +4,7 @@
 #include <translation.h>
 #include <type_id.h>
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cstdlib>
 #include <exception>
@@ -490,6 +491,78 @@ static bool a_satisfies_b( const std::vector<quality_requirement> &a,
     return true;
 }
 
+requirement_data &requirement_data::operator+=( const requirement_data &rhs )
+{
+    components.insert( components.end(), rhs.components.begin(), rhs.components.end() );
+    tools.insert( tools.end(), rhs.tools.begin(), rhs.tools.end() );
+    for( const std::vector<quality_requirement> &new_quality : rhs.qualities ) {
+        bool add = true;
+        for( std::vector<quality_requirement> &old_quality : qualities ) {
+            if( a_satisfies_b( new_quality, old_quality ) ) {
+                add = false;
+                old_quality = new_quality;
+                break;
+            } else if( a_satisfies_b( old_quality, new_quality ) ) {
+                add = false;
+                break;
+            }
+        }
+        if( add ) {
+            qualities.emplace_back( new_quality );
+        }
+    }
+    id_ = requirement_id::NULL_ID();
+    blacklisted |= rhs.blacklisted;
+    return *this;
+}
+
+requirement_data &requirement_data::operator+=( const std::pair<const requirement_id, int> &rhs )
+{
+    const requirement_data &src = *rhs.first;
+    const int scalar = static_cast<int>( static_cast<unsigned>( rhs.second ) );
+    if( scalar == 1 ) {
+        return *this += src;
+    }
+    const auto old_comp_size = components.size();
+    components.insert( components.end(), src.components.begin(), src.components.end() );
+    for( auto it = components.begin() + old_comp_size; it != components.end(); ++it ) {
+        for( item_comp &e : *it ) {
+            e.count = std::max( e.count * scalar, -1 );
+        }
+    }
+    const auto old_tool_size = tools.size();
+    tools.insert( tools.end(), src.tools.begin(), src.tools.end() );
+    for( auto it = tools.begin() + old_tool_size; it != tools.end(); ++it ) {
+        for( tool_comp &e : *it ) {
+            e.count = std::max( e.count * scalar, -1 );
+        }
+    }
+    for( const std::vector<quality_requirement> &new_quality : src.qualities ) {
+        bool add = true;
+        for( std::vector<quality_requirement> &old_quality : qualities ) {
+            if( a_satisfies_b( new_quality, old_quality ) ) {
+                add = false;
+                old_quality = new_quality;
+                break;
+            } else if( a_satisfies_b( old_quality, new_quality ) ) {
+                add = false;
+                break;
+            }
+        }
+        if( add ) {
+            qualities.emplace_back( new_quality );
+        }
+    }
+    id_ = requirement_id::NULL_ID();
+    blacklisted |= src.blacklisted;
+    return *this;
+}
+
+requirement_data &requirement_data::operator+=( const std::pair<requirement_id, int> &rhs )
+{
+    return *this += std::pair<const requirement_id, int>( rhs.first, rhs.second );
+}
+
 requirement_data requirement_data::operator+( const requirement_data &rhs ) const
 {
     requirement_data res = *this;
@@ -885,13 +958,20 @@ static void inline_requirements( std::vector<std::vector<T>> &list,
             already_nested.insert( r );
 
             const requirement_data &req = r.obj();
-            const requirement_data multiplied = req * comp.count;
-
-            const std::vector<std::vector<T>> &to_inline = getter( multiplied );
-            if( !to_inline.empty() ) {
-                const std::vector<T> &nested = to_inline.front();
-                for( const T &nested_comp : nested ) {
-                    rec( nested_comp );
+            if( comp.count == 1 ) {
+                const std::vector<std::vector<T>> &to_inline = getter( req );
+                if( !to_inline.empty() ) {
+                    for( const T &nested_comp : to_inline.front() ) {
+                        rec( nested_comp );
+                    }
+                }
+            } else {
+                const requirement_data multiplied = req * comp.count;
+                const std::vector<std::vector<T>> &to_inline = getter( multiplied );
+                if( !to_inline.empty() ) {
+                    for( const T &nested_comp : to_inline.front() ) {
+                        rec( nested_comp );
+                    }
                 }
             }
             already_nested.erase( r );
@@ -902,9 +982,14 @@ static void inline_requirements( std::vector<std::vector<T>> &list,
     };
 
     for( std::vector<T> &vec : list ) {
+        if( std::none_of( vec.begin(), vec.end(), []( const T & c ) {
+        return c.requirement;
+    } ) ) {
+            continue;
+        }
         const std::vector<T> vec_copy = vec;
         vec.clear();
-        for( const T &comp  : vec_copy ) {
+        for( const T &comp : vec_copy ) {
             inline_one( comp, vec );
         }
     }
@@ -1861,6 +1946,69 @@ static void expand_item_in_reqs(
 deduped_requirement_data::deduped_requirement_data( const requirement_data &in,
         const recipe_id &context )
 {
+    // Make sure the tools are not duplicated.
+    requirement_data::alter_tool_comp_vector tools_unique;
+    tools_unique.reserve( in.get_tools().size() );
+    for( auto tools : in.get_tools() ) {
+        std::sort( tools.begin(), tools.end() );
+        tools.erase( std::unique( tools.begin(), tools.end() ), tools.end() );
+        tools_unique.push_back( std::move( tools ) );
+    }
+
+    const alter_item_comp_vector &comps = in.get_components();
+    if( comps.size() <= 1 ) {
+        alternatives_.emplace_back( std::move( tools_unique ), in.get_qualities(), comps );
+        return;
+    }
+
+    std::size_t total_items = 0;
+    for( const std::vector<item_comp> &slot : comps ) {
+        total_items += slot.size();
+    }
+    bool has_cross_slot_duplicate = false;
+    if( total_items <= 32 ) {
+        std::array<std::pair<const itype_id *, std::size_t>, 32> seen{};
+        std::size_t seen_count = 0;
+        for( std::size_t slot_idx = 0; slot_idx < comps.size() && !has_cross_slot_duplicate;
+             ++slot_idx ) {
+            for( const item_comp &c : comps[slot_idx] ) {
+                bool found_same_slot = false;
+                for( std::size_t k = 0; k < seen_count; ++k ) {
+                    if( *seen[k].first == c.type ) {
+                        if( seen[k].second != slot_idx ) {
+                            has_cross_slot_duplicate = true;
+                            break;
+                        }
+                        found_same_slot = true;
+                    }
+                }
+                if( has_cross_slot_duplicate ) {
+                    break;
+                }
+                if( !found_same_slot ) {
+                    seen[seen_count++] = { &c.type, slot_idx };
+                }
+            }
+        }
+    } else {
+        std::unordered_map<itype_id, std::size_t> seen;
+        seen.reserve( total_items );
+        for( std::size_t slot_idx = 0; slot_idx < comps.size() && !has_cross_slot_duplicate;
+             ++slot_idx ) {
+            for( const item_comp &c : comps[slot_idx] ) {
+                const auto [it, inserted] = seen.try_emplace( c.type, slot_idx );
+                if( !inserted && it->second != slot_idx ) {
+                    has_cross_slot_duplicate = true;
+                    break;
+                }
+            }
+        }
+    }
+    if( !has_cross_slot_duplicate ) {
+        alternatives_.emplace_back( std::move( tools_unique ), in.get_qualities(), comps );
+        return;
+    }
+
     // This constructor works through a requirement_data, converting it into an
     // equivalent set of requirement_data alternatives, where each alternative
     // has the property that no item type appears more than once.
@@ -1873,28 +2021,22 @@ deduped_requirement_data::deduped_requirement_data( const requirement_data &in,
         size_t index;
     };
     std::stack<to_check, std::vector<to_check>> pending;
-    pending.push( { in.get_components(), 0 } );
+    pending.push( { comps, 0 } );
 
-    // Make sure the tools are not duplicated.
-    requirement_data::alter_tool_comp_vector tools_unique;
-    for( auto tools : in.get_tools() ) {
-        std::sort( tools.begin(), tools.end() );
-        tools.erase( std::unique( tools.begin(), tools.end() ), tools.end() );
-        tools_unique.push_back( tools );
-    }
+    std::unordered_set<itype_id> later_itypes;
 
     while( !pending.empty() ) {
-        to_check next = pending.top();
+        to_check next = std::move( pending.top() );
         pending.pop();
 
         if( next.index == next.components.size() ) {
-            alternatives_.emplace_back( tools_unique, in.get_qualities(), next.components );
+            alternatives_.emplace_back( tools_unique, in.get_qualities(), std::move( next.components ) );
             continue;
         }
 
         // Build a set of all the itypes used in later stages of this set of
         // requirements.
-        std::unordered_set<itype_id> later_itypes;
+        later_itypes.clear();
         for( size_t i = next.index + 1; i != next.components.size(); ++i ) {
             std::transform( next.components[i].begin(), next.components[i].end(),
                             std::inserter( later_itypes, later_itypes.end() ),
@@ -1920,11 +2062,11 @@ deduped_requirement_data::deduped_requirement_data( const requirement_data &in,
             std::vector<alter_item_comp_vector> result;
             expand_item_in_reqs( *comp_it, req_prefix, next.components, next.index, next.index + 1,
                                  result );
-            for( const alter_item_comp_vector &v : result ) {
+            for( alter_item_comp_vector &v : result ) {
                 // When v is smaller, that means the current requirement was
                 // deleted, in which case we don't advance index.
                 size_t index_inc = v.size() == next.components.size() ? 1 : 0;
-                pending.push( { v, next.index + index_inc } );
+                pending.push( { std::move( v ), next.index + index_inc } );
             }
         }
 
@@ -1932,8 +2074,8 @@ deduped_requirement_data::deduped_requirement_data( const requirement_data &in,
         this_requirement.erase( first_duplicated, this_requirement.end() );
         if( !this_requirement.empty() ) {
             alter_item_comp_vector without_dupes = next.components;
-            without_dupes[next.index] = this_requirement;
-            pending.push( { without_dupes, next.index + 1 } );
+            without_dupes[next.index] = std::move( this_requirement );
+            pending.push( { std::move( without_dupes ), next.index + 1 } );
         }
 
         if( alternatives_.empty() && pending.empty() ) {
