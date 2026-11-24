@@ -8,3 +8,8 @@ ccb.content.define_mutation {
     ugliness = 0,
     description = ccb.content.text("Upon gaining this ability, you gain the ability to enhance your dodge capabilities."),
 }
+
+ccb.content.define_trait_migration {
+    id = "NO_TRACE_YET_I_WISH_active",
+    remove = true,
+}
