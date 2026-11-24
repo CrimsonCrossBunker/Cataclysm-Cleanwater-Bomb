@@ -2,7 +2,66 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
+ccb.content.define_dialogue_topic {
+    id = "TALK_STOLE_ITEM",
+    replies = {
+        {
+            text = ccb.content.text("[Telepathy Check] What are you talking about?  This is mine."),
+            when = predicates.handler("dlg_p_mindovermatter_8333d7767a16"),
+            switch = true,
+            trial = { kind = "condition", when = predicates.handler("dlg_p_mindovermatter_a42101192724") },
+            success = { next_topic = "TALK_TELEPATHY_ALLOW_KEEP_ITEM" },
+            failure = { next_topic = "TALK_DISALLOW_KEEP_ITEM" },
+        },
+    },
+}
 
+ccb.content.define_dialogue_topic {
+    id = "TALK_TELEPATHY_ALLOW_KEEP_ITEM",
+    line = {
+        choices = {
+            ccb.content.text("Oh, I…I don't know what I was thinking.  I…sorry."),
+            ccb.content.text("It is?  Oh, it…it is.  Right.  Right."),
+            ccb.content.text("I…I thought that…never mind."),
+            ccb.content.text("But you…no, I thought…I just…"),
+            ccb.content.text("What?  But that's…we've had…how did you…"),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("That's right."),
+            next_topic = "TALK_DONE",
+            actions = { "remove_stolen_status", actions.handler("dlg_a_mindovermatter_2cfa11e32d4b") },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_MUG_TELEKINESIS_USED",
+    line = {
+        when = predicates.actor_state("interlocutor", "male"),
+        yes = {
+            choices = {
+                ccb.content.text("*'s weapon flies out of his hands.\n\n\"<freaking> <name_b>!  You some kind of witch?\""),
+                ccb.content.text("*'s weapon flies out of his hands and he lets out a startled yelp."),
+            },
+        },
+        no = {
+            choices = {
+                ccb.content.text("*'s weapon flies out of her hands.\n\n\"<freaking> <name_b>!  You some kind of witch?\""),
+                ccb.content.text("*'s weapon flies out of her hands and she lets out a startled yelp."),
+            },
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Get out of here before I do worse."),
+            trial = { kind = "intimidate", difficulty = 10, modifiers = { { score = "FEAR", scale = 3 } } },
+            success = { next_topic = "TALK_DONE", native_actions = { "flee" } },
+            failure = { next_topic = "TALK_DONE", native_actions = { "hostile" } },
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_STRANGER_SCARED",

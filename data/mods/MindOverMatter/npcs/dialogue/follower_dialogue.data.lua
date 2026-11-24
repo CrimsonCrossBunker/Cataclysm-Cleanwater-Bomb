@@ -3,6 +3,169 @@ local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
+    id = { "TALK_FRIEND" },
+    replies = {
+        {
+            text = ccb.content.text("[Telepathy] *Read <npc_name>'s mind*"),
+            next_topic = "TALK_FRIEND_FOLLOWER_scan",
+            when = predicates.handler("dlg_p_mindovermatter_8333d7767a16"),
+        },
+        {
+            text = ccb.content.text("[Vitakinesis] I noticed that you're really sick."),
+            next_topic = "TALK_FRIEND_VITAKINETIC_CURE_ILLNESS",
+            when = predicates.all({ predicates.any({ predicates.has_trait("interlocutor", "ASTHMA"), predicates.has_trait("interlocutor", "CHEMIMBALANCE"), predicates.has_trait("interlocutor", "SCHIZOPHRENIC"), predicates.has_trait("interlocutor", "JITTERY"), predicates.has_trait("interlocutor", "MOODSWINGS"), predicates.has_trait("interlocutor", "ROT1"), predicates.has_trait("interlocutor", "NARCOLEPTIC"), predicates.has_trait("interlocutor", "SEASONAL_ALLERGIES"), predicates.has_trait("interlocutor", "SEASONAL_AFFECTIVE") }), predicates.has_trait("speaker", "VITAKINETIC") }),
+        },
+        {
+            text = ccb.content.text("[Vitakinesis] You don't look so good."),
+            next_topic = "TALK_FRIEND_VITAKINETIC_CURE_DISEASE_LUNGS",
+            when = predicates.all({ predicates.any({ predicates.has_effect("interlocutor", "pre_common_cold"), predicates.has_effect("interlocutor", "common_cold"), predicates.has_effect("interlocutor", "pre_flu"), predicates.has_effect("interlocutor", "flu") }), predicates.has_trait("speaker", "VITAKINETIC") }),
+        },
+        {
+            text = ccb.content.text("[Vitakinesis] Is there something wrong with your eyes?"),
+            next_topic = "TALK_FRIEND_VITAKINETIC_CURE_DISEASE_EYES",
+            when = predicates.all({ predicates.any({ predicates.has_effect("interlocutor", "pre_conjunctivitis_viral"), predicates.has_effect("interlocutor", "conjunctivitis_viral"), predicates.has_effect("interlocutor", "pre_conjunctivitis_bacterial"), predicates.has_effect("interlocutor", "conjunctivitis_bacterial") }), predicates.has_trait("speaker", "VITAKINETIC") }),
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "TALK_FRIEND_FOLLOWER_scan" },
+    line = {
+        choices = {
+            ccb.content.text_without_extraction("<telepathy_generic>"),
+            ccb.content.text_without_extraction("<telepathy_follower>"),
+        },
+    },
+    replies = { { text = ccb.content.text("…"), next_topic = "TALK_FRIEND" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "TALK_FRIEND_VITAKINETIC_CURE_ILLNESS" },
+    line = {
+        choices = {
+            ccb.content.text("And?"),
+            ccb.content.text("Yeah, it is what it is."),
+            ccb.content.text("Those storms at the end of world…  I was fine before them."),
+            ccb.content.text("You noticed, did you?"),
+            ccb.content.text("Yeah, I've had it for years at this point.  Not much I can do about it now, though."),
+            ccb.content.text("Really wish I had gotten some more treatment before, you know."),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("I can cure your illness for you."),
+            when = predicates.all({ predicates.negate(predicates.conversation_state("radio")), predicates.negate(predicates.has_trait("interlocutor", "HALLUCINATION")) }),
+            trial = { kind = "condition", when = predicates.handler("dlg_p_mindovermatter_60ee61334138") },
+            success = { next_topic = "TALK_DENY_VITAKINETIC_HEALING" },
+            failure = { next_topic = "TALK_PERSUADE_VITAKINETIC_HEALING" },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_DENY_VITAKINETIC_HEALING",
+    line = { when = predicates.handler("dlg_p_mindovermatter_83ff787adb53"), yes = ccb.content.text("We'll talk about that after you're done operating that vehicle."), no = { when = predicates.handler("dlg_p_mindovermatter_ad31ba7ddf09"), yes = ccb.content.text("I don't want to talk about that while I'm operating a vehicle!"), no = {
+                when = predicates.handler("dlg_p_mindovermatter_c12d8bd39fb6"),
+                yes = ccb.content.text("I'm too thirsty, give me something to drink."),
+                no = {
+                    when = predicates.handler("dlg_p_mindovermatter_170fbd5b08e8"),
+                    yes = ccb.content.text("I'm too hungry, give me something to eat."),
+                    no = {
+                        when = predicates.handler("dlg_p_mindovermatter_f11538b5053e"),
+                        yes = ccb.content.text("I'm too tired, let me rest first."),
+                        no = {
+                            when = predicates.has_effect("interlocutor", "asked_to_vitakinetic_heal"),
+                            yes = ccb.content.text("I already told you no.  Let it go."),
+                            no = ccb.content.text("I have some reason to refuse healing."),
+                        },
+                    },
+                },
+            } } },
+    replies = {
+        {
+            text = ccb.content.text("Ah, okay."),
+            next_topic = "TALK_FRIEND",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "TALK_FRIEND_VITAKINETIC_CURE_DISEASE_LUNGS" },
+    line = {
+        choices = {
+            ccb.content.text("* coughs.  \"Yeah, I'm not feeling so great"),
+            ccb.content.text("No.  No I don't."),
+            ccb.content.text("Yeah, I think I'm coming down with something."),
+            ccb.content.text("Ugh, yeah.  If only I could call in sick, you know?"),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("I can cure it for you."),
+            when = predicates.all({ predicates.negate(predicates.conversation_state("radio")), predicates.negate(predicates.has_trait("interlocutor", "HALLUCINATION")) }),
+            trial = { kind = "condition", when = predicates.handler("dlg_p_mindovermatter_60ee61334138") },
+            success = { next_topic = "TALK_DENY_VITAKINETIC_HEALING" },
+            failure = { next_topic = "TALK_PERSUADE_VITAKINETIC_HEALING" },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = { "TALK_FRIEND_VITAKINETIC_CURE_DISEASE_EYES" },
+    line = {
+        choices = {
+            ccb.content.text("They just itch like crazy at all time lately."),
+            ccb.content.text("Yeah, I guess.  Must have got something in them."),
+            ccb.content.text("Yeah, I think I'm coming down with something."),
+            ccb.content.text("Ugh, yeah.  If only I could call in sick, you know?"),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("I can cure it for you."),
+            when = predicates.all({ predicates.negate(predicates.conversation_state("radio")), predicates.negate(predicates.has_trait("interlocutor", "HALLUCINATION")) }),
+            trial = { kind = "condition", when = predicates.handler("dlg_p_mindovermatter_60ee61334138") },
+            success = { next_topic = "TALK_DENY_VITAKINETIC_HEALING" },
+            failure = { next_topic = "TALK_PERSUADE_VITAKINETIC_HEALING" },
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_PERSUADE_VITAKINETIC_HEALING",
+    line = ccb.content.text("You're going to what?  How are you going to do that?"),
+    replies = {
+        {
+            text = ccb.content.text("You've seen what I can do, right?  Let me try.  (Note: By doing this you will absorb <npc_name>'s disease into yourself.)"),
+            trial = {
+                kind = "persuade",
+                difficulty = 0,
+                modifiers = {
+                    { score = "TRUST", scale = 6 },
+                    { score = "VALUE", scale = 2 },
+                    { score = "ANGER", scale = -6 },
+                },
+            },
+            success = { next_topic = "TALK_ACCEPT_VITAKINETIC_HEALING" },
+            failure = {
+                next_topic = "TALK_DENY_VITAKINETIC_HEALING_NON_PERSUADE",
+                actions = {
+                    actions.add_effect("interlocutor", "asked_to_vitakinetic_heal", { turns = 86400 }),
+                },
+            },
+        },
+        { text = ccb.content.text("Never mind then."), next_topic = "TALK_FRIEND" },
+        { text = ccb.content.text("Forget it, let's get going."), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_DENY_VITAKINETIC_HEALING_NON_PERSUADE",
+    line = ccb.content.text("I don't think so.  I know there are zombies out there and the world is all fucked up, but I'd rather keep that fucked-up-ness as far away from me as possible.  No offense."),
+    replies = { { text = ccb.content.text("Alright, if you insist."), next_topic = "TALK_DONE" } },
+}
+
+ccb.content.define_dialogue_topic {
     id = "TALK_ACCEPT_VITAKINETIC_HEALING",
     line = {
         choices = {
