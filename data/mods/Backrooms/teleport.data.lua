@@ -1,5 +1,32 @@
 local ccb = require("ccb")
 
+ccb.content.define_furniture {
+    id = "f_waycircle",
+    name = ccb.content.text("waycircle"),
+    move_cost_mod = 100,
+    symbol = "X",
+    description = ccb.content.text("A ritualistic, circular glyph painted onto a sizable boulder and surrounded with primitive decor, with the intent of channeling the natural of ley lines into a functional landing spot for teleportation.  Theoretically, it could receive any manner of targeted teleport, be it magical, ritualistic, or technological.  Examine to link."),
+    color = "light_gray",
+    required_strength = -1,
+    flags = { "TRANSLOCATOR", "MOUNTABLE", "TRANSPARENT" },
+    builtin_examine = "translocator",
+}
+
+ccb.content.define_item {
+    id = "waystone",
+    name = ccb.content.plural_text("Waystone", "Waystones"),
+    description = ccb.content.text("This large chunk of stone, cut from a paired waycircle, has been enchanted with primitive, ritual power to link it to a network of empowered ley lines.  As a result, it is capable of sending the user to any linked waycircle, or to any similar teleport location, be it magical or technological, after performing a brief somatic ritual.  The stone is many, many times heavier than it seems to have any right to be, as if pulled powerfully to the Earth by unseen forces.  Further, though it is only somewhat bulky, it seems to defy proper transport, its own dimensions defying any container or reasonable transport.  Best to craft this where you intend to leave it.  Requires a nearby waycircle to craft."),
+    mass = "2000000 g",
+    volume = "1000000 ml",
+    looks_like = "spiral_stone",
+    materials = { "stone" },
+    symbol = "9",
+    color = "light_blue",
+    flags = { "ALLOWS_REMOTE_USE" },
+    tool = {},
+    use_actions = { { kind = "cast_spell", spell = "prim_warp", no_fail = true, level = 25 } },
+}
+
 ccb.content.define_spell {
     id = "prim_warp",
     name = ccb.content.text("Red Room Recall"),
