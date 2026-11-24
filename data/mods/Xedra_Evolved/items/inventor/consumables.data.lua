@@ -1,5 +1,55 @@
 local ccb = require("ccb")
 
+ccb.content.define_item {
+    id = "water_thirsttrouncer",
+    category = "food",
+    materials = { "water" },
+    mass = "250 g",
+    volume = "250 ml",
+    symbol = "~",
+    phase = "liquid",
+    flags = { "EATEN_COLD", "NUTRIENT_OVERRIDE" },
+    name = ccb.content.plural_text("ThirstTrouncer", "ThirstTrouncer"),
+    description = ccb.content.text("A watery liquid that holds a truly dangerous amount of hydration.  Nothing hydrates like forcing your body to generate water!  Nothing hydrates like ThirstTrouncer!"),
+    default_container = "bottle_plastic",
+    sealed_container = false,
+    color = "light_blue",
+    copy_from = "water",
+    comestible = { kind = "DRINK", servings = 1 },
+    inheritance = { add = { flags = { "INVENTOR_CRAFTED" } } },
+}
+
+ccb.content.define_item {
+    id = "oxygen_jelly_quick",
+    name = ccb.content.plural_text("Quick-release Oxyjelly", "Quick-release Oxyjelly"),
+    description = ccb.content.text("Oxyjelly made to cause a big burst of oxygen, helping against asthma and smoke inhalation."),
+    category = "food",
+    mass = "3 g",
+    volume = "2 ml",
+    price = "1 cent",
+    survival_price = "1 cent",
+    symbol = "*",
+    color = "blue",
+    flags = { "INVENTOR_CRAFTED" },
+    comestible = { kind = "FOOD" },
+    use_actions = { "OXYGEN_BOTTLE" },
+}
+
+ccb.content.define_item {
+    id = "oxygen_jelly_long",
+    name = ccb.content.plural_text("Long-release Oxyjelly", "Long-release Oxyjelly"),
+    description = ccb.content.text("Oxyjelly made to slowly provide oxygen over a long timespan, allowing the user to breathe underwater."),
+    category = "food",
+    mass = "3 g",
+    volume = "2 ml",
+    price = "1 cent",
+    survival_price = "1 cent",
+    symbol = "*",
+    color = "blue",
+    flags = { "INVENTOR_CRAFTED" },
+    comestible = { kind = "FOOD", on_consume = "consume_oxygen_jelly_long" },
+}
+
 -- The name is intended as an acronym that spells a word for coffee.  The resulting word can be from any language.
 ccb.content.define_item {
     id = "inventor_coffee",
