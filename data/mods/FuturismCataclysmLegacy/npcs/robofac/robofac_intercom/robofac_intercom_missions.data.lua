@@ -2,6 +2,11 @@ local ccb = require("ccb")
 local predicates = ccb.content.dialogue_predicates
 
 ccb.content.define_dialogue_topic {
+    id = "MISSION_ROBOFAC_INTERCOM_CHOP_SHOP_ADVICE_Experiments",
+    line = ccb.content.text("Dr. Harlow discovered some sort of alien robotics, and has been performing unsanctioned medical procedures in an attempt to adapt a banned neuromorphic interface in living humans.  The experiments are unethical and a failure to boot, and thus must be stopped."),
+}
+
+ccb.content.define_dialogue_topic {
     id = { "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_OFFER", "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_What", "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_How", "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_Which", "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI_ADVICE_Prototype" },
     line = {
         when = predicates.handler("dlg_p_futurismcataclysmlegacy_97f048b36363"),
