@@ -1,5 +1,13 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation_type {
+    id = "Cyberframe",
+}
+
+ccb.content.define_mutation_type {
+    id = "Cybernetic",
+}
+
 -- NO_I18N
 -- NO_I18N
 ccb.content.define_mutation {

@@ -1,5 +1,9 @@
 local ccb = require("ccb")
 
+ccb.content.define_mutation_type {
+    id = "Equipment",
+}
+
 ccb.content.define_mutation {
     id = "well_distributed",
     name = ccb.content.text("Well Distributed Gear"),
