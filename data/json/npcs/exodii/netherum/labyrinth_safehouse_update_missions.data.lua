@@ -1,5 +1,58 @@
 local ccb = require("ccb")
 
+ccb.content.define_mission {
+    id = "MISSION_nl_boiler",
+    name = ccb.content.text("Find the Power Source"),
+    description = ccb.content.text("I've been tasked with finding some sort of power source.  Find and activate the <color_yellow>terminal</color> to take the power source back to the safehouse."),
+    goal = "MGOAL_GO_TO_TYPE",
+    destination = "labyrinth_nl_exit_boiler",
+    difficulty = 5,
+    value = 0,
+    start = {
+        target = {
+            terrain = "labyrinth_nl_exit_boiler",
+            special = "labyrinthine_structure_boiler",
+            reveal_radius = 1,
+            random = false,
+        },
+    },
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    dialogue = {
+        describe = ccb.content.text("…"),
+        offer = ccb.content.text("…"),
+        accepted = ccb.content.text("…"),
+        rejected = ccb.content.text("…"),
+        advice = ccb.content.text("…"),
+        inquire = ccb.content.text("…"),
+        success = ccb.content.text("…"),
+        success_lie = ccb.content.text("…"),
+        failure = ccb.content.text("…"),
+    },
+}
+
+ccb.content.define_mission {
+    id = "MISSION_nl_water_cooler",
+    name = ccb.content.text("Find the Water Source"),
+    description = ccb.content.text("I've been tasked with finding some sort of water source, but it is hidden in this place.  Find and <color_yellow>\"feed\"</color> it to take the technology back to the safehouse."),
+    goal = "MGOAL_NULL",
+    difficulty = 5,
+    value = 0,
+    origins = { "ORIGIN_SECONDARY" },
+    generic_rewards = false,
+    dialogue = {
+        describe = ccb.content.text("…"),
+        offer = ccb.content.text("…"),
+        accepted = ccb.content.text("…"),
+        rejected = ccb.content.text("…"),
+        advice = ccb.content.text("…"),
+        inquire = ccb.content.text("…"),
+        success = ccb.content.text("…"),
+        success_lie = ccb.content.text("…"),
+        failure = ccb.content.text("…"),
+    },
+}
+
 ccb.content.define_mapgen {
     kind = "update",
     id = "labyrinth_nl_entry_boiler",
