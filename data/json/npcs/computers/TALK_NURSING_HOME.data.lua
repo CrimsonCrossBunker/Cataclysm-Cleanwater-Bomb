@@ -1,6 +1,702 @@
 local ccb = require("ccb")
 
 ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEPTIONIST",
+    line = ccb.content.text("Shady Hills Nursing Home.\n You are logged in as: Joe Shert, Receptionist.\n\nWARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        {
+            text = ccb.content.text("Access Messages"),
+            next_topic = "COMP_NURSING_HOME_RECEP_EMAILS",
+        },
+        {
+            text = ccb.content.text("Access Assigned Tasks"),
+            next_topic = "COMP_NURSING_HOME_RECEP_TASKS",
+        },
+        { text = ccb.content.text("Log Off"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_EMAILS",
+    line = ccb.content.text("WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR B231; UNABLE TO CONNECT TO MESSAGING SERVER.\n ERROR REFRESHING MESSAGES.  NOT ALL MESSAGES MAY BE DISPLAYED.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        { text = ccb.content.text("RE: Ghosts!?"), next_topic = "COMP_NURSING_HOME_RECEP_GHOSTS" },
+        {
+            text = ccb.content.text("RE: Performance Evaluation"),
+            next_topic = "COMP_NURSING_HOME_RECEP_EVAL",
+        },
+        {
+            text = ccb.content.text("RE: Mrs.  Palmero"),
+            next_topic = "COMP_NURSING_HOME_RECEP_PALMERO",
+        },
+        {
+            text = ccb.content.text("RE: Housekeeping"),
+            next_topic = "COMP_NURSING_HOME_RECEP_HOUSEKEEPING",
+        },
+        {
+            text = ccb.content.text("RETURN TO MAIN PAGE"),
+            next_topic = "COMP_NURSING_HOME_RECEPTIONIST",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_GHOSTS",
+    line = ccb.content.text("FROM: Connie Malackey, Receptionist\n TO: Joe Shert, Receptionist\n RE: Ghosts!?\n\n Joe!  After we heard those weird noises the other night, I talked to some of the nurses.\n We aren't the only ones!  Everyone has heard weird noises coming from the walls.\n Do you think this place is haunted!?"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_RECEP_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_EVAL",
+    line = ccb.content.text("FROM: Bryan Rooters, Reception Manager\n TO: Joe Shert, Receptionist\n RE: Performance Eval\n\n Hi Joe.\n Your 90-day performance evaluation is due.  Please plan to meet with me in my office on Tuesday.\n Thanks."),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_RECEP_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_HOUSEKEEPING",
+    line = ccb.content.text("FROM: Bryan Rooters, Reception Manager\n TO: Receptionists\n RE: Housekeeping\n\n Hi team,\n Please be aware that the decision has been made to let go some of the housekeeping staff.\n This decision was made by management to ensure that our operation can run as smoothly and efficiently as possible by passing on these cost savings to the residents.\n To keep up with our high standards of elder care, I will be assigning some additional small tasks to you in the near future.\n As you know, here at Shady Hills we value each and every employee and see this as an excellent opportunity to grow, learn, and provide for the Shady Hills family.\n Please let me know if you have any questions.\n Thanks."),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_RECEP_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_PALMERO",
+    line = ccb.content.text("FROM: Connie Malackey, Receptionist\n TO: Joe Shert, Receptionist\n RE: Mrs.  Palmero\n\n Hi Joe.\n So - you know how Mrs.  Palmero has been acting weird and constantly talking about baking cookies?\n I was talking to one of the nurses and they said that Mrs.  Palmero was prescribed this new medicine?\n It's this weird powder stuff.  Apparently the nurses aren't even qualified to give it to her - she needs a special doctor to come in every day!\n Crazy, right?  I wish all I had to worry about was baking cookies…"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_RECEP_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_TASKS",
+    line = ccb.content.text("WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR C310; UNABLE TO CONNECT TO SCHEDULING SERVER.\n ERROR REFRESHING TASKS.  NOT ALL TASKS MAY BE DISPLAYED.\n REPORT COMPLETED TASKS DIRECTLY TO SUPERVISOR VIA MESSAGING SYSTEM.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        {
+            text = ccb.content.text("New Assignments [1]"),
+            next_topic = "COMP_NURSING_HOME_RECEP_NEWTASKS",
+        },
+        {
+            text = ccb.content.text("Pending Assignments"),
+            next_topic = "COMP_NURSING_HOME_RECEP_ERROR",
+        },
+        {
+            text = ccb.content.text("Completed Assignments"),
+            next_topic = "COMP_NURSING_HOME_RECEP_ERROR",
+        },
+        {
+            text = ccb.content.text("RETURN TO MAIN PAGE"),
+            next_topic = "COMP_NURSING_HOME_RECEPTIONIST",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_ERROR",
+    line = ccb.content.text("ERROR ACCESSING SERVER"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO ASSIGNED TASKS"),
+            next_topic = "COMP_NURSING_HOME_RECEP_TASKS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_NEWTASKS",
+    line = ccb.content.text("Welcome Joe to Shady Hills Assignment Database,\n\n You have [1] new task(s) assigned to you by your supervisor.\n When you have completed each task, be sure to submit them for approval."),
+    replies = {
+        {
+            text = ccb.content.text("Clean Bathrooms [NEW!]"),
+            next_topic = "COMP_NURSING_HOME_RECEP_CLEAN",
+        },
+        {
+            text = ccb.content.text("RETURN TO ASSIGNED TASKS"),
+            next_topic = "COMP_NURSING_HOME_RECEP_TASKS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_CLEAN",
+    line = ccb.content.text("TASK: Clean Bathrooms\n Assigned to: Joe Shert, Reception\n Assigned by: Bryan Rooters, Reception Manager\n Priority: High\n Due in: 1 Day\n\n Notes: Clean each bathroom stall and refresh toilet paper."),
+    replies = {
+        {
+            text = ccb.content.text("Set Task to Completed"),
+            next_topic = "COMP_NURSING_HOME_RECEP_ERROR",
+        },
+        { text = ccb.content.text("Add Comment"), next_topic = "COMP_NURSING_HOME_RECEP_ERROR" },
+        {
+            text = ccb.content.text("RETURN TO ASSIGNED TASKS"),
+            next_topic = "COMP_NURSING_HOME_RECEP_TASKS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_RECEP_MANAGER",
+    line = ccb.content.text("Shady Hills Nursing Home.\n You are logged in as: Bryan Rooters, Reception Manager.\n\n WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        { text = ccb.content.text("Access Messages"), next_topic = "COMP_NURSING_HOME_MGR_EMAILS" },
+        {
+            text = ccb.content.text("Access Employee Files"),
+            next_topic = "COMP_NURSING_HOME_MGR_RECORDS",
+        },
+        { text = ccb.content.text("Log Off"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_EMAILS",
+    line = ccb.content.text("WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR B231; UNABLE TO CONNECT TO MESSAGING SERVER.\n ERROR REFRESHING MESSAGES.  NOT ALL MESSAGES MAY BE DISPLAYED.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        {
+            text = ccb.content.text("RE: Do Your Job"),
+            next_topic = "COMP_NURSING_HOME_MGR_DOYOURJOB",
+        },
+        {
+            text = ccb.content.text("RE: Performance Evaluation"),
+            next_topic = "COMP_NURSING_HOME_MGR_EVAL",
+        },
+        {
+            text = ccb.content.text("RE: Connie Malackey"),
+            next_topic = "COMP_NURSING_HOME_MGR_CONNIE",
+        },
+        {
+            text = ccb.content.text("RE: Housekeeping"),
+            next_topic = "COMP_NURSING_HOME_MGR_HOUSEKEEPING1",
+        },
+        {
+            text = ccb.content.text("RE: Housekeeping"),
+            next_topic = "COMP_NURSING_HOME_MGR_HOUSEKEEPING2",
+        },
+        {
+            text = ccb.content.text("RETURN TO MAIN PAGE"),
+            next_topic = "COMP_NURSING_HOME_RECEP_MANAGER",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_DOYOURJOB",
+    line = ccb.content.text("FROM: Kristi Gordee, SVP Operations\n TO: Bryan Rooters, Reception Manager\n RE: Do Your Job\n\n Bryan,\n Do you not conduct thorough background checks and reviews on new hires?  Joe is related to the Mayor of Springfield.  His 90 day New Employee evaluation is coming up.  Do your job."),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_MGR_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_EVAL",
+    line = ccb.content.text("FROM: Joe Shert, Receptionist\n TO: Bryan Rooters, Reception Manager\n RE: Performance Evaluation\n\n Hi Mr. Rooters, I look forward to seeing you Tuesday for my evaluation.  I've been working really hard to show that I am Shady Hills material!"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_MGR_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_CONNIE",
+    line = ccb.content.text("FROM: Kristi Gordee, SVP Operations\n TO: Bryan Rooters, Reception Manager\n RE: Connie Malackey\n\n Bryan,\n Connie has been asking a lot of weird questions about 'Ghosts' and other such nonsense.\n This could look bad for us.  To make it worse, she is hanging out with Joe Shert a lot.\n Shut it down."),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_MGR_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_HOUSEKEEPING1",
+    line = ccb.content.text("FROM: Joe Shert, Receptionist\n TO: Bryan Rooters, Reception Manager\n RE: Housekeeping\n\n Hi Mr. Rooters, with all due respect I feel that I may have been assigned more of these tasks than the other Receptionists.\n Jim said he hasn't had to do any cleaning in two weeks, yet I have been on cleaning duty 3 times.\n To be clear, I certainly do not mind the extra work!  I just want to ensure you're aware in case there is a computer glitch.\n Thank you and have a great day!"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_MGR_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_HOUSEKEEPING2",
+    line = ccb.content.text("FROM: Amanda Hugentskis, Receptionist\n TO: Bryan Rooters, Reception Manager\n RE: Housekeeping\n\n Seriously?  This is ridiculous.  This place was a mess even with housekeeping personnel.\n I quit."),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_MGR_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_RECORDS",
+    line = ccb.content.text("WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR D809; UNABLE TO CONNECT TO DATABASE.\n ERROR REFRESHING DATABASE.  NOT ALL RECORDS MAY BE DISPLAYED.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n Please select an employee record below."),
+    replies = {
+        {
+            text = ccb.content.text("JOSEPH SHERT; RECEPTIONIST"),
+            next_topic = "COMP_NURSING_HOME_MGR_JOERECORD",
+        },
+        {
+            text = ccb.content.text("CONNIE MALACKEY; RECEPTIONIST"),
+            next_topic = "COMP_NURSING_HOME_MGR_CONNIERECORD",
+        },
+        {
+            text = ccb.content.text("AMANDA HUGENTSKIS; RECEPTIONIST"),
+            next_topic = "COMP_NURSING_HOME_MGR_AMANDARECORD",
+        },
+        {
+            text = ccb.content.text("JAMES NEONDORTHALL; RECEPTIONIST"),
+            next_topic = "COMP_NURSING_HOME_MGR_ERROR",
+        },
+        {
+            text = ccb.content.text("RETURN TO MAIN PAGE"),
+            next_topic = "COMP_NURSING_HOME_RECEP_MANAGER",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_ERROR",
+    line = ccb.content.text("ERROR ACCESSING SERVER"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO EMPLOYEES"),
+            next_topic = "COMP_NURSING_HOME_MGR_RECORDS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_JOERECORD",
+    line = ccb.content.text("EMPLOYEE NAME: Joseph Shert\n EMPLOYEE TITLE: Receptionist\n HIRE DATE: xx-xx-xxxx\n STATUS: Active\n REVIEW DUE: June\n\n"),
+    replies = {
+        {
+            text = ccb.content.text("Assign Task to This Employee"),
+            next_topic = "COMP_NURSING_HOME_MGR_ERROR",
+        },
+        {
+            text = ccb.content.text("View Most Recent Evaluation"),
+            next_topic = "COMP_NURSING_HOME_MGR_JOEFILE",
+        },
+        {
+            text = ccb.content.text("Conduct an Evaluation for This Employee"),
+            next_topic = "COMP_NURSING_HOME_MGR_ERROR",
+        },
+        {
+            text = ccb.content.text("RETURN TO EMPLOYEES"),
+            next_topic = "COMP_NURSING_HOME_MGR_RECORDS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_CONNIERECORD",
+    line = ccb.content.text("EMPLOYEE NAME: Connie Malackey\n EMPLOYEE TITLE: Receptionist\n HIRE DATE: xx-xx-xxxx\n Status: Active\n REVIEW DUE: May\n\n"),
+    replies = {
+        {
+            text = ccb.content.text("Assign Task to This Employee"),
+            next_topic = "COMP_NURSING_HOME_MGR_ERROR",
+        },
+        {
+            text = ccb.content.text("View Most Recent Evaluation"),
+            next_topic = "COMP_NURSING_HOME_MGR_CONNIEFILE",
+        },
+        {
+            text = ccb.content.text("Conduct an Evaluation for This Employee"),
+            next_topic = "COMP_NURSING_HOME_MGR_ERROR",
+        },
+        {
+            text = ccb.content.text("RETURN TO EMPLOYEES"),
+            next_topic = "COMP_NURSING_HOME_MGR_RECORDS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_AMANDARECORD",
+    line = ccb.content.text("EMPLOYEE NAME: Amanda Hugentskis\n EMPLOYEE TITLE: Receptionist\n HIRE DATE: xx-xx-xxxx\n Status: Terminated\n REVIEW DUE: December\n\n"),
+    replies = {
+        {
+            text = ccb.content.text("Assign Task to This Employee"),
+            next_topic = "COMP_NURSING_HOME_MGR_ERROR",
+        },
+        {
+            text = ccb.content.text("View Most Recent Evaluation"),
+            next_topic = "COMP_NURSING_HOME_MGR_ERROR",
+        },
+        {
+            text = ccb.content.text("Conduct an Evaluation for This Employee"),
+            next_topic = "COMP_NURSING_HOME_MGR_ERROR",
+        },
+        {
+            text = ccb.content.text("RETURN TO EMPLOYEES"),
+            next_topic = "COMP_NURSING_HOME_MGR_RECORDS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_JOEFILE",
+    line = ccb.content.text("EMPLOYEE NAME: Joseph Shert\n EMPLOYEE TITLE: Receptionist\n REVIEW DATE: 06-xx-xxxx\n REVIEW BY: Bryan Rooters, Reception Manager\n\n Joseph is always on time for work and gets along well with coworkers.  However, he has trouble taking direction and often speaks out against his superiors [See attached email: Housekeeping].\n Joe speaks a big game but unfortunately does not perform to the Shady Hills standard.\n As our standard is extremely important for the health and wellbeing of our residents, I have no choice but to recommend termination.\n\n Signed,\n Bryan Rooters\n Reception Manager"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO RECORD"),
+            next_topic = "COMP_NURSING_HOME_MGR_JOERECORD",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_MGR_CONNIEFILE",
+    line = ccb.content.text("EMPLOYEE NAME: Connie Malackey\n EMPLOYEE TITLE: Receptionist\n REVIEW DATE: 05-xx-xxxx\n REVIEW BY: Bryan Rooters, Reception Manager\n\n Connie gets along well with coworkers.  I have occasionally needed to remind her to start work on time as clocking in late is detrimental to other employees and, ultimately, our precious residents.  Connie works hard on assigned tasks but often lacks the drive to seek out additional tasks.\n I am recommending a generous 0.5% pay wage increase per corporate policy.\n\n Signed,\n Bryan Rooters\n Reception Manager"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO RECORD"),
+            next_topic = "COMP_NURSING_HOME_MGR_CONNIERECORD",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO",
+    line = ccb.content.text("Shady Hills Nursing Home.\n You are logged in as: Kristi Gordee, SVP Operations.\n\n WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        { text = ccb.content.text("Access Messages"), next_topic = "COMP_NURSING_HOME_COO_EMAILS" },
+        {
+            text = ccb.content.text("Access Nursing Home Main Drive"),
+            next_topic = "COMP_NURSING_HOME_COO_MAIN",
+        },
+        {
+            text = ccb.content.text("Access Encrypted Drive"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR5",
+        },
+        { text = ccb.content.text("Log Off"), next_topic = "TALK_DONE" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_ERROR5",
+    line = ccb.content.text("WARNING: Encrypted file.  Enter secure password."),
+    replies = { { text = ccb.content.text("RETURN TO MAIN DRIVE"), next_topic = "COMP_NURSING_HOME_COO" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_EMAILS",
+    line = ccb.content.text("Shady Hills Nursing Home.\n You are logged in as: Kristi Gordee, SVP Operations.\n\n WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR B231; UNABLE TO CONNECT TO MESSAGING SERVER.\n ERROR REFRESHING MESSAGES.  NOT ALL MESSAGES MAY BE DISPLAYED.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        {
+            text = ccb.content.text("RE: Thank you for your order"),
+            next_topic = "COMP_NURSING_HOME_COO_THANKS",
+        },
+        { text = ccb.content.text("RE: Budget"), next_topic = "COMP_NURSING_HOME_COO_BUDGET" },
+        {
+            text = ccb.content.text("RE: Kristi, Act Now and Save!"),
+            next_topic = "COMP_NURSING_HOME_COO_ADVERT",
+        },
+        {
+            text = ccb.content.text("RE: I am going to sue you"),
+            next_topic = "COMP_NURSING_HOME_COO_LAWSUIT",
+        },
+        { text = ccb.content.text("RETURN TO MAIN PAGE"), next_topic = "COMP_NURSING_HOME_COO" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_THANKS",
+    line = ccb.content.text("FROM: Big Science Supply Depot\n TO: Kristi Gordee, SVP Operations\n RE: Thank you for your order\n\n Hi KRISTI GORDEE,\n\n We have received your order and will begin processing it immediately.\n 1x Jet Injector, RX12 by Rivtech\n\n You will receive an additional email when your order has shipped.\n Thank you for shopping BIG SCIENCE SUPPLY DEPOT!\n\n Please do not reply to this message as your reply will be routed to an unmonitored inbox.\n Questions?  Contact customer service xxx-xxx-xxxx."),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_COO_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_BUDGET",
+    line = ccb.content.text("FROM: Peter St. Travers, SVP Research & Development\n TO: Kristi Gordee, SVP Operations\n RE: Budget\n\n Hi KRISTI GORDEE,\n\n Kristi, please see attached for my budget proposal.\n We need more jet injectors.\n  I am on the verge of a breakthrough - you need to run interference on this Shepherds issue.\n - Peter"),
+    replies = {
+        {
+            text = ccb.content.text("View Attachment"),
+            next_topic = "COMP_NURSING_HOME_COO_ATTACHMENT",
+        },
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_COO_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_ATTACHMENT",
+    line = ccb.content.text("WARNING: Encrypted file.  Enter secure password."),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_COO_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_ADVERT",
+    line = ccb.content.text("FROM: Big Science Supply Depot\n TO: Kristi Gordee, SVP Operations\n RE: Kristi, Act Now and Save!\n\n Hi KRISTI GORDEE,\n\n We appreciate you choosing BIG SCIENCE SUPPLY DEPOT for all your laboratory needs!  Based on your purchase history, might we recommend some of the below items?\n Now on sale for 15% off!\n\n * Book: Advanced Physical Chemistry\n * 1,000pc Medical Gauze\n * Jumbo Chemistry Kit\n\n Thank you for shopping BIG SCIENCE SUPPLY DEPOT!\n\n Please do not reply to this message as your reply will be routed to an unmonitored inbox.\n Questions?  Contact customer service xxx-xxx-xxxx."),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_COO_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_LAWSUIT",
+    line = ccb.content.text("FROM: Leah Shepherds\n TO: Kristi Gordee, SVP Operations\n RE: I am going to sue you\n\n I don't know what kind of sick game your sham of a home is playing, but I am getting to the bottom of it.\n I've hired a lawyer and we are going to sue you.\n I should never have left grandpa in your care.\n How does a PERSON go missing from a NURSING HOME!?  I have pictures of how dirty and disgusting that place is.\n You should be ashamed!"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MESSAGES"),
+            next_topic = "COMP_NURSING_HOME_COO_EMAILS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_MAIN",
+    line = ccb.content.text("WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR D766; UNABLE TO CONNECT TO MAIN SERVER.\n ERROR REFRESHING DATABASE.  ONLY CACHED INFORMATION DISPLAYED.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        {
+            text = ccb.content.text("Access Resident Records"),
+            next_topic = "COMP_NURSING_HOME_COO_RESIDENTS",
+        },
+        {
+            text = ccb.content.text("Access Employee Records"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR",
+        },
+        {
+            text = ccb.content.text("Access Budget Database"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR",
+        },
+        {
+            text = ccb.content.text("Access Legal Files"),
+            next_topic = "COMP_NURSING_HOME_COO_LEGAL",
+        },
+        { text = ccb.content.text("RETURN TO MAIN PAGE"), next_topic = "COMP_NURSING_HOME_COO" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_ERROR",
+    line = ccb.content.text("ERROR ACCESSING SERVER"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO MAIN DRIVE"),
+            next_topic = "COMP_NURSING_HOME_COO_MAIN",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_ERROR2",
+    line = ccb.content.text("ERROR ACCESSING SERVER"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO RESIDENT RECORDS"),
+            next_topic = "COMP_NURSING_HOME_COO_RESIDENTS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_RESIDENTS",
+    line = ccb.content.text("WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR D766; UNABLE TO CONNECT TO MAIN SERVER.\n ERROR REFRESHING DATABASE.  ONLY CACHED INFORMATION DISPLAYED.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        {
+            text = ccb.content.text("Resident: Pablo Shepherds"),
+            next_topic = "COMP_NURSING_HOME_COO_PABLO",
+        },
+        {
+            text = ccb.content.text("Resident: Nina Palmero"),
+            next_topic = "COMP_NURSING_HOME_COO_NINA",
+        },
+        {
+            text = ccb.content.text("Resident: Vorm E. Thracks"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        {
+            text = ccb.content.text("Resident: Mord R. Yuni-Korne"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        {
+            text = ccb.content.text("Resident: Robbie D. Nero"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        {
+            text = ccb.content.text("Resident: Niklaus Kaje"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        {
+            text = ccb.content.text("Resident: Lexi Lute-Thor"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        { text = ccb.content.text("RETURN TO MAIN PAGE"), next_topic = "COMP_NURSING_HOME_COO" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_PABLO",
+    line = ccb.content.text("RESIDENT NAME: Pablo Shepherds\n RESIDENT STATUS: Missing\n ASSIGNED ROOM: A01\n SOCIAL SECURITY NUMBER: xxx-xx-xxxx\n PAYMENT STATUS: Current\n PRIMARY PHYSICIAN: Peter St. Travers\n\n NOTES: Patient absent as of xx-xx-xxxx."),
+    replies = {
+        {
+            text = ccb.content.text("Access Resident Healthcare Records"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        {
+            text = ccb.content.text("Access Resident Legal Records"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        {
+            text = ccb.content.text("RETURN TO RESIDENT RECORDS"),
+            next_topic = "COMP_NURSING_HOME_COO_RESIDENTS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_NINA",
+    line = ccb.content.text("RESIDENT NAME: Nina Palmero\n RESIDENT STATUS: Resident\n ASSIGNED ROOM: B02\n SOCIAL SECURITY NUMBER: xxx-xx-xxxx\n PAYMENT STATUS: Current\n PRIMARY PHYSICIAN: Peter St. Travers\n\n NOTES: Patient has specialized prescription; must be administered by Primary Physician daily."),
+    replies = {
+        {
+            text = ccb.content.text("Access Resident Healthcare Records"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        {
+            text = ccb.content.text("Access Resident Legal Records"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR2",
+        },
+        {
+            text = ccb.content.text("RETURN TO RESIDENT RECORDS"),
+            next_topic = "COMP_NURSING_HOME_COO_RESIDENTS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_LEGAL",
+    line = ccb.content.text("WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR D766; UNABLE TO CONNECT TO MAIN SERVER.\n ERROR REFRESHING DATABASE.  ONLY CACHED INFORMATION DISPLAYED.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        {
+            text = ccb.content.text("Access Pending Lawsuits"),
+            next_topic = "COMP_NURSING_HOME_COO_LAWSUITS",
+        },
+        {
+            text = ccb.content.text("Access Closed Lawsuits"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR3",
+        },
+        { text = ccb.content.text("RETURN TO MAIN PAGE"), next_topic = "COMP_NURSING_HOME_COO" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_ERROR3",
+    line = ccb.content.text("ERROR ACCESSING SERVER"),
+    replies = { { text = ccb.content.text("RETURN TO LEGAL FILES"), next_topic = "COMP_NURSING_HOME_LEGAL" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_LAWSUITS",
+    line = ccb.content.text("WARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!\n\n WARNING!  ERROR D766; UNABLE TO CONNECT TO MAIN SERVER.\n ERROR REFRESHING DATABASE.  ONLY CACHED INFORMATION DISPLAYED.\n CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
+    replies = {
+        {
+            text = ccb.content.text("Pending: Pablo Shepherds"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Vorm E. Thracks"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Mord R. Yuni-Korne"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Nina Palmero"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Niklaus Kaje"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Lexi Lute-Thor"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Robbie D. Nero"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Jimbob Jones"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Heather Feathers"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Shania Moses"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Elle Jackson-Samuels"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Walter Pinkman"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("Pending: Gustavo Hermanos"),
+            next_topic = "COMP_NURSING_HOME_COO_ERROR4",
+        },
+        {
+            text = ccb.content.text("RETURN TO LEGAL FILES"),
+            next_topic = "COMP_NURSING_HOME_COO_LEGAL",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "COMP_NURSING_HOME_COO_ERROR4",
+    line = ccb.content.text("ERROR ACCESSING SERVER"),
+    replies = {
+        {
+            text = ccb.content.text("RETURN TO PREVIOUS PAGE"),
+            next_topic = "COMP_NURSING_HOME_COO_LAWSUITS",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
     id = "COMP_NURSING_HOME_SCI",
     line = ccb.content.text("Shady Hills Corporation.\n You are logged in as: Peter St. Travers, SVP Research & Development.\n\nWARNING!  ERROR A101; FAILURE DETECTED IN POWER SUPPLY.\n RESERVE POWER ACTIVATED.  CONTACT INFORMATION TECHNOLOGY DEPARTMENT IMMEDIATELY!"),
     replies = {
