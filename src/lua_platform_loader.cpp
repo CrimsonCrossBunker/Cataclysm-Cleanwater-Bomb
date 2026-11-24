@@ -1422,6 +1422,12 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     searchers.set_function( 1, [&lua, root]( const std::string & module_name ) {
         sol::variadic_results result;
         std::optional<fs::path> path = resolve_local_module( root, module_name );
+        if( !path && module_name.find( ".." ) == std::string::npos ) {
+            const fs::path datadir = PATH_INFO::datadir_path().get_unrelative_path();
+            if( !datadir.empty() ) {
+                path = resolve_local_module( datadir / fs::u8path( "lua" ), module_name );
+            }
+        }
         if( !path ) {
             // Match the standard Lua searcher diagnostic prefix.
             // NOLINTNEXTLINE(cata-text-style)
