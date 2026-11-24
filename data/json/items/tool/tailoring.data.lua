@@ -1,6 +1,175 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "needle_bone",
+    name = ccb.content.plural_text("bone needle", "bone needles"),
+    description = ccb.content.text("A sharp needle made from a bone.  Useful for making rough clothing and items.  Its low quality makes it rather unsuitable for anything requiring speed or precision."),
+    mass = "15 g",
+    volume = "10 ml",
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "bone" },
+    symbol = ";",
+    color = "white",
+    pockets = { { kind = "MAGAZINE", ammunition = { thread = 200 } } },
+    qualities = { { id = "SEW", level = 2 } },
+    flags = { "ALLOWS_REMOTE_USE" },
+    tool = { crafting_subtype = "sewing_kit", charges_per_use = 1, ammo_types = { "thread" } },
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_fabric",
+            materials = {
+                "cotton", "leather", "lycra", "nylon", "wool", "fur", "faux_fur", "nomex", "kevlar",
+                "kevlar_layered", "gutskin", "denim", "canvas",
+            },
+            skill = "tailor",
+            tool_quality = -1,
+            cost_scaling = 0.1,
+            move_cost = 1300,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "needle_curved",
+    name = ccb.content.plural_text("curved needle", "curved needles"),
+    description = ccb.content.text("A curved, sharp needle made of steel.  Its rounded shape allows it to make stitches that only pierce one side of the material.  While unsuitable for most tailoring projects, it's a necessity for stitching neoprene."),
+    mass = "5 g",
+    volume = "3 ml",
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "steel" },
+    symbol = ";",
+    color = "light_gray",
+    pockets = { { kind = "MAGAZINE", ammunition = { thread = 200 } } },
+    qualities = { { id = "SEW_CURVED", level = 1 } },
+    flags = { "ALLOWS_REMOTE_USE" },
+    tool = { crafting_subtype = "sewing_kit", charges_per_use = 1, ammo_types = { "thread" } },
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_fabric",
+            materials = { "neoprene" },
+            skill = "tailor",
+            tool_quality = 0,
+            cost_scaling = 0.1,
+            move_cost = 1200,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "needle_wood",
+    name = ccb.content.plural_text("wooden needle", "wooden needles"),
+    description = ccb.content.text("A wooden needle whittled down to a sharp point.  It has a narrow hole carved into the head for threading.  Its low quality makes it rather unsuitable for anything requiring speed or precision, or involving tougher materials like Kevlar."),
+    mass = "3 g",
+    volume = "5 ml",
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "wood" },
+    symbol = ";",
+    color = "brown",
+    pockets = { { kind = "MAGAZINE", ammunition = { thread = 200 } } },
+    qualities = { { id = "SEW", level = 1 } },
+    flags = { "ALLOWS_REMOTE_USE" },
+    tool = { crafting_subtype = "sewing_kit", charges_per_use = 1, ammo_types = { "thread" } },
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_fabric",
+            materials = { "cotton", "lycra", "nylon", "leather", "wool", "fur", "faux_fur", "nomex", "gutskin" },
+            skill = "tailor",
+            tool_quality = -1,
+            cost_scaling = 0.1,
+            move_cost = 1500,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "needle_steel",
+    name = ccb.content.plural_text("needle", "needles"),
+    description = ccb.content.text("A stainless steel needle.  It would be useful for making clothing and items."),
+    mass = "8 g",
+    volume = "1 ml",
+    price = "0 cent",
+    survival_price = "10 cent",
+    materials = { "steel" },
+    symbol = ";",
+    color = "light_gray",
+    pockets = { { kind = "MAGAZINE", ammunition = { thread = 200 } } },
+    qualities = { { id = "SEW", level = 3 } },
+    flags = { "ALLOWS_REMOTE_USE" },
+    tool = { crafting_subtype = "sewing_kit", charges_per_use = 1, ammo_types = { "thread" } },
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_fabric",
+            materials = {
+                "cotton", "leather", "lycra", "nylon", "wool", "fur", "faux_fur", "nomex", "kevlar",
+                "kevlar_layered", "gutskin", "denim", "canvas",
+            },
+            skill = "tailor",
+            tool_quality = 0,
+            cost_scaling = 0.1,
+            move_cost = 1000,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "sewing_kit",
+    name = ccb.content.plural_text("sewing kit", "sewing kits"),
+    description = ccb.content.text("A plastic kit with a variety of needles, some plastic spools for thread, small scissors, and a few other useful textile tools.  Use a sewing kit on an article of clothing to attempt to repair or refit if applicable.  This uses your tailoring skill."),
+    mass = "85 g",
+    volume = "250 ml",
+    price = "10 USD",
+    survival_price = "5 USD",
+    materials = { "plastic", "steel" },
+    symbol = ",",
+    color = "red",
+    pockets = { { kind = "MAGAZINE", ammunition = { thread = 200 } } },
+    qualities = { { id = "SEW", level = 3 }, { id = "FABRIC_CUT", level = 1 }, { id = "CUT", level = 2 } },
+    flags = { "ALLOWS_REMOTE_USE" },
+    tool = { charges_per_use = 1 },
+    use_actions = {
+        {
+            kind = "repair_item",
+            id = "repair_fabric",
+            materials = {
+                "cotton", "leather", "lycra", "nylon", "wool", "fur", "faux_fur", "nomex", "kevlar",
+                "kevlar_layered", "gutskin", "denim", "canvas",
+            },
+            skill = "tailor",
+            tool_quality = 0,
+            cost_scaling = 0.1,
+            move_cost = 1000,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "kevlar_shears",
+    name = ccb.content.plural_text("Kevlar shears", "Kevlar shears"),
+    description = ccb.content.text("A pair of heavy-duty shears suitable for cutting particularly tough materials, from polyaramid fabrics to tough plastics and thin metals.  The blades feature flat shearing edges and fine serrations."),
+    ascii_picture = "scissors",
+    mass = "113 g",
+    volume = "145 ml",
+    price = "35 USD",
+    survival_price = "3 USD 50 cent",
+    accuracy = { grip = "solid", length = "hand", surface = "line", balance = "neutral" },
+    materials = { "steel", "plastic" },
+    symbol = ",",
+    color = "yellow",
+    qualities = { { id = "CUT", level = 2 }, { id = "BUTCHER", level = 5 }, { id = "FABRIC_CUT", level = 2 } },
+    flags = { "BELT_CLIP", "SHEATH_KNIFE", "ALLOWS_BODY_BLOCK" },
+    weapon_categories = { "SHIVS" },
+    melee_damage = { stab = 10 },
+    tool = {},
+}
+
+ccb.content.define_item {
     id = "tailors_kit",
     name = ccb.content.plural_text("tailor's kit", "tailor's kits"),
     description = ccb.content.text("A high-quality kit consisting of a variety of needles, some plastic spools for thread, scissors and shears, and an awl.  Use a tailor's kit on an article of clothing to attempt to repair or refit if applicable.  This uses your tailoring skill."),
