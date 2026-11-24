@@ -3,6 +3,62 @@ local predicates = ccb.content.dialogue_predicates
 local actions = ccb.content.dialogue_actions
 
 ccb.content.define_dialogue_topic {
+    id = "TALK_BLACKSMITH_PROTOTYPE_NOT_FEELING_IT",
+    line = {
+        choices = {
+            ccb.content.text("Oh, these.  With the end of the world, Jay and I had been talking about some new projects for the wasteland warriors.  Anyways, it doesn't matter anymore since… well, it doesn't matter."),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Are you and Jay close?"),
+            when = predicates.negate(predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_artisans_blacksmith_accepted_quest" } })),
+            next_topic = "TALK_BLACKSMITH_JAY",
+        },
+        {
+            text = ccb.content.text("I'm sure we'll fix things soon!"),
+            when = predicates.any_equal({ "yes", { scope = "speaker", key = "dialogue_artisans_blacksmith_accepted_quest" } }),
+            next_topic = "TALK_BLACKSMITH_SERVICES",
+        },
+        { text = ccb.content.text("Alright."), next_topic = "TALK_BLACKSMITH_SERVICES" },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_BLACKSMITH_PROTOTYPE_FEELING_IT",
+    line = {
+        choices = {
+            ccb.content.text("Yeah!  I feel a lot better now that Jay and I are talking again, and we've been putting some serious work into this stuff.  If you wanted to help source parts and do some testing, we could definitely get some prototypes made."),
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Alright."),
+            actions = {
+                actions.set_actor_value("speaker", "dialogue_artisans_blacksmith_can_prototype", "yes"),
+            },
+            next_topic = "TALK_BLACKSMITH_SERVICES",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_BLACKSMITH_BUSY",
+    line = {
+        choices = {
+            ccb.content.text("I'm already working on something for you.  I only got two hands and 24 hours in a day."),
+        },
+    },
+    replies = { { text = ccb.content.text("Alright."), next_topic = "TALK_BLACKSMITH_SERVICES" } },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_BLACKSMITH_PROTOTYPE_ONGOING",
+    line = { choices = { ccb.content.text("I'm still working on it, can't rush perfection.") } },
+    replies = { { text = ccb.content.text("Alright."), next_topic = "TALK_BLACKSMITH_SERVICES" } },
+}
+
+ccb.content.define_dialogue_topic {
     id = "TALK_BLACKSMITH_PROTOTYPE",
     line = {
         choices = {
