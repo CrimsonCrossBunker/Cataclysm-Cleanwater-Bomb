@@ -1,6 +1,443 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "attachable_ear_muffs",
+    category = "armor",
+    name = ccb.content.plural_text("attachable ear muffs", "attachable ear muffs"),
+    description = ccb.content.text("A pair of ear muffs attachable to a hard hat or helmet to reduce noise exposures to safe levels.  Activate to put ear muffs into a working position, blocking most sounds."),
+    mass = "185 g",
+    volume = "250 ml",
+    price = "10 USD",
+    survival_price = "80 cent",
+    materials = { "thermo_resin", "cotton" },
+    symbol = "[",
+    color = "yellow",
+    flags = { "HELMET_EAR_ATTACHMENT", "CANT_WEAR" },
+    armor = {
+        thickness = 1,
+        warmth = 8,
+        portions = {
+            {
+                encumbrance_modifiers = { "NONE" },
+                coverage = 100,
+                covers = { "head" },
+                subparts = { "head_ear_r", "head_ear_l" },
+            },
+        },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            menu_text = ccb.content.text("Press tightly to ears"),
+            target = "attachable_ear_muffs_on",
+            message = ccb.content.text("You put the ear muffs tightly to your ears."),
+            moves = 100,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "attachable_ear_muffs_on",
+    name = ccb.content.plural_text("attachable ear muffs (on)", "attachable ear muffs (on)"),
+    description = ccb.content.text("A pair of ear muffs attachable to a hard hat or helmet to reduce noise exposures to safe levels.  Activate to put ear muffs into a standby position, letting you clearly hear again."),
+    copy_from = "attachable_ear_muffs",
+    inheritance = { add = { flags = { "DEAF" } } },
+    armor = {},
+    use_actions = {
+        {
+            kind = "transform",
+            menu_text = ccb.content.text("Put away from ears"),
+            target = "attachable_ear_muffs",
+            message = ccb.content.text("You put the ear muffs away from your ears."),
+            moves = 100,
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "ballistic_mandible_guard",
+    category = "armor",
+    name = ccb.content.plural_text("ballistic mandible guard", "ballistic mandible guard"),
+    description = ccb.content.text("A ballistic jaw guard designed to be attached on a military helmet, but easily adjustable to helmets with any kind of rail system installed."),
+    mass = "250 g",
+    volume = "250 ml",
+    price = "60 USD",
+    survival_price = "2 USD 50 cent",
+    materials = { "thermo_resin" },
+    symbol = "[",
+    color = "dark_gray",
+    flags = { "HELMET_MANDIBLE_GUARD", "CANT_WEAR" },
+    armor = { thickness = 1, portions = { { encumbrance = 12, coverage = 100, covers = { "mouth" } } } },
+}
+
+ccb.content.define_item {
+    id = "plastic_mandible_guard",
+    category = "armor",
+    name = ccb.content.plural_text("plastic mandible guard", "plastic mandible guard"),
+    description = ccb.content.text("A plastic jaw guard designed to be strapped to any common hard hat or helmet, it was probably part of some costume before the world ended."),
+    mass = "250 g",
+    volume = "200 ml",
+    price = "40 USD",
+    survival_price = "50 cent",
+    materials = { "plastic" },
+    symbol = "[",
+    color = "light_blue",
+    flags = { "HELMET_MANDIBLE_GUARD_STRAPPED", "CANT_WEAR" },
+    armor = { thickness = 1, portions = { { encumbrance = 10, coverage = 95, covers = { "mouth" } } } },
+}
+
+ccb.content.define_item {
+    id = "plastic_chin_guard",
+    category = "armor",
+    name = ccb.content.plural_text("plastic chin guard", "plastic chin guard"),
+    description = ccb.content.text("A common plastic chin guard designed to be attached to the straps of any common hard hat or helmet."),
+    mass = "5 g",
+    volume = "10 ml",
+    price = "1 USD",
+    survival_price = "1 cent",
+    materials = { "plastic" },
+    symbol = "[",
+    color = "light_gray",
+    flags = { "HELMET_MANDIBLE_GUARD_STRAPPED", "CANT_WEAR" },
+    armor = {
+        thickness = 0.1,
+        portions = { { coverage = 60, covers = { "mouth" }, subparts = { "mouth_chin" } } },
+    },
+}
+
+ccb.content.define_item {
+    id = "counterweight_pouch",
+    category = "armor",
+    name = ccb.content.plural_text("counterweight pouch", "counterweight pouch"),
+    description = ccb.content.text("A counterweight pouch attachable to the back of a hard hat or helmet to balance the weight on your head.  You can store batteries or some other very small items in it."),
+    mass = "150 g",
+    volume = "150 ml",
+    price = "4 USD",
+    survival_price = "10 cent",
+    materials = { "nylon" },
+    symbol = "[",
+    color = "green",
+    flags = { "HELMET_BACK_POUCH", "CANT_WEAR" },
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "250 ml",
+            mass_limit = "250 g",
+            max_item_length = "4 cm",
+            moves = 250,
+        },
+    },
+    armor = {
+        thickness = 0.1,
+        portions = { { encumbrance_modifiers = { "NONE" }, coverage = 10, covers = { "head" } } },
+    },
+}
+
+ccb.content.define_item {
+    id = "sun_shield",
+    category = "armor",
+    name = ccb.content.text("sun shield"),
+    description = ccb.content.text("A common sun shield intended to be put over a hard hat to protect the user from the sun."),
+    mass = "98 g",
+    volume = "250 ml",
+    price = "2 USD",
+    survival_price = "10 cent",
+    materials = { "plastic" },
+    symbol = "[",
+    color = "light_gray",
+    flags = { "CANT_WEAR" },
+    armor = {},
+}
+
+ccb.content.define_item {
+    id = "shield_visor",
+    category = "armor",
+    name = ccb.content.text("shield visor"),
+    description = ccb.content.text("A common shield visor intended to be attached on a hard hat or helmet."),
+    mass = "40 g",
+    volume = "150 ml",
+    price = "6 USD",
+    survival_price = "50 cent",
+    materials = { "plastic" },
+    symbol = "[",
+    color = "light_blue",
+    flags = { "HELMET_FACE_SHIELD", "CANT_WEAR" },
+    armor = { thickness = 1, portions = { { encumbrance = 2, coverage = 90, covers = { "eyes" } } } },
+}
+
+ccb.content.define_item {
+    id = "face_shield",
+    category = "armor",
+    name = ccb.content.text("face shield"),
+    description = ccb.content.text("A thermoplastic face shield with a mounting bracket intended to be attached over a hard hat or helmet."),
+    mass = "170 g",
+    volume = "250 ml",
+    price = "8 USD",
+    survival_price = "1 USD",
+    materials = { "thermo_resin" },
+    symbol = "[",
+    color = "light_blue",
+    flags = { "HELMET_FACE_SHIELD", "CANT_WEAR", "OUTER" },
+    armor = {
+        thickness = 1.5,
+        portions = { { encumbrance = 4, coverage = 100, covers = { "eyes", "mouth" } } },
+    },
+}
+
+ccb.content.define_item {
+    id = "face_shield_eod",
+    category = "armor",
+    name = ccb.content.text("EOD face shield"),
+    description = ccb.content.text("A thick polycarbonate and plexiglass face shield with a mounting bracket intended to be attached to a ballistic helmet for protection from blast and fragmentation in 'non-permissive environments'."),
+    mass = "229 g",
+    volume = "250 ml",
+    price = "836 USD",
+    survival_price = "24 USD",
+    materials = { "thermo_resin" },
+    symbol = "[",
+    color = "light_gray",
+    flags = { "HELMET_FACE_SHIELD", "CANT_WEAR", "OUTER" },
+    armor = {
+        thickness = 4.5,
+        portions = { { encumbrance = 14, coverage = 100, covers = { "eyes", "mouth" } } },
+    },
+}
+
+ccb.content.define_item {
+    id = "face_shield_plastic",
+    category = "armor",
+    name = ccb.content.text("plastic face shield"),
+    description = ccb.content.text("A plastic face shield with a mounting bracket intended to be attached over a hard hat or helmet.  It doesn't protects you as much as one made from thermoplastic, but it's cheaper and more common."),
+    mass = "120 g",
+    volume = "250 ml",
+    price = "6 USD 50 cent",
+    survival_price = "50 cent",
+    materials = { "plastic" },
+    symbol = "[",
+    color = "light_blue",
+    flags = { "HELMET_FACE_SHIELD", "CANT_WEAR", "OUTER" },
+    armor = {
+        thickness = 1,
+        portions = { { encumbrance = 4, coverage = 100, covers = { "eyes", "mouth" } } },
+    },
+}
+
+ccb.content.define_item {
+    id = "military_nvg",
+    category = "armor",
+    name = ccb.content.plural_text("night vision goggles", "night vision goggles"),
+    description = ccb.content.text("Last generation double-tube night vision device, designed to be mounted on a compatible helmet.  Currently raised up and out of the way."),
+    mass = "680 g",
+    volume = "1200 ml",
+    price = "10000 USD",
+    survival_price = "15 USD",
+    materials = { "plastic", "steel", "glass" },
+    symbol = "[",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            rigid = true,
+            allowed_flags = { "BATTERY_LIGHT" },
+            default_magazine = "light_battery_cell",
+        },
+    },
+    flags = { "HELMET_FRONT_ATTACHMENT", "CANT_WEAR", "OUTER", "ELECTRONIC", "MUNDANE" },
+    faults = { { group = "electronic_general" } },
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = { charges_per_use = 1, ammo_types = "battery" },
+    armor = {
+        thickness = 1,
+        portions = {
+            { covers = { "eyes" }, coverage = 10, encumbrance = 0, rigid_only = true },
+            { covers = { "head" }, encumbrance = 8, coverage = 70, subparts = { "head_forehead" } },
+        },
+    },
+    artifact = { enchantments = { "nvg_normal" } },
+    use_actions = {
+        {
+            kind = "transform",
+            message = ccb.content.text("You activate your %s."),
+            target = "military_nvg_on",
+            need_charges = 1,
+            need_charges_message = ccb.content.text("The batteries are dead."),
+        },
+    },
+}
+
+-- AN/PVS-7
+ccb.content.define_item {
+    id = "military_nvg_on",
+    copy_from = "military_nvg",
+    name = ccb.content.plural_text("night vision goggles (on)", "night vision goggles (on)"),
+    description = ccb.content.text("Last generation single-tube night vision device, designed to be mounted on a compatible helmet.  Limited field of view while activated.  It is turned on, and continually draining batteries.  Use it to turn it off."),
+    revert_to = "military_nvg",
+    inheritance = { add = { flags = { "NVG_GREEN", "SPAWN_ACTIVE" } } },
+    subtype_order = { "tool", "armor" },
+    tool = { power_draw = "140 mW" },
+    armor = { portions = { { covers = { "eyes" }, coverage = 100, encumbrance = 20, rigid_only = true } } },
+    use_actions = {
+        {
+            kind = "transform",
+            ammo_scale = 0,
+            menu_text = ccb.content.text("Turn off"),
+            message = ccb.content.text("You deactivate your %s."),
+            target = "military_nvg",
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "advanced_gpnvg",
+    category = "armor",
+    name = ccb.content.plural_text("panoramic night vision goggles", "panoramic night vision goggles"),
+    description = ccb.content.text("Advanced GPNVG with four image intensifier tubes, allowing for a large field of view at night, designed to be mounted on a compatible helmet.  Currently raised up and out of the way."),
+    mass = "765 g",
+    volume = "1600 ml",
+    price = "47000 USD",
+    survival_price = "30 USD",
+    materials = { "plastic", "steel", "glass" },
+    symbol = "[",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            rigid = true,
+            allowed_flags = { "BATTERY_MEDIUM" },
+            default_magazine = "medium_battery_cell",
+        },
+    },
+    flags = { "HELMET_FRONT_ATTACHMENT", "CANT_WEAR", "OUTER", "ELECTRONIC", "MUNDANE" },
+    faults = { { group = "electronic_general" } },
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = { charges_per_use = 1, ammo_types = "battery" },
+    armor = {
+        thickness = 1,
+        portions = {
+            { covers = { "eyes" }, coverage = 10, encumbrance = 0, rigid_only = true },
+            {
+                covers = { "head" },
+                encumbrance = 12,
+                coverage = 80,
+                subparts = { "head_forehead", "head_crown" },
+            },
+        },
+    },
+    artifact = { enchantments = { "nvg_good" } },
+    use_actions = {
+        {
+            kind = "transform",
+            message = ccb.content.text("You activate your %s."),
+            target = "advanced_gpnvg_on",
+            need_charges = 1,
+            need_charges_message = ccb.content.text("The batteries are dead."),
+        },
+    },
+}
+
+-- GPNVG-18
+ccb.content.define_item {
+    id = "advanced_gpnvg_on",
+    copy_from = "advanced_gpnvg",
+    name = ccb.content.plural_text("panoramic night vision goggles (on)", "panoramic night vision goggles (on)"),
+    description = ccb.content.text("Advanced GPNVG with four image intensifier tubes, allowing for a large field of view at night, designed to be mounted on a compatible helmet.  It is turned on, and continually draining batteries.  Use it to turn it off."),
+    revert_to = "advanced_gpnvg",
+    inheritance = { add = { flags = { "NVG_GREEN", "SPAWN_ACTIVE" } } },
+    subtype_order = { "tool", "armor" },
+    tool = { power_draw = "180 mW" },
+    armor = {
+        portions = {
+            { covers = { "eyes" }, coverage = 100, encumbrance = 15, rigid_only = true },
+            { covers = { "head" }, encumbrance = 3, coverage = 80, subparts = { "head_crown" } },
+        },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            ammo_scale = 0,
+            menu_text = ccb.content.text("Turn off"),
+            message = ccb.content.text("You deactivate your %s."),
+            target = "advanced_gpnvg",
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "enhanced_nvg",
+    category = "armor",
+    name = ccb.content.plural_text("enhanced night vision goggles", "enhanced night vision goggles"),
+    description = ccb.content.text("New and rare high-resolution thermal NVG device, designed to be mounted on a compatible helmet.  Lets you see in the dark, and detects heat signatures emitted by (un)living organisms.  Currently raised up and out of the way."),
+    mass = "720 g",
+    volume = "1400 ml",
+    price = "10000 USD",
+    survival_price = "35 USD",
+    materials = { "plastic", "steel", "glass" },
+    symbol = "[",
+    color = "dark_gray",
+    pockets = {
+        {
+            kind = "MAGAZINE_WELL",
+            rigid = true,
+            allowed_flags = { "BATTERY_MEDIUM" },
+            default_magazine = "medium_battery_cell",
+        },
+    },
+    flags = { "HELMET_FRONT_ATTACHMENT", "CANT_WEAR", "OUTER", "ELECTRONIC", "MUNDANE" },
+    faults = { { group = "electronic_general" } },
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = { charges_per_use = 1, ammo_types = "battery" },
+    armor = {
+        thickness = 1,
+        portions = {
+            { covers = { "eyes" }, coverage = 10, encumbrance = 0, rigid_only = true },
+            {
+                covers = { "head" },
+                encumbrance = 10,
+                coverage = 70,
+                subparts = { "head_forehead", "head_crown" },
+            },
+        },
+    },
+    artifact = { enchantments = { "nvg_good", "THERMAL_VISION_GOOD" } },
+    use_actions = {
+        {
+            kind = "transform",
+            message = ccb.content.text("You activate your %s."),
+            target = "enhanced_nvg_on",
+            need_charges = 1,
+            need_charges_message = ccb.content.text("The batteries are dead."),
+        },
+    },
+}
+
+-- AN/PSQ-42
+ccb.content.define_item {
+    id = "enhanced_nvg_on",
+    copy_from = "enhanced_nvg",
+    name = ccb.content.plural_text("enhanced night vision goggles (on)", "enhanced night vision goggles (on)"),
+    description = ccb.content.text("New and rare high-resolution thermal NVG device, designed to be mounted on a compatible helmet.  Lets you see in the dark, and detects heat signatures emitted by (un)living organisms.  It is turned on, and continually draining batteries.  Use it to turn it off."),
+    revert_to = "enhanced_nvg",
+    inheritance = { add = { flags = { "NVG_GREEN", "SPAWN_ACTIVE" } } },
+    subtype_order = { "tool", "armor" },
+    tool = { power_draw = "320 mW" },
+    armor = {
+        portions = {
+            { covers = { "eyes" }, coverage = 100, encumbrance = 10, rigid_only = true },
+            { covers = { "head" }, encumbrance = 3, coverage = 80, subparts = { "head_crown" } },
+        },
+    },
+    use_actions = {
+        {
+            kind = "transform",
+            ammo_scale = 0,
+            menu_text = ccb.content.text("Turn off"),
+            message = ccb.content.text("You deactivate your %s."),
+            target = "enhanced_nvg",
+        },
+    },
+}
+
+ccb.content.define_item {
     id = "nape_protector",
     category = "armor",
     name = ccb.content.text("nape protector"),
