@@ -1,4 +1,95 @@
 local ccb = require("ccb")
+local predicates = ccb.content.dialogue_predicates
+local actions = ccb.content.dialogue_actions
+
+ccb.content.define_npc {
+    id = "refugee_GarryVilleneuve",
+    unique_name = ccb.content.text("Garry Villeneuve"),
+    gender = "male",
+    suffix = ccb.content.text("Refugee"),
+    class = "NC_REFUGEE_Garry",
+    attitude = 0,
+    mission = "GUARD",
+    chat = "TALK_REFUGEE_Garry_1",
+    faction = "free_merchants",
+}
+
+-- Garry is a Stan's older brother.  He's grateful he's made it to help support his brother, but he's very worried about Stan.
+ccb.content.define_npc_class {
+    id = "NC_REFUGEE_Garry",
+    name = ccb.content.text("Refugee"),
+    job_description = ccb.content.text("I'm just trying to survive."),
+    common = false,
+    strength = { rng = { 0, 4 } },
+    dexterity = { rng = { -1, 3 } },
+    intelligence = { rng = { -1, 3 } },
+    perception = { rng = { -2, 2 } },
+    worn = "REFUGEE_Garry_worn",
+    carry = "REFUGEE_Garry_carried",
+    weapon = "REFUGEE_Garry_wield",
+    traits = {
+        { trait = "MYOPIC" },
+        { group = "Appearance_Germanic" },
+        { trait = "NO_BASH" },
+        { trait = "RETURN_TO_START_POS" },
+    },
+    skills = {
+        {
+            skill = "ALL",
+            level = { mul = { { one_in = 3 }, { sum = { { dice = { 2, 2 } }, { rng = { 0, -4 } } } } } },
+        },
+        { skill = "firstaid", bonus = { rng = { 3, 4 } } },
+        { skill = "electronics", bonus = { rng = { 1, 2 } } },
+    },
+}
+
+-- common talk responses
+ccb.content.define_dialogue_topic {
+    id = {
+        "TALK_REFUGEE_Garry_2", "TALK_REFUGEE_Garry_Background", "TALK_REFUGEE_Garry_Background_loss",
+        "TALK_REFUGEE_Garry_Situation",
+    },
+    replies = {
+        {
+            text = ccb.content.text("I'm trying to put a cleanup crew together to tidy up the back room.  Can you help?"),
+            when = predicates.all({ predicates.has_mission("MISSION_REFUGEE_Boris_CLEANUP"), predicates.negate(predicates.any_equal({ "yes", { scope = "interlocutor", key = "mission_Boris_mission_1_cleanup_asked" } })) }),
+            trial = { kind = "persuade", difficulty = 25 },
+            success = { next_topic = "TALK_REFUGEE_Accept_Boris_Mission_1" },
+            failure = { next_topic = "TALK_REFUGEE_Refuse_Boris_Mission_1" },
+        },
+        {
+            text = ccb.content.text("What's your story?"),
+            next_topic = "TALK_REFUGEE_Garry_Background",
+        },
+        {
+            text = ccb.content.text("How are things here?"),
+            next_topic = "TALK_REFUGEE_Garry_Situation",
+        },
+    },
+}
+
+ccb.content.define_dialogue_topic {
+    id = "TALK_REFUGEE_Garry_1",
+    line = ccb.content.text("*looks up at you with a gaunt face.  His loose clothes and sharp cheekbones suggest he recently lost a lot of weight.  \"Hi.  Hi there.\"  He scratches at a patchy beard of gray stubble.  \"I'm Garry, Garry Villeneuve.\""),
+    on_enter = {
+        {
+            actions = {
+                actions.set_actor_value("speaker", "general_meeting_u_met_Garry_Villeneuve", "yes"),
+                actions.set_first_topic("TALK_REFUGEE_Garry_1a"),
+            },
+        },
+    },
+    replies = {
+        {
+            text = ccb.content.text("Nice to meet you, Garry."),
+            next_topic = "TALK_REFUGEE_Garry_1_firstmeet",
+        },
+        {
+            text = ccb.content.text("Hi Garry, nice to meet you.  <end_talking_leave>"),
+            next_topic = "TALK_DONE",
+        },
+    },
+}
 
 ccb.content.define_dialogue_topic {
     id = "TALK_REFUGEE_Garry_1a",
