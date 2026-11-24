@@ -45,7 +45,7 @@
     "type": "ITEM",
     "id": "atlas_wood_hydronic_boiler",
     "name": { "str": "wood stove with a water boiler" },
-    "description": "A wood stove fitted with a forty-litre water tank. Load firewood to boil drinking water or heat a connected radiator loop.",
+    "description": "A wood stove fitted with a forty-litre water tank. A lit fire warms the room and can boil the water. A connected radiator loop carries heat from the tank.",
     "symbol": "#",
     "color": "red",
     "material": [ "steel" ],
