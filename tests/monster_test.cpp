@@ -16,6 +16,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <array>
 
 #include "avatar.h"
 #include "calendar.h"
@@ -63,6 +64,12 @@
 #include "trap.h"
 #include "type_id.h"
 #include "value_ptr.h"
+#include "monster_helpers.h"
+#include "game_constants.h"
+#include "bodypart.h"
+#include "damage.h"
+#include "messages.h"
+#include "monster_local_cache.h"
 
 using move_statistics = statistics<int>;
 
@@ -139,7 +146,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
 {
     creature_tracker tracker;
     const auto live_monster = make_shared_fast<monster>( mon_test_zombie,
-                              tripoint_bub_ms( 0, 0, 0 ) );
+        tripoint_bub_ms( 0, 0, 0 ) );
     REQUIRE( tracker.add( live_monster ) );
     REQUIRE( live_monster->uid().is_valid() );
     const int64_t live_uid = live_monster->uid().get_value();
@@ -152,7 +159,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
     CHECK( tracker.find_by_uid( live_uid ) == nullptr );
 
     const auto dead_monster = make_shared_fast<monster>( mon_test_zombie,
-                              tripoint_bub_ms( 1, 0, 0 ) );
+        tripoint_bub_ms( 1, 0, 0 ) );
     REQUIRE( tracker.add( dead_monster ) );
     REQUIRE( dead_monster->uid().is_valid() );
     const int64_t dead_uid = dead_monster->uid().get_value();
@@ -210,9 +217,9 @@ struct track {
 std::ostream &operator<<( std::ostream &os, track const &value )
 {
     os << value.participant <<
-       " l:" << value.location <<
-       " d:" << value.distance <<
-       " m:" << value.moves;
+    " l:" << value.location <<
+    " d:" << value.distance <<
+    " m:" << value.moves;
     return os;
 }
 
@@ -311,7 +318,7 @@ static void check_shamble_speed( const std::string &monster_type,
     // Scale the scaling factor based on the ratio of diagonal to cardinal steps.
     const float slope = get_normalized_angle( point::zero, destination.xy().raw() );
     const float diagonal_multiplier = 1.0 + ( get_option<bool>( "CIRCLEDIST" ) ?
-                                      ( slope * 0.41 ) : 0.0 );
+        ( slope * 0.41 ) : 0.0 );
     INFO( monster_type << " " << destination );
     // Wandering makes things nondeterministic, so look at the distribution rather than a target number.
     move_statistics move_stats;
@@ -357,7 +364,7 @@ static void test_moves_to_squares( const std::string &monster_type, const bool w
                 // Scale the scaling factor based on the ratio of diagonal to cardinal steps.
                 const float slope = get_normalized_angle( {50, 50}, {x, y} );
                 const float diagonal_multiplier = 1.0 + ( get_option<bool>( "CIRCLEDIST" ) ?
-                                                  ( slope * 0.41 ) : 0.0 );
+                    ( slope * 0.41 ) : 0.0 );
                 turns_at_angle[angle * 100].new_type();
                 turns_at_slope[slope].new_type();
                 for( int i = 0; i < 5; ++i ) {
@@ -397,7 +404,7 @@ static void test_moves_to_squares( const std::string &monster_type, const bool w
     if( write_data ) {
         std::ofstream data;
         data.open( std::filesystem::u8path( "slope_test_data_" + std::string( (
-                                                trigdist ? "trig_" : "square_" ) ) +
+                    trigdist ? "trig_" : "square_" ) ) +
                                             monster_type ) );
         for( const auto &stat_pair : turns_at_angle ) {
             data << stat_pair.first << " " << stat_pair.second.avg() << "\n";
@@ -1410,7 +1417,7 @@ TEST_CASE( "monster_can_navigate_from_overmap_to_reality_bubble_following_sound"
     horde_entity *test_mon_initial = nullptr;
     capture_debugmsg_during( [&]() {
         test_mon_initial = &overmap_buffer.spawn_monster( entity_spawn_location,
-                           mon_test_zombie );
+            mon_test_zombie );
     } );
     // Assert monster is not wandering
     REQUIRE( test_mon_initial->tracking_intensity == 0 );
@@ -1757,7 +1764,7 @@ TEST_CASE( "obstacles_placed_on_map_are_present_in_overmap", "[map][hordes]" )
     tripoint_bub_ms obstacle_origin{ 30, 30, 0 };
     int obstacle_radius = 10;
     tripoint_abs_ms obstacle_eastern_border = here.get_abs( obstacle_origin + point::east *
-            obstacle_radius );
+        obstacle_radius );
     std::set<tripoint_abs_omt> edited_omts;
     std::set<tripoint_abs_ms> obstacle_locations;
     std::set<tripoint_abs_ms> passable_locations;
@@ -1821,7 +1828,7 @@ TEST_CASE( "dormant_zombie_places_corpse_and_trap", "[monster][map]" )
     monster dormant_monster( pseudo_dormant_mon_zombie_fat );
     REQUIRE( dormant_monster.can_move_to( spawn_point ) );
     monster *const placed_monster = g->place_critter_at( make_shared_fast<monster>( dormant_monster ),
-                                    spawn_point );
+        spawn_point );
     REQUIRE( placed_monster != nullptr );
     REQUIRE( placed_monster->pos_bub() == spawn_point );
     REQUIRE( placed_monster->type->id == dormant_monster.type->id );
@@ -1848,3 +1855,385 @@ TEST_CASE( "dormant_zombie_places_corpse_and_trap", "[monster][map]" )
     // The monster count should have dropped by one since it destroyed itself.
     CHECK( g->num_creatures() == 1 );
 }
+
+namespace merged_monster_ai_determinism_test
+{
+
+// Determinism guard for the monster-AI turn loop.
+//
+// CCB inherits CDDA's hard constraint: a fixed RNG seed plus identical initial
+// state must produce a bit-for-bit identical replay. The single-threaded turn
+// loop satisfies this today, and it is the invariant any future multithreading
+// work (parallel caches, background mapgen, AI LOD) is most likely to break by
+// reordering monster processing or interleaving the global RNG differently.
+//
+// This test pins that invariant: spawn a fixed swarm, advance a fixed number of
+// turns twice from the same seed, and require the per-monster state fingerprints
+// to match exactly. It is intentionally lightweight (no world save/load) so it
+// can run as a fast CI gate. It also retroactively guards the cub-anger early-out
+// optimization (it must not change RNG consumption or processing order).
+
+namespace
+{
+
+// A compact, order-stable fingerprint of one monster's post-turn state. Any
+// divergence in AI decisions (movement, anger/morale accrual, damage) shows up
+// here. Position is in absolute ms so it is independent of map shifts.
+struct mon_fingerprint {
+    tripoint_abs_ms pos;
+    int anger = 0;
+    int morale = 0;
+    int hp = 0;
+    int moves = 0;
+
+    bool operator==( const mon_fingerprint &o ) const {
+        return pos == o.pos && anger == o.anger && morale == o.morale &&
+               hp == o.hp && moves == o.moves;
+    }
+};
+
+// Run one identical scenario from a fixed seed and return the ordered list of
+// monster fingerprints after advancing `turns` turns. Creature_tracker iterates
+// in a stable order, so the returned vector is comparable across runs.
+std::vector<mon_fingerprint> run_scenario( unsigned int seed, int turns )
+{
+    clear_map();
+    rng_set_engine_seed( seed );
+
+    // A small ring of zombies around a central point. Zombies have no baby_type,
+    // so this also exercises the cub-anger early-out path.
+    const tripoint_bub_ms center{ 65, 65, 0 };
+    const std::vector<tripoint_bub_ms> spots = {
+        center + tripoint::north, center + tripoint::south,
+        center + tripoint::east, center + tripoint::west,
+        center + tripoint::north_east, center + tripoint::south_west,
+    };
+    std::vector<monster *> mons;
+    mons.reserve( spots.size() );
+    for( const tripoint_bub_ms &p : spots ) {
+        mons.push_back( &spawn_test_monster( "mon_zombie", p ) );
+    }
+
+    for( int t = 0; t < turns; ++t ) {
+        for( monster *m : mons ) {
+            if( !m->is_dead() ) {
+                move_monster_turn( *m );
+            }
+        }
+        calendar::turn += 1_turns;
+    }
+
+    std::vector<mon_fingerprint> out;
+    out.reserve( mons.size() );
+    for( monster *m : mons ) {
+        out.push_back( { m->pos_abs(), m->anger, m->morale, m->get_hp(), m->get_moves() } );
+    }
+    return out;
+}
+
+} // namespace
+
+TEST_CASE( "monster_ai_replay_is_deterministic", "[monster][determinism]" )
+{
+    constexpr unsigned int seed = 4242424242u;
+    constexpr int turns = 20;
+
+    const std::vector<mon_fingerprint> first = run_scenario( seed, turns );
+    const std::vector<mon_fingerprint> second = run_scenario( seed, turns );
+
+    REQUIRE( first.size() == second.size() );
+    for( size_t i = 0; i < first.size(); ++i ) {
+        CHECK( first[i] == second[i] );
+    }
+}
+
+} // namespace merged_monster_ai_determinism_test
+
+namespace merged_monster_all_seeing_test
+{
+
+static const ter_str_id ter_t_brick_wall( "t_brick_wall" );
+static const ter_str_id ter_t_floor( "t_floor" );
+
+TEST_CASE( "all_seeing_ignores_opaque_obstacles", "[vision][monster][all_seeing]" )
+{
+    const bool nighttime = GENERATE( false, true );
+    const bool target_is_avatar = GENERATE( false, true );
+    CAPTURE( nighttime, target_is_avatar );
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    set_time( calendar::turn_zero + ( nighttime ? 0_hours : 12_hours ) );
+    clear_avatar();
+    clear_map( 0, 1 );
+    map &here = get_map();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms origin( 60, 60, 0 );
+    const tripoint_bub_ms target_position( 62, 60, 0 );
+    you.setpos( here, target_position );
+    monster &observer = spawn_test_monster( "mon_debug_puller_weak", origin );
+    REQUIRE( observer.has_flag( mon_flag_ALL_SEEING ) );
+    Creature *target = &you;
+    if( !target_is_avatar ) {
+        you.setpos( here, tripoint_bub_ms( 62, 62, 0 ) );
+        target = &spawn_test_monster( "mon_zombie", target_position );
+    }
+    here.build_map_cache( 0 );
+    REQUIRE( observer.sees( here, *target ) );
+
+    SECTION( "wall" ) {
+        here.ter_set( tripoint_bub_ms( 61, 60, 0 ), ter_t_brick_wall );
+    }
+    SECTION( "floor" ) {
+        const tripoint_bub_ms upstairs( 60, 60, 1 );
+        here.ter_set( upstairs, ter_t_floor );
+        target->setpos( here, upstairs );
+        here.invalidate_map_cache( 1 );
+        here.build_map_cache( 1 );
+    }
+
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0 );
+    REQUIRE_FALSE( here.sees( origin, target->pos_bub( here ), MAX_VIEW_DISTANCE ) );
+    CHECK( observer.sees( here, *target ) );
+}
+
+TEST_CASE( "all_seeing_preserves_vision_range_limits", "[vision][monster][all_seeing]" )
+{
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    set_time( calendar::turn_zero + 12_hours );
+    clear_avatar();
+    clear_map();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms origin( 60, 60, 0 );
+    you.setpos( here, tripoint_bub_ms( 62, 60, 0 ) );
+    monster &observer = spawn_test_monster( "mon_debug_puller_weak", origin );
+    REQUIRE( observer.has_flag( mon_flag_ALL_SEEING ) );
+    const int vision_range = std::max( observer.type->vision_day, observer.type->vision_night );
+    REQUIRE( vision_range < MAX_VIEW_DISTANCE );
+
+    SECTION( "horizontal_range" ) {
+        you.setpos( here, tripoint_bub_ms( origin.x() + vision_range, origin.y(), origin.z() ) );
+        here.build_map_cache( 0 );
+        CHECK( observer.sees( here, you ) );
+        you.setpos( here, tripoint_bub_ms( origin.x() + vision_range + 1, origin.y(), origin.z() ) );
+        CHECK_FALSE( observer.sees( here, you ) );
+        you.setpos( here, tripoint_bub_ms( origin.x() + MAX_VIEW_DISTANCE + 1, origin.y(),
+                                           origin.z() ) );
+        CHECK_FALSE( observer.sees( here, you ) );
+    }
+    SECTION( "vertical_range" ) {
+        observer.setpos( here, tripoint_bub_ms( origin.x(), origin.y(), -1 ), false );
+        you.setpos( here, tripoint_bub_ms( origin.x(), origin.y(), fov_3d_z_range ), false );
+        CHECK_FALSE( observer.sees( here, you ) );
+    }
+}
+
+} // namespace merged_monster_all_seeing_test
+
+namespace merged_monster_block_message_test
+{
+
+static const damage_type_id damage_bash( "bash" );
+static const mtype_id mon_test_zombie( "mon_test_zombie" );
+static const ter_str_id ter_t_wall( "t_wall" );
+
+TEST_CASE( "monster_block_messages_respect_player_visibility", "[monster][block][messages]" )
+{
+    const bool hidden = GENERATE( false, true );
+    const bool successful = GENERATE( false, true );
+    CAPTURE( hidden, successful );
+    clear_avatar();
+    clear_map();
+    restore_on_out_of_scope<time_point> restore_time( calendar::turn );
+    calendar::turn = calendar::turn_zero + 12_hours;
+    map &here = get_map();
+    avatar &you = get_avatar();
+    you.setpos( here, { 60, 60, 0 } );
+
+    mtype blocker_type = mon_test_zombie.obj();
+    blocker_type.block.chance = 100;
+    blocker_type.block.effectiveness = 5;
+    monster &blocker = spawn_test_monster( mon_test_zombie.str(), { 62, 60, 0 } );
+    restore_on_out_of_scope<const mtype *> restore_type( blocker.type );
+    blocker.type = &blocker_type;
+    blocker.blocks_left = successful ? 1 : 0;
+    if( hidden ) {
+        here.ter_set( tripoint_bub_ms( 61, 60, 0 ), ter_t_wall );
+    }
+    g->reset_light_level();
+    here.build_map_cache( 0 );
+    REQUIRE( you.sees( here, blocker ) == !hidden );
+
+    damage_instance damage( damage_bash, 10 );
+    bodypart_id hit = body_part_torso.id();
+    Messages::clear_messages();
+    CHECK( blocker.block_hit( &you, hit, damage ) == successful );
+    CHECK( damage.total_damage() == Approx( successful ? 5 : 10 ) );
+    CHECK( Messages::size() == ( successful && !hidden ? 1 : 0 ) );
+}
+
+} // namespace merged_monster_block_message_test
+
+namespace merged_monster_local_cache_test
+{
+
+TEST_CASE( "monster_local_cache_preserves_scent_weights", "[monster][local_cache]" )
+{
+    monster_local_cache<bool, 2, 1> cache;
+    std::vector<std::array<int, 3>> original;
+    std::vector<std::array<int, 3>> cached;
+    int queries = 0;
+    int original_queries = 0;
+    for( int z = -1; z <= 1; ++z ) {
+        for( int dx = -1; dx <= 1; ++dx ) {
+            for( int dy = -1; dy <= 1; ++dy ) {
+                for( int x = dx - 1; x <= dx + 1; ++x ) {
+                    for( int y = dy - 1; y <= dy + 1; ++y ) {
+                        const bool valid = ( x + y + z ) % 2 == 0;
+                        ++original_queries;
+                        if( valid ) {
+                            original.push_back( {x, y, z} );
+                        }
+                        if( cache.get( { x, y, z }, [&]() {
+                        ++queries;
+                        return valid;
+                    } ) ) {
+                            cached.push_back( {x, y, z} );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    CHECK( original == cached );
+    CHECK( queries == 75 );
+    CHECK( original_queries == 243 );
+    CHECK( cached.size() > 75 );
+}
+
+TEST_CASE( "monster_local_cache_caches_missing_helpers_and_has_local_lifetime",
+           "[monster][local_cache]" )
+{
+    int helper = 1;
+    int queries = 0;
+    monster_local_cache<int *, 1, 0> cache;
+    for( int i = 0; i < 3; ++i ) {
+        CHECK( cache.get( tripoint::south_west, [&]() -> int* {
+            ++queries;
+            return nullptr;
+        } ) == nullptr );
+    }
+    CHECK( queries == 1 );
+    // Out-of-window queries are never aliased into a valid entry.
+    for( const auto &offset : std::vector<std::array<int, 3>> {
+    {2, 0, 0}, {-2, 0, 0}, {0, 2, 0}, {0, -2, 0}, {0, 0, 1}, {0, 0, -1}
+} ) {
+        CHECK( cache.get( { offset[0], offset[1], offset[2] }, [&]() {
+            ++queries;
+            return &helper;
+        } ) == &helper );
+    }
+    CHECK( queries == 7 );
+    monster_local_cache<int *, 1, 0> next_action;
+    CHECK( next_action.get( tripoint::south_west, [&]() {
+        return &helper;
+    } ) == &helper );
+}
+
+} // namespace merged_monster_local_cache_test
+
+namespace merged_monster_melee_visibility_test
+{
+
+static const efftype_id effect_invisibility( "invisibility" );
+
+TEST_CASE( "rejected_monster_melee_is_not_a_debug_error", "[monster][regression]" )
+{
+    clear_map();
+    const tripoint_bub_ms origin( 50, 50, 0 );
+    monster &attacker = spawn_test_monster( "mon_zombie", origin );
+    monster &target = spawn_test_monster( "mon_zombie", origin + tripoint::east );
+    target.add_effect( effect_invisibility, 1_hours );
+    REQUIRE( attacker.is_adjacent( &target, true ) );
+    REQUIRE_FALSE( attacker.sees( get_map(), target ) );
+    const int hp = target.get_hp();
+    const int moves = attacker.get_moves();
+    CHECK( capture_debugmsg_during( [&]() {
+        CHECK_FALSE( attacker.melee_attack( target ) );
+    } ).empty() );
+    CHECK( target.get_hp() == hp );
+    CHECK( attacker.get_moves() == moves - attacker.type->attack_cost );
+}
+
+} // namespace merged_monster_melee_visibility_test
+
+namespace merged_monster_vision_test
+{
+
+static const ter_str_id ter_t_floor( "t_floor" );
+
+static monster &spawn_and_clear( const tripoint_bub_ms &pos, bool set_floor )
+{
+    if( set_floor ) {
+        get_map().set( pos, ter_t_floor, furn_str_id::NULL_ID() );
+    }
+    return spawn_test_monster( "mon_zombie", pos );
+}
+
+static const time_point midday = calendar::turn_zero + 12_hours;
+
+TEST_CASE( "monsters_should_not_see_through_floors", "[vision]" )
+{
+    const map &here = get_map();
+
+    calendar::turn = midday;
+    clear_map( -2, 1 );
+    monster &upper = spawn_and_clear( { 5, 5, 0 }, true );
+    monster &adjacent = spawn_and_clear( { 5, 6, 0 }, true );
+    monster &distant = spawn_and_clear( { 5, 3, 0 }, true );
+    monster &lower = spawn_and_clear( { 5, 5, -1 }, true );
+    monster &deep = spawn_and_clear( { 5, 5, -2 }, true );
+    monster &sky = spawn_and_clear( { 5, 5, 1 }, false );
+
+    // First check monsters whose vision should be blocked by floors.
+    // One intervening floor between monsters.
+    CHECK( !upper.sees( here, lower ) );
+    CHECK( !lower.sees( here, upper ) );
+    // Two intervening floors between monsters.
+    CHECK( !upper.sees( here, deep ) );
+    CHECK( !deep.sees( here,  upper ) );
+    // One intervening floor and an open space between monsters.
+    CHECK( !sky.sees( here, lower ) );
+    CHECK( !lower.sees( here, sky ) );
+    // One intervening floor between monsters, and offset one tile horizontally.
+    CHECK( !adjacent.sees( here, lower ) );
+    CHECK( !lower.sees( here,  adjacent ) );
+    // One intervening floor between monsters, and offset two tiles horizontally.
+    CHECK( !distant.sees( here, lower ) );
+    CHECK( !lower.sees( here, distant ) );
+    // Two intervening floors between monsters, and offset one tile horizontally.
+    CHECK( !adjacent.sees( here,  deep ) );
+    CHECK( !deep.sees( here, adjacent ) );
+    // Two intervening floor between monsters, and offset two tiles horizontally.
+    CHECK( !distant.sees( here, deep ) );
+    CHECK( !deep.sees( here,  distant ) );
+
+    // Then cases where they should be able to see each other.
+    // No floor between monsters
+    CHECK( upper.sees( here, sky ) );
+    CHECK( sky.sees( here, upper ) );
+    // Adjacent monsters.
+    CHECK( upper.sees( here, adjacent ) );
+    CHECK( adjacent.sees( here, upper ) );
+    // distant monsters.
+    CHECK( upper.sees( here, distant ) );
+    CHECK( distant.sees( here, upper ) );
+    // One intervening vertical tile and one intervening horizontal tile.
+    CHECK( sky.sees( here, adjacent ) );
+    CHECK( adjacent.sees( here, sky ) );
+    // One intervening vertical tile and two intervening horizontal tiles.
+    CHECK( sky.sees( here, distant ) );
+    CHECK( distant.sees( here, sky ) );
+}
+
+} // namespace merged_monster_vision_test
