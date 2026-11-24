@@ -6602,6 +6602,22 @@
     "qualities": [ [ "TEST_RESERVE_C", 1 ] ]
   },
   {
+    "//": "Supplies a quality only while it has charges, for the lists of items that satisfy a quality requirement.",
+    "id": "test_reserve_charged_quality_tool",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "test reservation charged quality tool" },
+    "description": "Supplies TEST_RESERVE_C while it carries battery charges.",
+    "weight": "500 g",
+    "volume": "500 ml",
+    "material": [ "steel" ],
+    "symbol": ";",
+    "color": "light_gray",
+    "charges_per_use": 1,
+    "charged_qualities": [ [ "TEST_RESERVE_C", 1 ] ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 200 } } ]
+  },
+  {
     "//": "One provider backing two requirement groups, for the cross-group reuse tests.",
     "id": "test_reserve_multitool_ab",
     "type": "ITEM",

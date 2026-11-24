@@ -9,6 +9,7 @@
 
 #include "coordinates.h"
 #include "item.h"
+#include "point.h"
 #include "type_id.h"
 
 class Character;
@@ -61,7 +62,7 @@ void add_vehicle_tool_use_menu( veh_menu &menu, map &here, vehicle &target,
 
 // Native pseudo-tool preparation and resource billing, with an explicit operator.
 // Empty method retains the legacy local selection; no_invoke is the old heater handoff.
-bool invoke_vehicle_tool( Character &who, vehicle &target, map &here,
-                          const tripoint_bub_ms &position, const itype_id &tool,
+bool invoke_vehicle_tool( Character &who, vehicle &veh, map &terrain,
+                          const tripoint_bub_ms &vp_pos, const itype_id &tool_type,
                           const std::string &method = {}, bool no_invoke = false );
 #endif // CATA_SRC_VEHICLE_TOOL_USE_H

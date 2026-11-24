@@ -1166,7 +1166,7 @@ class vehicle
         bool auto_select_fuel( map &here, vehicle_part &vp );
         // Attempt to start an engine
         bool start_engine( map &here, vehicle_part &vp );
-        bool start_engine( map &here, vehicle_part &vp, Character &driver );
+        bool start_engine( map &here, vehicle_part &vp, Character &player_character );
         // stop all engines
         void stop_engines( map &here );
         // Attempt to start the vehicle's active engines
@@ -2409,7 +2409,7 @@ class vehicle
         void use_tiedown_furniture( int part, map *here, const tripoint_bub_ms & );
         void use_harness( int part, map *here, const tripoint_bub_ms &pos );
 
-        void build_electronics_menu( map &here, veh_menu &menu );
+        void build_electronics_menu( map &here, veh_menu &menu ) const;
         void build_bike_rack_menu( map &here, veh_menu &menu, int part );
         void build_interact_menu( veh_menu &menu, map *here, const tripoint_bub_ms &p, bool with_pickup );
         void interact_with( map *here, const tripoint_bub_ms &p, bool with_pickup = false );
