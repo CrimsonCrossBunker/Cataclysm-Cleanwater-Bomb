@@ -1,6 +1,95 @@
 local ccb = require("ccb")
 
 ccb.content.define_item {
+    id = "afs_mealgrub_medium",
+    name = ccb.content.plural_text("mealgrub growth medium", "mealgrub growth medium"),
+    description = ccb.content.text("All sorts of organic substances rendered into a nutritious goop that can be used as a growth medium in grub aquaculture.  Urban myth claims that its original formula was just bottled industrial runoff.  Whatever the case, mealgrubs thrive within it."),
+    mass = "100 g",
+    default_container = "jug_plastic",
+    flags = { "NUTRIENT_OVERRIDE" },
+    symbol = "~",
+    price = "10 USD",
+    survival_price = "1 USD",
+    volume = "250 ml",
+    phase = "liquid",
+    category = "chems",
+    comestible = {
+        kind = "DRINK",
+        quench = -10,
+        healthy = -2,
+        calories = 400,
+        servings = 5,
+        fun = -30,
+        vitamins = {
+            { id = "calcium", amount = 2 },
+            { id = "iron", amount = 12 },
+            { id = "bad_food", amount = 1 },
+        },
+    },
+    use_actions = { "BLECH" },
+}
+
+ccb.content.define_item {
+    id = "afs_mealgrub_spores",
+    name = ccb.content.plural_text("mealgrub spores", "mealgrub spores"),
+    description = ccb.content.text("Mealgrubs are a staple aquacultural product, treasured for their ability to process nearly any organic substance into safe for consumption animal protein.  As the result of very heavy-handed gene-modding these are proprietary organisms, and strictly speaking, it's illegal to grow them without a license."),
+    mass = "100 g",
+    default_container = "bottle_plastic_small",
+    symbol = "~",
+    price = "10 USD",
+    survival_price = "1 USD",
+    volume = "250 ml",
+    phase = "liquid",
+    category = "chems",
+    comestible = { kind = "DRINK", quench = -10, healthy = -2, calories = 1, servings = 100, fun = -10 },
+    use_actions = { "BLECH" },
+}
+
+ccb.content.define_item {
+    id = "brew_afs_mealgrub_broth",
+    name = ccb.content.plural_text("mealgrub broth", "mealgrub broth"),
+    description = ccb.content.text("Growth medium seeded with mealgrub eggs.  Once placed in a growing vat, they should be ready for harvesting in around 76 hours.  The immature grub's metabolism can produce toxic by-products so caution is advisable."),
+    emissions = { "emit_toxic_cloud" },
+    mass = "33 g",
+    color = "white",
+    default_container = "jug_plastic",
+    symbol = "~",
+    price = "4 cent",
+    survival_price = "10 cent",
+    volume = "250 ml",
+    phase = "liquid",
+    subtype_order = { "brewing", "comestible" },
+    brewing = { duration = "76 hours", products = { "afs_mealgrub_jelly", "afs_mealgrub_spores" } },
+    comestible = { quench = -5, fun = 4, servings = 5, kind = "DRINK" },
+    use_actions = { "BLECH" },
+}
+
+ccb.content.define_item {
+    id = "afs_mealgrub_jelly",
+    name = ccb.content.plural_text("live mealgrubs", "live mealgrubs"),
+    description = ccb.content.text("Thousands of mature mealworms, squirming in the viscous remains of their growth medium.  They are ready for harvest, and in fact require speedy cleaning and processing, as the harvest can quickly rot in this stage."),
+    mass = "100 g",
+    emissions = { "emit_toxic_cloud" },
+    default_container = "jug_plastic",
+    symbol = "~",
+    price = "10 USD",
+    survival_price = "1 USD",
+    volume = "250 ml",
+    phase = "liquid",
+    category = "chems",
+    comestible = {
+        kind = "DRINK",
+        quench = -10,
+        healthy = -2,
+        calories = 260,
+        shelf_life = "12 days",
+        servings = 5,
+        fun = -10,
+    },
+    use_actions = { "BLECH" },
+}
+
+ccb.content.define_item {
     id = "afs_mealgrubs",
     name = ccb.content.plural_text("mealgrubs", "mealgrubs"),
     symbol = "s",
