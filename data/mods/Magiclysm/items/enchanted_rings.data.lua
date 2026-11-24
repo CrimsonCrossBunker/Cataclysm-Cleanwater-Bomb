@@ -1,5 +1,137 @@
 local ccb = require("ccb")
 
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_item {
+    id = "mring_copper",
+    abstract = true,
+    name = ccb.content.text_without_extraction("copper magic ring"),
+    description = ccb.content.text_without_extraction("A generic copper magic ring."),
+    mass = "4 g",
+    volume = "1 ml",
+    price = "50 USD",
+    survival_price = "20 USD",
+    materials = { "copper" },
+    symbol = "[",
+    color = "light_red",
+    looks_like = "copper_ring",
+    flags = { "WATER_FRIENDLY", "ALLOWS_NATURAL_ATTACKS", "ONE_PER_LAYER", "SKINTIGHT", "UNRESTRICTED" },
+    subtype_order = { "tool", "armor" },
+    tool = {},
+    armor = {
+        sided = true,
+        warmth = 0,
+        portions = {
+            {
+                encumbrance = 0,
+                coverage = 0,
+                covers = { "hand_l", "hand_r" },
+                subparts = { "hand_fingers_l", "hand_fingers_r" },
+                rigid_only = true,
+            },
+        },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_item {
+    id = "mring_silver",
+    abstract = true,
+    name = ccb.content.text_without_extraction("silver magic ring"),
+    description = ccb.content.text_without_extraction("A generic silver magic ring."),
+    mass = "5 g",
+    volume = "1 ml",
+    price = "50 USD",
+    survival_price = "20 USD",
+    materials = { "silver" },
+    symbol = "[",
+    color = "light_gray",
+    looks_like = "silver_ring",
+    flags = { "WATER_FRIENDLY", "ALLOWS_NATURAL_ATTACKS", "ONE_PER_LAYER", "SKINTIGHT", "UNRESTRICTED" },
+    subtype_order = { "tool", "armor" },
+    tool = {},
+    armor = {
+        sided = true,
+        warmth = 0,
+        portions = {
+            {
+                encumbrance = 0,
+                coverage = 0,
+                covers = { "hand_l", "hand_r" },
+                subparts = { "hand_fingers_l", "hand_fingers_r" },
+                rigid_only = true,
+            },
+        },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_item {
+    id = "mring_gold",
+    abstract = true,
+    name = ccb.content.text_without_extraction("gold magic ring"),
+    description = ccb.content.text_without_extraction("A generic gold magic ring."),
+    mass = "9 g",
+    volume = "1 ml",
+    price = "50 USD",
+    survival_price = "20 USD",
+    materials = { "gold" },
+    symbol = "[",
+    color = "yellow",
+    looks_like = "gold_ring",
+    flags = { "WATER_FRIENDLY", "ALLOWS_NATURAL_ATTACKS", "ONE_PER_LAYER", "SKINTIGHT", "UNRESTRICTED" },
+    subtype_order = { "tool", "armor" },
+    tool = {},
+    armor = {
+        sided = true,
+        warmth = 0,
+        portions = {
+            {
+                encumbrance = 0,
+                coverage = 0,
+                covers = { "hand_l", "hand_r" },
+                subparts = { "hand_fingers_l", "hand_fingers_r" },
+                rigid_only = true,
+            },
+        },
+    },
+}
+
+-- NO_I18N
+-- NO_I18N
+ccb.content.define_item {
+    id = "mring_platinum",
+    abstract = true,
+    name = ccb.content.text_without_extraction("platinum magic ring"),
+    description = ccb.content.text_without_extraction("A generic platinum magic ring"),
+    mass = "11 g",
+    volume = "1 ml",
+    price = "50 USD",
+    survival_price = "20 USD",
+    materials = { "platinum" },
+    symbol = "[",
+    color = "light_gray",
+    looks_like = "platinum_ring",
+    flags = { "WATER_FRIENDLY", "ALLOWS_NATURAL_ATTACKS", "ONE_PER_LAYER", "SKINTIGHT", "UNRESTRICTED" },
+    subtype_order = { "tool", "armor" },
+    tool = {},
+    armor = {
+        sided = true,
+        warmth = 0,
+        portions = {
+            {
+                encumbrance = 0,
+                coverage = 0,
+                covers = { "hand_l", "hand_r" },
+                subparts = { "hand_fingers_l", "hand_fingers_r" },
+                rigid_only = true,
+            },
+        },
+    },
+}
+
 ccb.content.define_item {
     id = "mring_wizardry_minor",
     copy_from = "mring_copper",
@@ -381,4 +513,121 @@ ccb.content.define_item {
     tool = {},
     armor = {},
     artifact = { enchantments = { "ITEM_ENCH_Magiclysm_mring_protection_8_0" } },
+}
+
+ccb.content.define_item {
+    id = "storage_ring_lesser",
+    copy_from = "mring_platinum",
+    name = ccb.content.plural_text("lesser storage ring", "lesser storage rings"),
+    price = "3000 USD",
+    length = "2 cm",
+    survival_price = "1000 USD",
+    description = ccb.content.text("A glistening ring holding a small dimensional space inside.  Can store only a little but you can draw items instantly."),
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "1 L",
+            mass_limit = "1 kg",
+            max_item_length = "35 cm",
+            moves = 1,
+            holster = true,
+            weight_multiplier = 0.0,
+            volume_multiplier = 0.0,
+            volume_encumbrance = 0.0,
+        },
+    },
+    subtype_order = { "tool", "armor" },
+    tool = {},
+    armor = {},
+    use_actions = {
+        {
+            kind = "holster",
+            prompt = ccb.content.text("Stick what into your ring"),
+            message = ccb.content.text("You tuck your %s into your %s"),
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "storage_ring_greater",
+    copy_from = "mring_platinum",
+    name = ccb.content.plural_text("greater storage ring", "greater storage rings"),
+    price = "9000 USD",
+    length = "2 cm",
+    survival_price = "1750 USD",
+    description = ccb.content.text("A glistening ring holding a small dimensional space inside.  Capable of storing a medium-sized weapon you can draw instantly."),
+    pockets = {
+        {
+            kind = "CONTAINER",
+            capacity = "2 L",
+            mass_limit = "2500 g",
+            max_item_length = "100 cm",
+            moves = 1,
+            holster = true,
+            weight_multiplier = 0.0,
+            volume_multiplier = 0.0,
+            volume_encumbrance = 0.0,
+        },
+    },
+    subtype_order = { "tool", "armor" },
+    tool = {},
+    armor = {},
+    use_actions = {
+        {
+            kind = "holster",
+            prompt = ccb.content.text("Stick what into your ring"),
+            message = ccb.content.text("You tuck your %s into your %s"),
+        },
+    },
+}
+
+ccb.content.define_item {
+    id = "mring_fire_protection",
+    copy_from = "mring_gold",
+    survival_price = "6000 USD",
+    name = ccb.content.plural_text("ring of fire protection", "rings of fire protection"),
+    description = ccb.content.text("A crimsonite ring with a dappled pattern that protects you from fire."),
+    replace_materials = { gold = "crimsonite_metal" },
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = {},
+    armor = {},
+    artifact = { enchantments = { "ITEM_ENCH_Magiclysm_mring_fire_protection_0" } },
+}
+
+ccb.content.define_item {
+    id = "mring_flying",
+    copy_from = "mring_platinum",
+    survival_price = "10000 USD",
+    name = ccb.content.plural_text("ring of flying", "rings of flying"),
+    description = ccb.content.text("A platinum ring that allows you fly for a short time each day, and prevents fall damage while worn."),
+    pockets = { { kind = "MAGAZINE", ammunition = { crystallized_mana = 1 } } },
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = { charges_per_use = 1 },
+    armor = {},
+    artifact = {
+        charge = { recharge_type = "periodic", interval = "24 h", regenerate_ammo = true },
+        enchantments = { "ITEM_ENCH_Magiclysm_mring_flying_0" },
+    },
+    use_actions = {
+        {
+            kind = "cast_spell",
+            spell = "ring_of_flight_spell",
+            no_fail = true,
+            level = 0,
+            need_worn = true,
+        },
+    },
+}
+
+-- Extremely valuable in the apocalypse.
+ccb.content.define_item {
+    id = "mring_sustenance",
+    copy_from = "mring_gold",
+    survival_price = "25000 USD",
+    name = ccb.content.plural_text("ring of sustenance", "rings of sustenance"),
+    description = ccb.content.text("A golden ring that greatly reduces your need to eat, drink, or sleep while it is worn.  It will do nothing for feelings of hunger, and it requires a full day of being worn for the magic to take effect."),
+    subtype_order = { "tool", "armor", "artifact" },
+    tool = {},
+    armor = {},
+    artifact = { enchantments = { "ITEM_ENCH_Magiclysm_mring_sustenance_0" } },
 }
