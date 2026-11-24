@@ -12,9 +12,11 @@
 #include "character.h"
 #include "character_action_guard.h"
 #include "crafting.h"
+#include "field_type.h"
 #include "flag.h"
 #include "game.h"
 #include "handle_liquid.h"
+#include "iexamine.h"
 #include "item.h"
 #include "item_location.h"
 #include "item_stack.h"
@@ -438,7 +440,8 @@ void use_vehicle_appliance( Character &who, map &here, vehicle &target, int part
 bool is_hvac_indoors( const map &here, const tripoint_bub_ms &position )
 {
     return here.inbounds( position ) &&
-           ( position.z() < 0 || here.has_flag( ter_furn_flag::TFLAG_INDOORS, position ) );
+           ( position.z() < 0 || here.has_flag( ter_furn_flag::TFLAG_INDOORS, position ) ||
+             ( here.has_loaded_submap( position + tripoint::above ) && here.is_roofed( position ) ) );
 }
 
 void store_boiler_water( item &boiler, double liters, double temperature_c, bool clean )
@@ -465,8 +468,10 @@ constexpr int hose_span = 4;
 const itype_id wood_boiler( "atlas_wood_hydronic_boiler" );
 const itype_id household_water_heater( "household_water_heater" );
 const itype_id family_water_heater( "household_water_heater_family" );
+const field_type_str_id boiler_fire( "fd_fire" );
 constexpr int boiler_watts = 4500;
-constexpr double boiler_heat_per_minute_kj = boiler_watts * 60 / 1000.0;
+constexpr double water_heat_capacity = 4184.0;
+constexpr double radiator_pipe_loss_per_tile = 0.08;
 
 int boiler_capacity_liters( const item &boiler )
 {
@@ -489,23 +494,17 @@ int hvac_part_at( const vehicle &target, const tripoint_abs_ms &p, const std::st
     return -1;
 }
 
+int hvac_energy_kj( int watts )
+{
+    return ( watts * 60 + 999 ) / 1000;
+}
+
 bool hvac_power( map &here, vehicle &target, int watts )
 {
-    const int energy_kj = ( watts * 60 + 999 ) / 1000;
+    const int energy_kj = hvac_energy_kj( watts );
     return energy_kj > 0 && !cata_mp::is_client_mode() &&
            target.battery_left( here ) >= energy_kj &&
            target.discharge_battery( here, energy_kj ) == 0;
-}
-
-double boiler_heat( map &here, vehicle &target, item &boiler )
-{
-    if( boiler.typeId() != wood_boiler ) {
-        return hvac_power( here, target, boiler_watts ) ? boiler_heat_per_minute_kj : 0.0;
-    }
-    const double fuel = boiler.get_var( "hvac_wood_fuel_kj", 0.0 );
-    const double heat = std::min( fuel, boiler_heat_per_minute_kj );
-    boiler.set_var( "hvac_wood_fuel_kj", fuel - heat );
-    return heat;
 }
 
 int hvac_minute()
@@ -513,7 +512,13 @@ int hvac_minute()
     return to_minutes<int>( calendar::turn - calendar::turn_zero );
 }
 
-double update_boiler( map &here, vehicle &target, item &boiler, double ambient )
+double boiler_mode( const item &boiler )
+{
+    return boiler.get_var( "hvac_mode", boiler.typeId() == wood_boiler ? 1.0 : 0.0 );
+}
+
+double update_boiler( map &here, vehicle &target, item &boiler, const tripoint_bub_ms &position,
+                      double ambient )
 {
     const int now = hvac_minute();
     const int last = static_cast<int>( boiler.get_var( "hvac_minute", now - 1.0 ) );
@@ -525,11 +530,35 @@ double update_boiler( map &here, vehicle &target, item &boiler, double ambient )
     const int elapsed = std::max( 0, now - last );
     const double cooling_minutes = 240.0 * std::max( 1.0, liters / 40.0 );
     water_c = ambient + ( water_c - ambient ) * std::exp( -elapsed / cooling_minutes );
-    const bool boil = boiler.get_var( "hvac_mode", 0.0 ) == 2;
+    const double mode = boiler_mode( boiler );
+    const bool boil = mode == 2;
+    const bool wood = boiler.typeId() == wood_boiler;
+    const double fire_watts = wood ? 3000.0 * here.get_field_intensity( position, boiler_fire.id() ) : 0.0;
+    double room_watts = fire_watts;
+    int electric_watts = 0;
     const double target_c = boil ? 100 : 75;
-    if( elapsed > 0 && liters > 0 && boiler.get_var( "hvac_mode", 0.0 ) != 0 &&
-        water_c < target_c - 0.01 ) {
-        water_c = std::min( target_c, water_c + boiler_heat( here, target, boiler ) / ( liters * 4.184 ) );
+    if( elapsed > 0 && liters > 0 && mode != 0 && water_c < target_c - 0.01 ) {
+        const double needed_watts = ( target_c - water_c ) * liters * water_heat_capacity / 60.0;
+        double water_watts = 0;
+        if( wood && fire_watts > 0 ) {
+            water_watts = std::min( needed_watts, fire_watts * 0.65 );
+            room_watts -= water_watts;
+        } else if( wood ) {
+            // Let boilers in older saves finish burning the fuel already loaded into them.
+            const double fuel_kj = std::max( 0.0, boiler.get_var( "hvac_wood_fuel_kj", 0.0 ) );
+            water_watts = std::min( { needed_watts, static_cast<double>( boiler_watts ),
+                                    fuel_kj * 1000.0 / 60.0 } );
+            if( fuel_kj > 0 ) {
+                boiler.set_var( "hvac_wood_fuel_kj", std::max( 0.0, fuel_kj - water_watts * 60.0 / 1000.0 ) );
+            }
+        } else {
+            const int input = static_cast<int>( std::ceil( std::min<double>( needed_watts, boiler_watts ) ) );
+            if( hvac_power( here, target, input ) ) {
+                electric_watts = input;
+                water_watts = std::min<double>( needed_watts, input );
+            }
+        }
+        water_c = std::min( target_c, water_c + water_watts * 60.0 / ( liters * water_heat_capacity ) );
     }
     if( boil && liters > 0 && water_c >= 100 ) {
         boiler.set_var( "hvac_clean", 1 );
@@ -537,6 +566,12 @@ double update_boiler( map &here, vehicle &target, item &boiler, double ambient )
     }
     boiler.set_var( "hvac_minute", now );
     boiler.set_var( "hvac_water_c", water_c );
+    if( wood ) {
+        boiler.set_var( "hvac_boiler_room_watts", room_watts );
+    } else if( electric_watts > 0 ) {
+        boiler.set_var( "hvac_power_watts", electric_watts );
+        boiler.set_var( "hvac_power_minute", now );
+    }
     return water_c;
 }
 
@@ -708,25 +743,12 @@ void disconnect_hvac( Character &who, item &unit )
     unit.erase_var( "hvac_output" );
 }
 
-void load_boiler_firewood( Character &who, item &boiler )
+void operate_boiler( Character &who, item &boiler )
 {
-    for( const itype_id &wood : { itype_id( "firewood" ), itype_id( "log" ), itype_id( "2x4" ),
-                                 itype_id( "splinter" ) } ) {
-        const auto fuel = who.use_amount( wood, 1 );
-        if( !fuel.empty() ) {
-            // Approximate the useful heat delivered to the water after combustion losses.
-            const double heat_kj = units::to_gram( fuel.front().weight() ) * 7.5;
-            boiler.set_var( "hvac_wood_fuel_kj", boiler.get_var( "hvac_wood_fuel_kj", 0.0 ) + heat_kj );
-            return;
-        }
-    }
-    who.add_msg_if_player( _( "You need firewood, a log, a plank, or splintered wood." ) );
-}
-
-void operate_boiler( Character &who, map &here, vehicle &target, item &boiler )
-{
-    const double water_c = update_boiler( here, target, boiler,
-                                         units::to_celsius( get_weather().temperature ) );
+    const double ambient_c = units::to_celsius(
+                                 get_weather().forced_temperature.value_or( get_weather().temperature ) );
+    const double water_c = boiler.get_var( "hvac_water_c", ambient_c );
+    const bool wood = boiler.typeId() == wood_boiler;
     const item water_sample( water );
     const int per_liter = water_sample.charges_per_volume( units::from_milliliter( 1000 ) );
     if( per_liter <= 0 ) {
@@ -738,16 +760,12 @@ void operate_boiler( Character &who, map &here, vehicle &target, item &boiler )
     uilist options;
     options.title = string_format( _( "Boiler holding %.1f / %d L at %.1f C" ), liters, capacity,
                                    water_c );
-    options.addentry( 0, true, 'o', _( "Turn off" ) );
+    options.addentry( 0, true, 'o', wood ? _( "Turn off water heating" ) : _( "Turn off" ) );
     options.addentry( 1, liters > 0, 'h', _( "Heat the radiator loop" ) );
-    options.addentry( 2, liters > 0, 'b', _( "Boil the water, then switch off" ) );
+    options.addentry( 2, liters > 0, 'b', wood ? _( "Boil the water" ) :
+                      _( "Boil the water, then switch off" ) );
     options.addentry( 3, empty > 0, 'f', _( "Add water from carried containers" ) );
     options.addentry( 4, liters > 0, 'd', _( "Draw water into a container" ) );
-    if( boiler.typeId() == wood_boiler ) {
-        options.text = string_format( _( "Loaded fuel provides %.1f MJ of heat." ),
-                                      boiler.get_var( "hvac_wood_fuel_kj", 0.0 ) / 1000 );
-        options.addentry( 5, true, 'w', _( "Load firewood" ) );
-    }
     options.query();
     if( options.ret >= 0 && options.ret <= 2 ) {
         boiler.set_var( "hvac_mode", options.ret );
@@ -780,8 +798,6 @@ void operate_boiler( Character &who, map &here, vehicle &target, item &boiler )
                 boiler.set_var( "hvac_mode", 0 );
             }
         }
-    } else if( options.ret == 5 && boiler.typeId() == wood_boiler ) {
-        load_boiler_firewood( who, boiler );
     }
 }
 
@@ -800,7 +816,7 @@ void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_a
             }
             Character &who = get_player_character();
             if( role == "HYDRONIC_BOILER" ) {
-                operate_boiler( who, here, target, *unit );
+                operate_boiler( who, *unit );
             } else if( role == "DISCONNECT_HVAC" ) {
                 disconnect_hvac( who, *unit );
             } else if( role == "SPLIT_HVAC_INDOOR" || role == "HYDRONIC_RADIATOR" ) {
@@ -837,6 +853,14 @@ void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_a
     add_link( "HYDRONIC_RADIATOR", _( "Connect the radiator" ), _( "Disconnect the radiator" ) );
     if( const int index = hvac_part_at( target, pos, "HYDRONIC_BOILER" ); index >= 0 ) {
         add( _( "Operate water boiler" ), index, "HYDRONIC_BOILER" );
+        if( target.is_appliance() && target.part( index ).info().base_item == wood_boiler ) {
+            menu.add( _( "Tend the boiler fire" ) ).on_submit( [&here, pos] {
+                const tripoint_bub_ms tile = here.get_bub( pos );
+                if( has_wood_boiler( here, tile ) ) {
+                    iexamine::fireplace( get_player_character(), tile );
+                }
+            } );
+        }
     }
     for( const vpart_reference &part : target.get_avail_parts( "CABIN_HVAC" ) ) {
         add( _( "Cabin climate control" ), part.part_index(), "CABIN_HVAC" );
@@ -865,6 +889,16 @@ void add_hvac_menu( veh_menu &menu, map &here, vehicle &target, const tripoint_a
     add_windows( _( "Close cabin windows" ), std::move( open_windows ), false );
 }
 } // namespace
+
+bool has_wood_boiler( const map &here, const tripoint_bub_ms &position )
+{
+    const optional_vpart_position at = here.veh_at( position );
+    if( !at || !at->vehicle().is_appliance() ) {
+        return false;
+    }
+    const std::optional<vpart_reference> boiler = at.avail_part_with_feature( "HYDRONIC_BOILER" );
+    return boiler && boiler->part().info().base_item == wood_boiler;
+}
 
 std::optional<int> use_hvac_remote( Character *who, item *, const tripoint_bub_ms & )
 {
@@ -902,43 +936,43 @@ std::optional<int> use_hvac_remote( Character *who, item *, const tripoint_bub_m
     return 0;
 }
 
-double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &position,
-                             double outside_c, double room_c )
+bool is_room_heat_source( const vpart_reference &part )
 {
-    const tripoint_abs_ms abs = here.get_abs( position );
-    const int boiler_index = hvac_part_at( target, abs, "HYDRONIC_BOILER" );
-    if( boiler_index >= 0 ) {
-        item_location boiler = target.part_base( boiler_index );
-        if( boiler ) {
-            update_boiler( here, target, *boiler, outside_c );
-        }
-        return 0;
+    const vehicle_part &vp = part.part();
+    const vpart_info &info = vp.info();
+    return !vp.removed && vp.is_available() &&
+           ( info.base_item == wood_boiler || info.has_flag( "HYDRONIC_RADIATOR" ) ||
+             info.has_flag( "SPLIT_HVAC_INDOOR" ) ||
+             ( info.has_flag( "SPACE_HEATER" ) && vp.enabled ) );
+}
+
+double room_appliance_watts( map &here, const vpart_reference &part, double outside_c, double room_c )
+{
+    const vpart_info &info = part.part().info();
+    if( info.has_flag( "SPACE_HEATER" ) ) {
+        return std::max( 0.0, -static_cast<double>( units::to_watt( info.epower ) ) );
     }
-    if( !is_hvac_indoors( here, position ) ) {
-        return 0;
-    }
-    const int heater_index = hvac_part_at( target, abs, "SPACE_HEATER" );
-    if( heater_index >= 0 && target.part( heater_index ).enabled ) {
-        return std::max( 0.0, -static_cast<double>( units::to_watt(
-                             target.part( heater_index ).info().epower ) ) );
-    }
-    const int radiator_index = hvac_part_at( target, abs, "HYDRONIC_RADIATOR" );
-    const bool radiator = radiator_index >= 0;
-    const int index = radiator ? radiator_index : hvac_part_at( target, abs, "SPLIT_HVAC_INDOOR" );
-    if( index < 0 ) {
-        return 0;
-    }
-    item_location unit = target.part_base( index );
+    vehicle &target = part.vehicle();
+    item_location unit = target.part_base( part.part_index() );
     if( !unit ) {
         return 0;
     }
+    if( info.base_item == wood_boiler ) {
+        update_boiler( here, target, *unit, part.pos_bub( here ), outside_c );
+        return unit->get_var( "hvac_boiler_room_watts", 0.0 );
+    }
+    const bool radiator = info.has_flag( "HYDRONIC_RADIATOR" );
     const int mode = static_cast<int>( unit->get_var( "hvac_mode", 0.0 ) );
     if( !radiator && mode == 0 ) {
         return 0;
     }
+    const tripoint_abs_ms abs = part.pos_abs();
     const tripoint_abs_ms link = unit->get_var( "hvac_link", no_hvac_link );
-    if( link == no_hvac_link || abs == link || abs.z() != link.z() ||
-        square_dist( abs.xy(), link.xy() ) > link_range ) {
+    if( link == no_hvac_link || abs == link || abs.z() != link.z() ) {
+        return 0;
+    }
+    const int distance = square_dist( abs.xy(), link.xy() );
+    if( distance > link_range ) {
         return 0;
     }
     const tripoint_bub_ms connected = here.get_bub( link );
@@ -963,11 +997,13 @@ double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &
     double output = 0;
     if( radiator ) {
         const double liters = other->get_var( "hvac_water_l", 0.0 );
-        if( liters > 0 ) {
-            const double water_c = update_boiler( here, supply, *other, outside_c );
+        if( liters > 0 && boiler_mode( *other ) == 1 ) {
+            const double water_c = update_boiler( here, supply, *other, connected, outside_c );
             const double difference = std::max( 0.0, water_c - room_c );
-            output = std::min( { 2000.0, 35 * difference, liters * 4184 * difference / 60 } );
-            other->set_var( "hvac_water_c", water_c - 60 * output / ( liters * 4184 ) );
+            const double extracted = std::min( { 2000.0, 35 * difference,
+                                               liters * water_heat_capacity * difference / 60.0 } );
+            other->set_var( "hvac_water_c", water_c - extracted * 60.0 / ( liters * water_heat_capacity ) );
+            output = extracted * std::exp( -radiator_pipe_loss_per_tile * distance );
         }
     } else {
         const double demand = unit->get_var( "hvac_setpoint", 22.0 ) - room_c;
@@ -981,7 +1017,13 @@ double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &
                            std::clamp( 4.3 - 0.065 * ( outside_c - 25 ), 1.8, 4.5 );
         if( ( heat || cool ) && other->get_var( "hvac_minute", -1.0 ) != now ) {
             const double watts = std::min( capacity, std::abs( demand ) * 700 );
-            if( hvac_power( here, supply, static_cast<int>( std::ceil( watts / cop + 35 ) ) ) ) {
+            const int input_watts = static_cast<int>( std::ceil( watts / cop + 35 ) );
+            const bool use_outdoor_feed = &supply == &target ||
+                                          supply.battery_left( here ) >= hvac_energy_kj( input_watts );
+            if( hvac_power( here, use_outdoor_feed ? supply : target, input_watts ) ) {
+                item &feed = use_outdoor_feed ? *other : *unit;
+                feed.set_var( "hvac_power_watts", input_watts );
+                feed.set_var( "hvac_power_minute", now );
                 other->set_var( "hvac_minute", now );
                 output = heat ? watts : -watts;
             }
@@ -992,16 +1034,31 @@ double room_appliance_watts( map &here, vehicle &target, const tripoint_bub_ms &
     return output;
 }
 
+units::power room_appliance_power_draw( const vehicle &target )
+{
+    const int now = hvac_minute();
+    units::power draw = 0_W;
+    for( const vpart_reference &part : target.get_all_parts() ) {
+        const item &base = part.part().get_base();
+        if( base.get_var( "hvac_power_minute", -1.0 ) == now ) {
+            draw += units::from_watt( static_cast<int>( base.get_var( "hvac_power_watts", 0.0 ) ) );
+        }
+    }
+    return draw;
+}
+
 void update_vehicle_climate( map &here, vehicle &target )
 {
     if( cata_mp::is_client_mode() ) {
         return;
     }
-    const double ambient_c = units::to_celsius( get_weather().weather_precise->temperature );
+    const weather_manager &weather = get_weather();
+    const double ambient_c = units::to_celsius(
+                                 weather.forced_temperature.value_or( weather.weather_precise->temperature ) );
     for( const vpart_reference &part : target.get_avail_parts( "HYDRONIC_BOILER" ) ) {
         item_location boiler = target.part_base( part.part_index() );
         if( boiler && boiler->get_var( "hvac_water_l", 0.0 ) > 0 ) {
-            update_boiler( here, target, *boiler, ambient_c );
+            update_boiler( here, target, *boiler, part.pos_bub( here ), ambient_c );
         }
     }
     for( const vpart_reference &part : target.get_avail_parts( "CABIN_HVAC" ) ) {

@@ -81,7 +81,7 @@
     "categories": [ "utility" ],
     "color": "light_red",
     "durability": 150,
-    "flags": [ "APPLIANCE", "HYDRONIC_RADIATOR" ],
+    "flags": [ "APPLIANCE", "HYDRONIC_RADIATOR", "NO_POWER_CONNECTION" ],
     "requirements": { "install": { "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_screw", 1 ] ] }, "removal": { "time": "6 m", "using": [ [ "vehicle_screw", 1 ] ] } },
     "breaks_into": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "cable", "count": [ 2, 5 ] } ],
     "variants": [ { "symbols": ";", "symbols_broken": ":" } ]

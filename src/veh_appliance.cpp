@@ -44,6 +44,7 @@
 #include "veh_type.h"
 #include "veh_utils.h"
 #include "vehicle.h"
+#include "vehicle_appliance.h"
 #include "vehicle_power_connection.h"
 #include "vehicle_control.h"
 #include "vpart_position.h"
@@ -325,11 +326,21 @@ static void draw_appliance_connections( vehicle *veh )
 }
 #endif
 
-std::string veh_app_interact::draw_info_imgui_header( map &here )
+std::string veh_app_interact::draw_info_imgui_header( map &here, const vehicle_part &part )
 {
-    // Always print this warning and only this warning if we don't have a grid.
-    // We should not pretend anything is functional without a battery, because it's not!
+    if( part.info().has_flag( "NO_POWER_CONNECTION" ) ) {
+        if( part.info().has_flag( "HYDRONIC_BOILER" ) ) {
+            return _( "Drop fuel on the boiler's tile, then start a fire." );
+        }
+        return _( "Connect the radiator to a boiler to circulate hot water." );
+    }
     if( !has_battery_in_grid( here, veh ) ) {
+        if( part.info().has_flag( "SPLIT_HVAC_INDOOR" ) ) {
+            return _( "The air conditioner can draw power through its linked outdoor unit." );
+        }
+        if( part.info().has_flag( "SPLIT_HVAC_OUTDOOR" ) ) {
+            return _( "The air conditioner can draw power through its linked indoor unit." );
+        }
         return colorize( _( "Appliance has no connection to a battery." ), c_light_red );
     }
 
@@ -368,7 +379,8 @@ std::string veh_app_interact::draw_info_imgui_header( map &here )
     // Battery power output
     units::power grid_flow = 0_W;
     for( const std::pair<vehicle *const, float> &pair : veh->search_connected_vehicles( here ) ) {
-        grid_flow += pair.first->net_battery_charge_rate( here, /* include_reactors = */ true );
+        grid_flow += pair.first->net_battery_charge_rate( here, /* include_reactors = */ true ) -
+                     room_appliance_power_draw( *pair.first );
     }
     // Always start printing this on its own line
     ret += "\n";
@@ -405,8 +417,10 @@ std::string veh_app_interact::draw_info_imgui_header( map &here )
     }
 
     // Other power output
-    if( !veh->accessories.empty() || veh->has_part( "RECHARGE" ) ) {
-        units::power rate = veh->total_accessory_epower() + veh->recharge_epower_this_turn;
+    const units::power climate_draw = room_appliance_power_draw( *veh );
+    if( !veh->accessories.empty() || veh->has_part( "RECHARGE" ) || climate_draw > 0_W ) {
+        const units::power rate = veh->total_accessory_epower() + veh->recharge_epower_this_turn -
+                                  climate_draw;
         print_charge( _( "Appliance power consumption: " ), rate, ret );
     }
 
@@ -685,7 +699,7 @@ void veh_app_interact::populate_app_actions( map &here )
     const std::string ctxt_letters = ctxt.get_available_single_char_hotkeys();
     imenu.entries.clear();
     imenu.title = veh->name;
-    imenu.text = draw_info_imgui_header( here );
+    imenu.text = draw_info_imgui_header( here, *vp );
     app_actions.clear();
 
     /******************** General actions ********************/
@@ -724,11 +738,13 @@ void veh_app_interact::populate_app_actions( map &here )
     }
 #if defined(TILES)
     // Hide connections
-    app_actions.emplace_back( []() {
-        toggle_connections_visibility();
-    } );
-    imenu.addentry( -1, true, ctxt.keys_bound_to( "TOGGLE_CONNECTION_VISIBILITY" ).front(),
-                    ctxt.get_action_name( "TOGGLE_CONNECTION_VISIBILITY" ) );
+    if( !vp->info().has_flag( "NO_POWER_CONNECTION" ) ) {
+        app_actions.emplace_back( []() {
+            toggle_connections_visibility();
+        } );
+        imenu.addentry( -1, true, ctxt.keys_bound_to( "TOGGLE_CONNECTION_VISIBILITY" ).front(),
+                        ctxt.get_action_name( "TOGGLE_CONNECTION_VISIBILITY" ) );
+    }
 
     // Hide wire vehicle parts
     if( use_tiles && vp->info().has_flag( flag_WIRING ) ) {

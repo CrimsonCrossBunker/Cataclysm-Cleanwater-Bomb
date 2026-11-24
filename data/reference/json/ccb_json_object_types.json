@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:97e0fca569d0cc2daef578bd2a54d90fbe22973d4e3909eb6ef3ffb95418b2c5",
+    "source_fingerprint": "sha256:e5dd01074d5b517394e636f21e53123adf187a56ca7582675970d2304002f3fb",
     "contract_roots": [
       "data/core",
       "data/json",

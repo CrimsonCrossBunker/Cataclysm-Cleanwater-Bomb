@@ -6535,8 +6535,14 @@ std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &her
     }
     std::map < Vehicle *, float > distances; // distance represents sum of cable losses
     std::vector < Vehicle * > queue;
+    const auto can_conduct_power = []( const vehicle &veh ) {
+        return !veh.is_appliance() || !veh.cable_ports.empty() || !veh.batteries.empty();
+    };
 
     distances[start] = 0;
+    if( !can_conduct_power( *start ) ) {
+        return distances;
+    }
     queue.emplace_back( start );
     constexpr float infinity_distance = 10000.0f; // should be enough to represent "infinity"
 
@@ -6555,7 +6561,7 @@ std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &her
             }
 
             Vehicle *const v_next = find_vehicle_using_parts( here,  vp.target.second );
-            if( v_next == nullptr ) { // vehicle's rolled away or off-map
+            if( !v_next || !can_conduct_power( *v_next ) ) {
                 continue;
             }
             // try insert infinity for initial unvisited node distance

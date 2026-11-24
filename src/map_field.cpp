@@ -63,6 +63,7 @@
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
+#include "vehicle_appliance.h"
 #include "vpart_position.h"
 #include "weather.h"
 
@@ -1022,11 +1023,11 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
     // How much time to add to the fire's life due to burned items/terrain/furniture
     time_duration time_added = 0_turns;
     // Checks if the fire can spread
-    const bool can_spread = !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_FIRE_CONTAINER );
-    // If the flames are in furniture with fire_container flag like brazier or oven,
-    // they're fully contained, so skip consuming terrain
-    const bool can_burn = ( ter.is_flammable() || frn.is_flammable() ) &&
-                          !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_FIRE_CONTAINER );
+    const bool wood_boiler = has_wood_boiler( here, p );
+    const bool can_spread = !wood_boiler &&
+                            !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_FIRE_CONTAINER );
+    // A contained fire does not consume the terrain beneath its firebox.
+    const bool can_burn = can_spread && ( ter.is_flammable() || frn.is_flammable() );
     // The huge indent below should probably be somehow moved away from here
     // without forcing the function to use i_at( p ) for fires without items
     if( !is_sealed && map_tile.get_item_count() > 0 ) {
@@ -1090,7 +1091,7 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
     int part;
     // Get the part of the vehicle in the fire (_internal skips the boundary check)
     vehicle *veh = here.veh_at_internal( p, part );
-    if( veh != nullptr ) {
+    if( veh != nullptr && !wood_boiler ) {
         veh->damage( here, part, cur.get_field_intensity() * 10, damage_heat, true );
         // Damage the vehicle in the fire.
     }
@@ -1451,7 +1452,7 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
         }
     }
     // Create smoke once - above us if possible, at us otherwise
-    if( !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_SUPPRESS_SMOKE ) &&
+    if( !wood_boiler && !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_SUPPRESS_SMOKE ) &&
         rng( 0, 100 - windpower ) <= smoke &&
         rng( 3, 35 ) < cur.get_field_intensity() * 10 ) {
         bool smoke_up = p.z() < here.max_z();
