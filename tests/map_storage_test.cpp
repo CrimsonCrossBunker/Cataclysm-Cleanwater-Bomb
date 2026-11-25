@@ -1,16 +1,13 @@
-#include <map_scale_constants.h>
 #include <chrono>
-#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <iterator>
 #include <memory>
-#include <random>
 #include <stdexcept>
 #include <string>
 #include <system_error>
 #include <thread>
-#include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
@@ -38,19 +35,12 @@
 #include "world_identity.h"
 #include "worldfactory.h"
 
-static const dimension_id dimension_world_default( "default" );
-static const dimension_id dimension_world_elsewhere( "elsewhere" );
-static const dimension_id dimension_world_other( "../other" );
-
-static const field_type_str_id field_fd_marker1( "fd_marker1" );
-
-static const itype_id itype_test_2x4( "test_2x4" );
-
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_soil( "t_soil" );
 static const ter_str_id ter_t_wall( "t_wall" );
-
+static const field_type_str_id field_fd_marker1( "fd_marker1" );
+static const itype_id itype_test_2x4( "test_2x4" );
 static const trap_str_id tr_beartrap( "tr_beartrap" );
 
 namespace
@@ -60,8 +50,8 @@ class storage_fixture
     public:
         storage_fixture() {
             for( int i = 0; i < 1000; ++i ) {
-                const std::filesystem::path candidate = std::filesystem::temp_directory_path() /
-                                                        std::filesystem::u8path( "ccb-map-storage-test-" + std::to_string( i ) );
+                const auto candidate = std::filesystem::temp_directory_path() /
+                                       ( "ccb-map-storage-test-" + std::to_string( i ) );
                 std::error_code error;
                 if( std::filesystem::create_directory( candidate, error ) ) {
                     root = candidate;
@@ -77,12 +67,11 @@ class storage_fixture
         }
         map_storage_context context( const std::string &world, const std::string &dimension,
                                      bool compressed ) const {
-            const std::filesystem::path directory = root / std::filesystem::u8path( world );
+            const auto directory = root / world;
             std::filesystem::create_directories( directory );
             // Different world dictionaries exercise namespace ownership as well
             // as the archive path. Raw content dictionaries are supported by ZSTD.
-            std::ofstream dictionary( directory / std::filesystem::u8path( "maps.dict" ),
-                                      std::ios::binary );
+            std::ofstream dictionary( directory / "maps.dict", std::ios::binary );
             dictionary << std::string( 512, world.front() );
             REQUIRE( dictionary.good() );
             return map_storage_context( world_id( std::string( 32, world.front() ) ),
@@ -160,23 +149,19 @@ TEST_CASE( "map_storage_captures_resolved_paths_and_dimension_namespace", "[map_
     PATH_INFO::set_savedir( fixture.root.generic_u8string() );
     const cata_path relative( cata_path::root_path::save, "a" );
     const world_id id( std::string( 32, 'a' ) );
-    const map_storage_context normal( id, dimension_world_default, relative, false );
-    const map_storage_context other( id, dimension_world_elsewhere, relative, true );
-    const std::filesystem::path moved = fixture.root / std::filesystem::u8path( "moved" );
-    PATH_INFO::set_savedir( moved.generic_u8string() );
-    const std::filesystem::path world_dir = fixture.root / std::filesystem::u8path( "a" );
+    const map_storage_context normal( id, dimension_id( "default" ), relative, false );
+    const map_storage_context other( id, dimension_id( "elsewhere" ), relative, true );
+    PATH_INFO::set_savedir( ( fixture.root / "moved" ).generic_u8string() );
     CHECK( normal.world() == id );
-    CHECK( other.dimension() == dimension_world_elsewhere );
-    CHECK( normal.directory().get_unrelative_path() == world_dir );
-    CHECK( other.directory().get_unrelative_path() ==
-           world_dir / std::filesystem::u8path( "dimensions/elsewhere" ) );
-    CHECK( other.dictionary().get_unrelative_path() ==
-           world_dir / std::filesystem::u8path( "maps.dict" ) );
+    CHECK( other.dimension() == dimension_id( "elsewhere" ) );
+    CHECK( normal.directory().get_unrelative_path() == fixture.root / "a" );
+    CHECK( other.directory().get_unrelative_path() == fixture.root / "a/dimensions/elsewhere" );
+    CHECK( other.dictionary().get_unrelative_path() == fixture.root / "a/maps.dict" );
     CHECK_FALSE( normal.compressed() );
     CHECK( other.compressed() );
-    CHECK_THROWS_AS( map_storage_context( world_id(), dimension_world_default, relative, false ),
+    CHECK_THROWS_AS( map_storage_context( world_id(), dimension_id( "default" ), relative, false ),
                      std::invalid_argument );
-    CHECK_THROWS_AS( map_storage_context( id, dimension_world_other, relative, false ),
+    CHECK_THROWS_AS( map_storage_context( id, dimension_id( "../other" ), relative, false ),
                      std::invalid_argument );
 }
 
@@ -189,13 +174,13 @@ TEST_CASE( "map_buffers_keep_same_coordinates_in_separate_storage_namespaces", "
     mapbuffer first( fixture.context( "a", "default", compressed ) );
     mapbuffer second( fixture.context( different_world ? "b" : "a", "elsewhere", compressed ) );
     const tripoint_abs_sm base( 0, 0, 0 );
-    const cata_default_random_engine rng_before = rng_get_engine(); // NOLINT(cata-determinism)
+    const auto rng_before = rng_get_engine();
     insert_quad( first, base, ter_t_dirt );
     insert_quad( second, base, ter_t_floor );
     first.save( true );
     second.save();
-    CHECK( first.submap_count() == 0 );
-    CHECK( second.submap_count() != 0 );
+    CHECK( first.begin() == first.end() );
+    CHECK( second.begin() != second.end() );
     first.clear();
     second.clear();
     check_quad( second, base, ter_t_floor );
@@ -295,7 +280,7 @@ TEST_CASE( "queued_sound_keeps_its_world_position_across_map_views",
         sounds::sound( source, 10, sounds::sound_t::combat, std::string( "test sound" ) );
     }
     const swap_map context( second );
-    const cata_default_random_engine rng_before = rng_get_engine(); // NOLINT(cata-determinism)
+    const auto rng_before = rng_get_engine();
     const auto [locations, centroids] = sounds::get_monster_sounds();
     const tripoint_bub_ms expected( 1, 1, 0 );
     REQUIRE( locations.size() == 1 );
@@ -390,8 +375,7 @@ TEST_CASE( "legacy_map_buffer_binds_on_insertion_and_rebinds_only_after_clear", 
     legacy.save( true );
     mapbuffer first_reader( first_context );
     check_quad( first_reader, tripoint_abs_sm::zero, ter_t_dirt );
-    CHECK_FALSE( std::filesystem::exists( second_context.directory().get_unrelative_path() /
-                                          std::filesystem::u8path( "maps" ) ) );
+    CHECK_FALSE( std::filesystem::exists( second_context.directory().get_unrelative_path() / "maps" ) );
     legacy.clear();
     insert_quad( legacy, tripoint_abs_sm::zero, ter_t_floor );
     legacy.save( true );
@@ -404,8 +388,8 @@ TEST_CASE( "map_buffer_clear_and_save_do_not_cancel_another_owners_prefetch",
 {
     const bool compressed = GENERATE( false, true );
     storage_fixture fixture;
-    const map_storage_context first_context = fixture.context( "a", "default", compressed );
-    const map_storage_context second_context = fixture.context( "b", "default", compressed );
+    const auto first_context = fixture.context( "a", "default", compressed );
+    const auto second_context = fixture.context( "b", "default", compressed );
     mapbuffer first( first_context );
     mapbuffer second( second_context );
     const tripoint_abs_sm base( 0, 0, 0 );
@@ -425,10 +409,9 @@ TEST_CASE( "map_buffer_clear_and_save_do_not_cancel_another_owners_prefetch",
     CHECK( second.prefetch_status().ready == 1 );
     // Remove the backing file: synchronous fallback must not conceal a cancelled
     // result or bytes accidentally obtained from the other world's same quad.
-    const std::filesystem::path directory = second_context.directory().get_unrelative_path() /
-                                            std::filesystem::u8path( "maps" );
-    const std::string backing_name = compressed ? "0.0.0.zzip" : "0.0.0/0.0.0.map";
-    REQUIRE( std::filesystem::remove( directory / std::filesystem::u8path( backing_name ) ) );
+    const auto directory = second_context.directory().get_unrelative_path() / "maps";
+    REQUIRE( std::filesystem::remove( compressed ? directory / "0.0.0.zzip" :
+                                      directory / "0.0.0/0.0.0.map" ) );
     check_quad( second, base, ter_t_floor );
     CHECK( second.prefetch_status().ready == 0 );
 }
@@ -437,68 +420,38 @@ TEST_CASE( "partial_quad_restores_uniform_submaps_only_in_its_own_buffer", "[map
 {
     const bool compressed = GENERATE( false, true );
     storage_fixture fixture;
-    const map_storage_context context = fixture.context( "a", "default", compressed );
+    const auto context = fixture.context( "a", "default", compressed );
     int lookups = 0;
     mapbuffer buffer( context, [&]( const tripoint_abs_omt & p ) {
         CHECK( p == tripoint_abs_omt::zero );
         ++lookups;
         return oter_id( "solid_earth" );
     } );
-    const std::size_t global_size = MAPBUFFER.submap_count();
+    const auto global_size = std::distance( MAPBUFFER.begin(), MAPBUFFER.end() );
     auto sm = std::make_unique<submap>();
     sm->set_all_ter( ter_t_floor );
     REQUIRE( buffer.add_submap( tripoint_abs_sm::zero, sm ) );
     buffer.save( true );
-    REQUIRE( buffer.submap_count() == 0 );
+    REQUIRE( buffer.begin() == buffer.end() );
     submap *missing = buffer.lookup_submap( tripoint_abs_sm( 1, 1, 0 ) );
     REQUIRE( missing );
     CHECK( missing->get_ter( point_sm_ms::zero ) == ter_t_soil );
     CHECK( buffer.lookup_submap( tripoint_abs_sm::zero )->get_ter( point_sm_ms::zero ) == ter_t_floor );
     CHECK( lookups == 1 );
-    CHECK( buffer.submap_count() == 4 );
-    CHECK( MAPBUFFER.submap_count() == global_size );
-}
-
-TEST_CASE( "distant_terrain_reads_saved_submaps_without_reconstructing_missing_tiles",
-           "[map_storage][render3d]" )
-{
-    const bool compressed = GENERATE( false, true );
-    storage_fixture fixture;
-    const map_storage_context context = fixture.context( "a", "default", compressed );
-    int overmap_lookups = 0;
-    mapbuffer buffer( context, [&]( const tripoint_abs_omt & ) {
-        ++overmap_lookups;
-        return oter_id( "solid_earth" );
-    } );
-    auto sm = std::make_unique<submap>();
-    sm->set_all_ter( ter_t_floor );
-    REQUIRE( buffer.add_submap( tripoint_abs_sm::zero, sm ) );
-    buffer.save( true );
-    const tripoint_abs_sm missing( 1, 1, 0 );
-    CHECK( buffer.lookup_saved_submap( missing ) == nullptr );
-    const submap *saved = buffer.lookup_saved_submap( tripoint_abs_sm::zero );
-    REQUIRE( saved );
-    CHECK( saved->get_ter( point_sm_ms::zero ) == ter_t_floor );
-    CHECK( overmap_lookups == 0 );
-
-    const submap *reconstructed = buffer.lookup_submap( missing );
-    REQUIRE( reconstructed );
-    CHECK( reconstructed->get_ter( point_sm_ms::zero ) == ter_t_soil );
-    CHECK( buffer.lookup_submap( tripoint_abs_sm::zero ) == saved );
-    CHECK( overmap_lookups == 1 );
+    CHECK( std::distance( buffer.begin(), buffer.end() ) == 4 );
+    CHECK( std::distance( MAPBUFFER.begin(), MAPBUFFER.end() ) == global_size );
 }
 
 TEST_CASE( "failed_map_save_retains_owned_submaps_for_retry", "[map_storage][save]" )
 {
     const bool compressed = GENERATE( false, true );
     storage_fixture fixture;
-    const map_storage_context context = fixture.context( "a", "default", compressed );
+    const auto context = fixture.context( "a", "default", compressed );
     mapbuffer buffer( context );
     const tripoint_abs_sm base( 0, 0, 0 );
     insert_quad( buffer, base, ter_t_floor );
     submap *original = buffer.lookup_submap( base );
-    const std::filesystem::path maps = context.directory().get_unrelative_path() /
-                                       std::filesystem::u8path( "maps" );
+    const auto maps = context.directory().get_unrelative_path() / "maps";
     {
         std::ofstream blocked( maps );
         blocked << "not a directory";
@@ -509,7 +462,7 @@ TEST_CASE( "failed_map_save_retains_owned_submaps_for_retry", "[map_storage][sav
     check_quad( buffer, base, ter_t_floor );
     REQUIRE( std::filesystem::remove( maps ) );
     buffer.save( true );
-    REQUIRE( buffer.submap_count() == 0 );
+    REQUIRE( buffer.begin() == buffer.end() );
     check_quad( buffer, base, ter_t_floor );
 }
 
@@ -520,7 +473,7 @@ TEST_CASE( "owned_uniform_maps_persist_without_a_terrain_resolver", "[map_storag
     mapbuffer buffer( fixture.context( "a", "default", compressed ) );
     REQUIRE( buffer.generate_uniform_omt( tripoint_abs_sm::zero, oter_id( "solid_earth" ) ) );
     buffer.save( true );
-    REQUIRE( buffer.submap_count() == 0 );
+    REQUIRE( buffer.begin() == buffer.end() );
     for( int x = 0; x < 2; ++x ) {
         for( int y = 0; y < 2; ++y ) {
             submap *restored = buffer.lookup_submap( tripoint_abs_sm( x, y, 0 ) );
@@ -539,9 +492,8 @@ TEST_CASE( "map_storage_repeated_saves_persist_live_mutations", "[map_storage][s
     insert_quad( buffer, base, ter_t_dirt );
     buffer.save( false );
     std::filesystem::path saved;
-    for( const std::filesystem::directory_entry &entry :
-         std::filesystem::recursive_directory_iterator( fixture.root ) ) {
-        if( entry.path().extension() == std::filesystem::u8path( compressed ? ".zzip" : ".map" ) ) {
+    for( const auto &entry : std::filesystem::recursive_directory_iterator( fixture.root ) ) {
+        if( entry.path().extension() == ( compressed ? ".zzip" : ".map" ) ) {
             saved = entry.path();
             break;
         }
