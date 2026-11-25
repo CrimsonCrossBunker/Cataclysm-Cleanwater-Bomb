@@ -3660,14 +3660,15 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
             if( regional_crop && pos.z() == 0 && north_america::active() &&
                 chosen_furn->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
                 const point_abs_omt field = dat.pos().xy();
-                const point_abs_ms abs_field = project_to<coords::ms>( field ) + point( SEEX, SEEY );
                 // A field is planted as a unit. Hash its absolute position with the world seed.
                 const unsigned roll = static_cast<unsigned>( std::hash<point_abs_omt> {}( field ) ) ^
                                       g->get_seed();
-                const std::optional<field_crop> crop = regional_field_crop(
-                        north_america::jurisdiction_at( abs_field ), roll );
+                std::optional<field_crop> crop = regional_field_crop( field, roll );
+                if( !crop && item_spawner ) {
+                    crop = regional_field_crop( field, roll, item_spawner->type.get( dat ) );
+                }
                 if( crop && crop->seed.is_valid() ) {
-                    const auto sown = crop->sowing_date( calendar::start_of_cataclysm );
+                    const auto sown = regional_field_sowing( *crop, field, calendar::start_of_cataclysm );
                     if( !sown ) {
                         return;
                     }
@@ -3680,7 +3681,10 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                         seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
                         iexamine::set_plant_last_water_check( seed, *sown );
                         dat.m.add_item( pos, std::move( seed ) );
-                        dat.m.furn_set( pos, chosen_furn );
+                        static const furn_str_id field_seedling( "f_plant_seedling" );
+                        static const furn_str_id field_seed( "f_plant_seed" );
+                        dat.m.furn_set( pos, chosen_furn == field_seedling.id() ?
+                                        field_seed.id() : chosen_furn );
                         return;
                     }
                 }

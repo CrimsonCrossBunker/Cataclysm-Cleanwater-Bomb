@@ -376,6 +376,7 @@
         [ "dry_soybean", 1 ],
         [ "dry_wild_rice", 1 ],
         [ "wheat", 1 ],
+        [ "winter_wheat", 1 ],
         [ "barley", 1 ],
         [ "buckwheat", 1 ]
       ],
@@ -426,6 +427,7 @@
         [ "soybean", 1 ],
         [ "dry_soybean", 1 ],
         [ "wheat", 1 ],
+        [ "winter_wheat", 1 ],
         [ "barley", 1 ],
         [ "buckwheat", 1 ]
       ],

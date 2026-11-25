@@ -8,11 +8,13 @@
     "https://www.uaex.uada.edu/farm-ranch/crops-commercial-horticulture/docs/2024-arkansas-corn-quick-facts.pdf",
     "https://www.ontario.ca/page/publication-811-agronomy-guide-field-crops",
     "https://nube.agricultura.gob.mx/calendario_agricola/",
-    "https://nube.agricultura.gob.mx/panorama_dgsiap/2025.pdf"
+    "https://nube.agricultura.gob.mx/panorama_dgsiap/2025.pdf",
+    "https://extension.umn.edu/agriculture/crop-production/small-grains/plant-winter-hardy-adapted-varieties",
+    "https://data.nass.usda.gov/Statistics_by_State/Texas/Publications/Crop_Progress_%26_Condition/prevCW/2024/tx-cw-05-12-2024.pdf"
   ],
   "notes": [
     "Representative game crops, not official acreage shares. Shared windows approximate neighboring regions.",
-    "Each row is [seed, weight, planting MMDD, harvest end MMDD]."
+    "Each row is [seed, weight, planting MMDD, harvest end MMDD]. A spring planting date anchors a window adjusted using local temperature normals. Winter wheat fields can ripen before the harvest end date."
   ],
   "regions": {
     "CA-AB": [

@@ -1038,7 +1038,8 @@ class game
         // Regular movement. Returns false if it failed for any reason
         bool walk_move( const tripoint_bub_ms &dest, bool via_ramp = false, bool furniture_move = false );
         bool walk_move( Character &who, const tripoint_bub_ms &dest, bool via_ramp = false,
-                        bool furniture_move = false, const walk_move_choices *choices = nullptr );
+                        bool furniture_move = false, const walk_move_choices *choices = nullptr,
+                        bool climb_slope = false );
         void on_move_effects();
         void on_move_effects( Character &who );
     private:

@@ -878,8 +878,10 @@ season_type fixed_season_of_year( const time_point &p, bool ignore_eternal_seaso
         // Keep the opening season even if the season length changes during play.
         return calendar::initial_season;
     }
-    return static_cast<season_type>(
-               to_turn<int>( p ) / to_turns<int>( calendar::season_length() ) % 4 );
+    const time_duration year = calendar::year_length();
+    const time_duration elapsed = ( p - calendar::turn_zero ) % year;
+    return static_cast<season_type>( static_cast<int>(
+                                         ( elapsed < 0_turns ? elapsed + year : elapsed ) / calendar::season_length() ) );
 }
 
 season_type season_of_year( const time_point &p, bool ignore_eternal_season )
@@ -900,7 +902,8 @@ season_type foliage_season_of_year( const time_point &p )
 
 std::string to_string( const time_point &p, bool ignore_eternal_season )
 {
-    const int year = calendar::years_since_cataclysm( p ) + 1;
+    const int calendar_year = calendar::years_since_cataclysm( p );
+    const int year = calendar_year < 0 ? calendar_year : calendar_year + 1;
     const std::string time = to_string_time_of_day( p );
     if( get_option<bool>( "SHOW_MONTHS" ) && calendar::year_length() == 364_days ) {
         const std::pair<month, int> month_day = month_and_day( p );
@@ -936,7 +939,8 @@ time_duration calendar::turn_zero_offset()
 
 int calendar::years_since_cataclysm( time_point turn )
 {
-    return to_turn<int>( ( turn + turn_zero_offset() ) / calendar::year_length() );
+    const time_duration elapsed = turn - turn_zero + turn_zero_offset();
+    return static_cast<int>( ( elapsed - time_past_new_year( turn ) ) / year_length() );
 }
 
 std::pair<month, int> month_and_day( time_point turn )

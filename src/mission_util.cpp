@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -22,6 +23,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
+#include "line.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "mapgen_functions.h"
@@ -37,6 +39,8 @@
 #include "talker.h"
 #include "translations.h"
 #include "type_id.h"
+
+static constexpr int local_mission_range = 20000 / ( 2 * SEEX );
 
 static tripoint_abs_omt reveal_destination( const std::string &type, const Character &who )
 {
@@ -113,7 +117,11 @@ tripoint_abs_omt mission_util::reveal_om_ter( tripoint_abs_omt origin, const std
 {
     // Missions are normally on z-level 0, but allow an optional argument.
     origin.z() = target_z;
-    const tripoint_abs_omt place = overmap_buffer.find_closest( origin, omter, 0, must_see );
+    const tripoint_abs_omt place = overmap_buffer.find_closest( origin, omter,
+                                   local_mission_range, must_see );
+    if( !place.is_invalid() && rl_dist( origin, place ) > local_mission_range ) {
+        return tripoint_abs_omt::invalid;
+    }
     if( !place.is_invalid() && reveal_rad >= 0 ) {
         overmap_buffer.reveal( place, reveal_rad );
     }
@@ -146,11 +154,14 @@ tripoint_abs_omt mission_util::random_house_in_closest_city( const Character &pl
 {
     const tripoint_abs_sm center = player_character.pos_abs_sm();
     const city_reference cref = overmap_buffer.closest_city( center );
-    if( !cref ) {
+    if( !cref || rl_dist( player_character.pos_abs_omt(),
+                         project_to<coords::omt>( cref.abs_sm_pos ) ) > local_mission_range ) {
         debugmsg( "could not find closest city" );
         return player_character.pos_abs_omt();
     }
-    return random_house_in_city( cref );
+    const tripoint_abs_omt house = random_house_in_city( cref );
+    return rl_dist( player_character.pos_abs_omt(), house ) <= local_mission_range ?
+           house : project_to<coords::omt>( cref.abs_sm_pos );
 }
 
 static std::optional<tripoint_abs_omt> find_or_create_om_terrain(
@@ -175,6 +186,10 @@ static std::optional<tripoint_abs_omt> find_or_create_om_terrain(
     find_params.cant_see = params.cant_see;
     find_params.existing_only = true;
 
+    if( params.z ) {
+        find_params.min_z = find_params.max_z = origin_pos.z();
+    }
+
     if( params.overmap_special.has_value() ) {
         const overmap_special_id special_id = static_cast<overmap_special_id>(
                 ( *params.overmap_special ).evaluate( d ) );
@@ -188,61 +203,56 @@ static std::optional<tripoint_abs_omt> find_or_create_om_terrain(
             }
             return target_pos;
         }
+    } else {
+        find_params.search_range = find_params.search_range > 0 ?
+                                   std::min( find_params.search_range, local_mission_range ) :
+                                   local_mission_range;
     }
-    auto get_target_position = [&]() {
-        // Either find a random or closest match, based on the criteria.
-        if( params.random ) {
-            target_pos = overmap_buffer.find_random( origin_pos, find_params );
-        } else {
-            target_pos = overmap_buffer.find_closest( origin_pos, find_params );
+    const auto find_target = [&]() {
+        return params.random ? overmap_buffer.find_random( origin_pos, find_params ) :
+               overmap_buffer.find_closest( origin_pos, find_params );
+    };
+    const bool can_create = params.create_if_necessary && !params.must_see;
+    target_pos = find_target();
+    if( target_pos.is_invalid() && find_params.om_special && can_create ) {
+        if( overmap_buffer.place_special( *find_params.om_special, origin_pos,
+                                          find_params.search_range ) ) {
+            target_pos = overmap_buffer.contains_unique_special( *find_params.om_special ) ?
+                         overmap_buffer.find_existing_globally_unique( origin_pos, find_params ) :
+                         find_target();
         }
-
-        // If we didn't find a match, and we're allowed to create new terrain, and the player didn't
-        // have to see the location beforehand, then we can attempt to create the new terrain.
-        if( target_pos.is_invalid() && params.create_if_necessary &&
-            !params.must_see ) {
-            // If this terrain is part of an overmap special...
-            if( params.overmap_special ) {
-                // ...then attempt to place the whole special.
-                const bool placed = overmap_buffer.place_special( static_cast<overmap_special_id >(
-                                        ( *params.overmap_special ).evaluate( d ) ), origin_pos,
-                                    params.search_range.evaluate( d ) );
-                // If we succeeded in placing the special, then try and find the particular location
-                // we're interested in.
-                if( placed ) {
-                    find_params.must_see = false;
-                    target_pos = overmap_buffer.find_closest( origin_pos, find_params );
-                }
-            } else if( params.replaceable_overmap_terrain ) {
-                // This terrain wasn't part of an overmap special, but we do have a replacement
-                // terrain specified. Find a random location of that replacement type.
-                find_params.must_see = false;
-                find_params.types.front().first = ( *params.replaceable_overmap_terrain ).evaluate( d );
-                target_pos = overmap_buffer.find_random( origin_pos, find_params );
-
-                // We didn't find it, so allow this search to create new overmaps and try again.
-                find_params.existing_only = true;
-                if( target_pos.is_invalid() ) {
-                    target_pos = overmap_buffer.find_random( origin_pos, find_params );
-                }
-
-                // We found a match, so set this position (which was our replacement terrain)
-                // to our desired mission terrain.
-                if( !target_pos.is_invalid() ) {
-                    overmap_buffer.ter_set( target_pos, oter_id( params.overmap_terrain.evaluate( d ) ) );
-                }
+    }
+    if( target_pos.is_invalid() && find_params.om_special && !params.must_see ) {
+        const point_abs_om origin_om = project_to<coords::om>( origin_pos.xy() );
+        const int range = find_params.search_range > 0 ? find_params.search_range : OMAPX;
+        const point_abs_om low = project_to<coords::om>( origin_pos.xy() - point( range, range ) );
+        const point_abs_om high = project_to<coords::om>( origin_pos.xy() + point( range, range ) );
+        for( const point_abs_om &p : closest_points_first( origin_om, 0, 1 ) ) {
+            if( p.x() < low.x() || p.x() > high.x() || p.y() < low.y() || p.y() > high.y() ||
+                overmap_buffer.has( p ) ) {
+                continue;
+            }
+            overmap_buffer.get( p );
+            target_pos = find_target();
+            if( !target_pos.is_invalid() ) {
+                break;
             }
         }
-    };
-
-    // First try to get the position where we only allow existing overmaps.
-    get_target_position();
-
-    if( target_pos.is_invalid() ) {
-        // If it's invalid, then that means we couldn't find it or create it (if allowed) on
-        // our current overmap. We'll now go ahead and try again but allow it to create new overmaps.
+        if( target_pos.is_invalid() && can_create &&
+            overmap_buffer.place_special( *find_params.om_special, origin_pos, range ) ) {
+            target_pos = find_target();
+        }
+    } else if( target_pos.is_invalid() && !params.must_see ) {
         find_params.existing_only = false;
-        get_target_position();
+        target_pos = find_target();
+    }
+    if( target_pos.is_invalid() && !find_params.om_special && can_create &&
+        params.replaceable_overmap_terrain ) {
+        find_params.types.front().first = params.replaceable_overmap_terrain->evaluate( d );
+        target_pos = overmap_buffer.find_random( origin_pos, find_params );
+        if( !target_pos.is_invalid() ) {
+            overmap_buffer.ter_set( target_pos, oter_id( params.overmap_terrain.evaluate( d ) ) );
+        }
     }
 
     // If we got here and this is still invalid, it means that we couldn't find it nor create it
@@ -291,6 +301,10 @@ std::optional<tripoint_abs_omt> mission_util::assign_mission_target(
     if( target_pos ) {
         if( params.offset ) {
             *target_pos += *params.offset;
+        }
+        if( !params.overmap_special && !params.target_var &&
+            rl_dist( origin_pos, *target_pos ) > local_mission_range ) {
+            return std::nullopt;
         }
 
         // If we specified a reveal radius, then go ahead and reveal around our found position.
@@ -477,13 +491,16 @@ bool mission_util::set_update_mapgen( const JsonObject &jo,
         Character & who ) {
             tripoint_abs_omt update_pos3 = mission_util::reveal_om_ter( miss->has_target() ? miss->get_target()
                                            : who.pos_abs_omt(), om_terrain, 1, false );
-            update_map( update_pos3, miss );
+            if( !update_pos3.is_invalid() ) {
+                update_map( update_pos3, miss );
+            }
         };
         funcs.emplace_back( std::move( mission_func ) );
     } else {
         auto mission_func = [update_map = std::move( update_map )]( mission * miss, Character & ) {
-            tripoint_abs_omt update_pos3 = miss->get_target();
-            update_map( update_pos3, miss );
+            if( miss->has_target() ) {
+                update_map( miss->get_target(), miss );
+            }
         };
         funcs.emplace_back( std::move( mission_func ) );
     }

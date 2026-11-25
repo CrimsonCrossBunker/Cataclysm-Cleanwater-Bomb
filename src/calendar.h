@@ -576,31 +576,36 @@ constexpr time_point turn_max = time_point::from_turn( INT_MAX );
 
 inline time_duration time_past_midnight( const time_point &p )
 {
-    return ( p - calendar::turn_zero ) % 1_days;
+    const time_duration elapsed = ( p - calendar::turn_zero ) % 1_days;
+    return elapsed < 0_turns ? elapsed + 1_days : elapsed;
 }
 
 inline time_duration time_past_new_year( const time_point &p )
 {
-    return ( p - calendar::turn_zero + calendar::turn_zero_offset() ) % calendar::year_length();
+    const time_duration year = calendar::year_length();
+    const time_duration elapsed = ( p - calendar::turn_zero + calendar::turn_zero_offset() ) % year;
+    return elapsed < 0_turns ? elapsed + year : elapsed;
 }
 
 template<typename T>
 inline T minute_of_hour( const time_point &p )
 {
-    return to_minutes<T>( ( p - calendar::turn_zero ) % 1_hours );
+    return to_minutes<T>( time_past_midnight( p ) % 1_hours );
 }
 
 template<typename T>
 inline T hour_of_day( const time_point &p )
 {
-    return to_hours<T>( ( p - calendar::turn_zero ) % 1_days );
+    return to_hours<T>( time_past_midnight( p ) );
 }
 
 /// This uses the current season length.
 template<typename T>
 inline T day_of_season( const time_point &p )
 {
-    return to_days<T>( ( p - calendar::turn_zero ) % calendar::season_length() );
+    const time_duration season = calendar::season_length();
+    const time_duration elapsed = ( p - calendar::turn_zero ) % season;
+    return to_days<T>( elapsed < 0_turns ? elapsed + season : elapsed );
 }
 
 /// @returns The season of the of the given time point. Returns the same season for

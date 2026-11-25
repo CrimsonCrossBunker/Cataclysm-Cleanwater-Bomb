@@ -193,7 +193,10 @@ void mission_start::place_npc_software( mission *miss, Character &who )
     if( type == "house" ) {
         place = mission_util::random_house_in_closest_city( who );
     } else {
-        place = overmap_buffer.find_closest( dev->pos_abs_omt(), type, 0, false );
+        place = mission_util::reveal_om_ter( dev->pos_abs_omt(), type, -1, false );
+        if( place.is_invalid() ) {
+            place = mission_util::random_house_in_closest_city( who );
+        }
     }
     miss->target = place;
     overmap_buffer.reveal( place, 6 );
@@ -229,9 +232,9 @@ void mission_start::place_deposit_box( mission *miss, Character & )
     // Npc joins you
     p->set_attitude( NPCATT_FOLLOW );
     tripoint_abs_omt site =
-        overmap_buffer.find_closest( p->pos_abs_omt(), "bank", 0, false );
+        mission_util::reveal_om_ter( p->pos_abs_omt(), "bank", -1, false );
     if( site.is_invalid() ) {
-        site = overmap_buffer.find_closest( p->pos_abs_omt(), "office_tower_1", 0, false );
+        site = mission_util::reveal_om_ter( p->pos_abs_omt(), "office_tower_1", -1, false );
     }
 
     if( site.is_invalid() ) {

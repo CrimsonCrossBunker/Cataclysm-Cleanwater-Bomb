@@ -3,7 +3,6 @@
 #define CATA_SRC_PLANT_CLIMATE_H
 
 #include <optional>
-#include <string_view>
 
 #include "calendar.h"
 #include "coordinates.h"
@@ -23,6 +22,7 @@ struct crop_climate_profile {
     double water_mm;
     int growing_days;
     double water_peak;
+    int vernalization_days;
 
     static crop_climate_profile load( const JsonObject &jo );
     double heat_units( double low, double high ) const;
@@ -37,8 +37,10 @@ struct field_crop {
     std::optional<time_point> sowing_date( time_point when ) const;
 };
 
-std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll,
+std::optional<field_crop> regional_field_crop( point_abs_omt field, unsigned field_roll,
         const itype_id &existing_seed = itype_id::NULL_ID() );
+std::optional<time_point> regional_field_sowing( const field_crop &crop, point_abs_omt field,
+        time_point when );
 
 struct fruit_climate_profile {
     crop_climate_profile growth;
@@ -54,6 +56,7 @@ struct crop_water_status {
     double irrigation_mm;
     double daily_need_mm;
     bool temperature_limited;
+    bool dormant;
 };
 
 crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms &p,

@@ -3465,6 +3465,11 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
             }
             desc += '\n' + string_format( _( "Growing degree days: %.1f / %.1f" ),
                                           seed->get_var( "crop_degree_days", 0.0 ), seed->type->seed->climate->degree_days );
+            if( seed->type->seed->climate->vernalization_days > 0 ) {
+                desc += '\n' + string_format( _( "Cold exposure: %.1f / %d days" ),
+                                              seed->get_var( "crop_vernalization_days", 0.0 ),
+                                              seed->type->seed->climate->vernalization_days );
+            }
             desc += '\n' + string_format( _( "Recorded rain: %.1f mm" ),
                                           seed->get_var( "crop_sampled_rain_mm", 0.0 ) );
             if( status.soil_moisture_mm + status.irrigation_mm < status.daily_need_mm ) {
@@ -3472,7 +3477,9 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
             } else {
                 desc += _( "\n<color_green>Water supply covers one day's demand.</color>" );
             }
-            if( status.temperature_limited ) {
+            if( status.dormant ) {
+                desc += _( "\n<color_yellow>The crop is dormant in the cold.</color>" );
+            } else if( status.temperature_limited ) {
                 desc += _( "\n<color_yellow>Temperature limits growth.</color>" );
             }
             desc += is_plant_fertilized( *seed ) ? _( "\n<color_green>Fertilized.</color>" ) :

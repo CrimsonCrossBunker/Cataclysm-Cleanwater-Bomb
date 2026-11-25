@@ -18,6 +18,7 @@
       [ [ "flour", 1 ] ],
       [
         [ "wheat", 1 ],
+        [ "winter_wheat", 1 ],
         [ "buckwheat", 1 ],
         [ "barley", 1 ],
         [ "acorns_cooked", 10 ],
@@ -49,6 +50,7 @@
       [ [ "flour", 1 ] ],
       [
         [ "wheat", 1 ],
+        [ "winter_wheat", 1 ],
         [ "buckwheat", 1 ],
         [ "barley", 1 ],
         [ "acorns_cooked", 10 ],
@@ -248,7 +250,7 @@
     "batch_time_factors": [ 83, 3 ],
     "flags": [ "BLIND_EASY" ],
     "tools": [ [ [ "rock_quern", -1 ] ] ],
-    "components": [ [ [ "wheat", 1 ], [ "barley", 1 ], [ "starch", 1 ] ] ]
+    "components": [ [ [ "wheat", 1 ], [ "winter_wheat", 1 ], [ "barley", 1 ], [ "starch", 1 ] ] ]
   },
   {
     "result": "flour",
@@ -264,7 +266,7 @@
     "autolearn": true,
     "batch_time_factors": [ 83, 3 ],
     "tools": [ [ [ "food_processor", 20 ] ] ],
-    "components": [ [ [ "wheat", 1 ], [ "barley", 1 ], [ "starch", 1 ] ] ]
+    "components": [ [ [ "wheat", 1 ], [ "winter_wheat", 1 ], [ "barley", 1 ], [ "starch", 1 ] ] ]
   },
   {
     "type": "recipe",
@@ -282,7 +284,7 @@
     "batch_time_factors": [ 83, 3 ],
     "flags": [ "BLIND_EASY" ],
     "qualities": [ { "id": "FINE_GRIND", "level": 1 } ],
-    "components": [ [ [ "wheat", 1 ], [ "barley", 1 ], [ "starch", 1 ] ] ]
+    "components": [ [ [ "wheat", 1 ], [ "winter_wheat", 1 ], [ "barley", 1 ], [ "starch", 1 ] ] ]
   },
   {
     "//": "For use by mills, so the only entries used are the charges and components.",
