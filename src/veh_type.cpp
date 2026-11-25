@@ -455,7 +455,27 @@ void vpslot_engine::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "m2c", m2c, 100 );
     optional( jo, was_loaded, "displacement_ml", displacement_ml, 0 );
     optional( jo, was_loaded, "rated_rpm", rated_rpm, 0 );
+    optional( jo, was_loaded, "peak_torque_nm", peak_torque_nm, 0 );
+    optional( jo, was_loaded, "peak_torque_rpm", peak_torque_rpm, 0 );
+    optional( jo, was_loaded, "altitude_compensation_m", altitude_compensation_m, 0 );
     optional( jo, was_loaded, "fuel_model_turbine", turbine, false );
+    if( const std::optional<JsonValue> value = jo.get_member_opt( "typical_fuel_economy" ) ) {
+        if( value->test_null() ) {
+            typical_fuel_economy.reset();
+        } else {
+            const JsonObject economy = value->get_object();
+            const int mass = economy.get_int( "mass_kg" );
+            const double consumption = economy.get_float( "litres_per_100km" );
+            if( mass <= 0 ) {
+                economy.throw_error_at( "mass_kg", "Reference vehicle mass must be positive" );
+            }
+            if( !std::isfinite( consumption ) || consumption <= 0 ) {
+                economy.throw_error_at( "litres_per_100km",
+                                        "Reference fuel consumption must be positive and finite" );
+            }
+            typical_fuel_economy = engine_fuel_economy{ mass, consumption };
+        }
+    }
     optional( jo, was_loaded, "muscle_power_factor", muscle_power_factor, 0 );
     optional( jo, was_loaded, "exclusions", exclusions, string_reader{} );
     optional( jo, was_loaded, "fuel_options", fuel_opts, string_id_reader<itype> {} );
@@ -491,6 +511,7 @@ void vpslot_wheel::deserialize( const JsonObject &jo )
 void vpslot_rotor::deserialize( const JsonObject &jo )
 {
     optional( jo, was_loaded, "rotor_diameter", rotor_diameter, 1 );
+    optional( jo, was_loaded, "max_flight_altitude_m", max_flight_altitude_m, 4300 );
 
     was_loaded = true;
 }
@@ -506,6 +527,7 @@ void vpslot_balloon::deserialize( const JsonObject &jo )
 {
     // CBN-faithful: "height" is the per-part lift in kilograms.
     optional( jo, was_loaded, "height", height, 1.0f );
+    optional( jo, was_loaded, "max_flight_altitude_m", max_flight_altitude_m, 3000 );
 
     was_loaded = true;
 }
@@ -1107,6 +1129,31 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
     };
 
     append_desc( description.translated() );
+    if( engine_info && engine_info->peak_torque_nm > 0 ) {
+        append_desc( string_format( _( "Rated power: %.1f kW." ), units::to_watt( power ) / 1000.0 ) );
+        if( engine_info->peak_torque_rpm > 0 ) {
+            append_desc( string_format( _( "Peak torque: %1$d N·m at %2$d rpm." ),
+                                        engine_info->peak_torque_nm, engine_info->peak_torque_rpm ) );
+        } else {
+            append_desc( string_format( _( "Peak torque: %d N·m." ), engine_info->peak_torque_nm ) );
+        }
+    }
+
+    if( engine_info && engine_info->typical_fuel_economy ) {
+        const engine_fuel_economy &economy = *engine_info->typical_fuel_economy;
+        append_desc( string_format( _( "Typical combined fuel consumption: %1$.1f L/100 km at %2$d kg." ),
+                                    economy.litres_per_100km, economy.mass_kg ) );
+    }
+
+    if( rotor_info ) {
+        append_desc( string_format( _( "Ground effect extends up to about %d m above the surface." ),
+                                    rotor_info->rotor_diameter + bonus ) );
+        append_desc( string_format( _( "Operating altitude limit: %d m MSL." ),
+                                    rotor_info->max_flight_altitude_m ) );
+    } else if( balloon_info ) {
+        append_desc( string_format( _( "Operating altitude limit: %d m MSL." ),
+                                    balloon_info->max_flight_altitude_m ) );
+    }
 
     for( const std::string &flagid : flags ) {
         if( flagid == "ALARMCLOCK" || flagid == "WATCH" ) {
@@ -1502,6 +1549,22 @@ void vehicle_prototype::load( const JsonObject &jo, std::string_view )
         }
         // gross
         parts.insert( parts.end(), tmp.begin(), tmp.end() );
+    }
+
+    for( const JsonObject replacement : jo.get_array( "replace_parts" ) ) {
+        const vpart_id from( replacement.get_string( "from" ) );
+        const vpart_id to( replacement.get_string( "to" ) );
+        bool found = false;
+        for( part_def &part : parts ) {
+            if( part.part == from ) {
+                part.part = to;
+                part.variant.clear();
+                found = true;
+            }
+        }
+        if( !found ) {
+            replacement.throw_error_at( "from", "No matching part in the vehicle prototype" );
+        }
     }
 
     optional( jo, was_loaded, "items", item_spawns );

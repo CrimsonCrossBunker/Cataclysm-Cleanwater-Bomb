@@ -700,6 +700,13 @@ double pressure_ratio_at_height( double altitude_m )
                                       ( altitude_m - lower ) / temperature );
 }
 
+double air_density_ratio_at_height( double altitude_m )
+{
+    constexpr double standard_temperature_k = 288.15;
+    const double temperature = standard_temperature_k - lapse_rate * std::min( altitude_m, tropopause_m );
+    return pressure_ratio_at_height( altitude_m ) * standard_temperature_k / temperature;
+}
+
 double wind_speed_factor( double altitude_m, double surface_m )
 {
     const double height = std::clamp( altitude_m - surface_m + 10.0, 2.0, 250.0 );

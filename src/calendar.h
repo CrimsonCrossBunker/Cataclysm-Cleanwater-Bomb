@@ -609,6 +609,7 @@ inline T day_of_season( const time_point &p )
 season_type season_of_year( const time_point &p, bool ignore_eternal_season = false );
 season_type fixed_season_of_year( const time_point &p, bool ignore_eternal_season = false );
 season_type foliage_season_of_year( const time_point &p );
+std::optional<time_duration> time_until_season_change( const time_point &p );
 /// @returns The time point formatted to be shown to the player. Contains year, season, day and time of day.
 /// With ignore_eternal_season, show the date's season even before the game starts.
 std::string to_string( const time_point &p, bool ignore_eternal_season = false );

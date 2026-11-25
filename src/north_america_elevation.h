@@ -52,6 +52,7 @@ point surface_slope( const map &here, const tripoint_bub_ms &position );
 int surface_relief_shade( point slope );
 double temperature_delta_at_height( double altitude_m, double reference_m );
 double pressure_ratio_at_height( double altitude_m );
+double air_density_ratio_at_height( double altitude_m );
 double wind_speed_factor( double altitude_m, double surface_m );
 } // namespace north_america
 

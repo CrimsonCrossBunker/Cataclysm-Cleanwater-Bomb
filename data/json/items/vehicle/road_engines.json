@@ -1,0 +1,83 @@
+[
+  {
+    "id": "i4_15t_road_engine",
+    "copy-from": "i4_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "1.5 L turbo I4 engine" },
+    "description": "A 1.5 L turbo I4 gasoline engine for passenger vehicles.",
+    "looks_like": "i4_combustion"
+  },
+  {
+    "id": "h4_20t_road_engine",
+    "copy-from": "i4_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "2.0 L turbo H4 engine" },
+    "description": "A 2.0 L turbo H4 gasoline engine for passenger vehicles.",
+    "looks_like": "i4_combustion"
+  },
+  {
+    "id": "h4_24t_road_engine",
+    "copy-from": "i4_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "2.4 L turbo H4 engine" },
+    "description": "A 2.4 L turbo H4 gasoline engine for passenger vehicles.",
+    "looks_like": "i4_combustion"
+  },
+  {
+    "id": "i4_25_road_engine",
+    "copy-from": "i4_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "2.5 L I4 engine" },
+    "description": "A 2.5 L I4 gasoline engine for passenger vehicles.",
+    "looks_like": "i4_combustion"
+  },
+  {
+    "id": "v6_25_road_engine",
+    "copy-from": "v6_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "2.5 L V6 engine" },
+    "description": "A 2.5 L V6 gasoline engine for passenger vehicles.",
+    "looks_like": "v6_combustion"
+  },
+  {
+    "id": "i6_30tt_road_engine",
+    "copy-from": "v6_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "3.0 L twin-turbo I6 engine" },
+    "description": "A 3.0 L twin-turbo I6 gasoline engine for passenger vehicles.",
+    "looks_like": "v6_combustion"
+  },
+  {
+    "id": "v6_35_road_engine",
+    "copy-from": "v6_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "3.5 L V6 engine" },
+    "description": "A 3.5 L V6 gasoline engine for passenger vehicles.",
+    "looks_like": "v6_combustion"
+  },
+  {
+    "id": "v6_37_road_engine",
+    "copy-from": "v6_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "3.7 L V6 engine" },
+    "description": "A 3.7 L V6 gasoline engine for passenger vehicles.",
+    "looks_like": "v6_combustion"
+  },
+  {
+    "id": "v8_50_road_engine",
+    "copy-from": "v8_combustion",
+    "type": "ITEM",
+    "subtypes": [ "ENGINE" ],
+    "name": { "str": "5.0 L V8 engine" },
+    "description": "A 5.0 L V8 gasoline engine for passenger vehicles.",
+    "looks_like": "v8_combustion"
+  }
+]
