@@ -43,7 +43,13 @@ void note_mouse_look( float dx, float dy );
 // Camera zoom: feed mouse wheel ticks (+1/-1) here.
 void note_mouse_wheel( float ticks );
 
-// True while a middle-mouse drag holds relative mouse mode for orbiting.
+// Display-only modes for the experimental 3D main view.
+void toggle_same_level_only();
+void toggle_cursor_dither();
+// Keep the cursor mask anchored in display-buffer coordinates.
+void note_mouse_position( const point &logical_pixel );
+
+// True while right-click-toggled relative mouse mode is active for orbiting.
 bool mouse_captured();
 
 // Converts a logical pixel (same space as the dest rect of draw_terrain_window)
