@@ -561,7 +561,7 @@
         "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 }, { "value": "RANGE", "multiply": -1 } ]
       }
     ],
-    "flags": [ "MUTE", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "SHAPESHIFT_SIZE_HUGE" ],
+    "flags": [ "HANDS_CANNOT_USE_FIREARMS", "MUTE", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "SHAPESHIFT_SIZE_HUGE" ],
     "integrated_armor": [ "integrated_werewolf_primal_form_fur", "integrated_werewolf_primal_form_fangs" ],
     "override_look": { "id": "mon_direwolf", "tile_category": "monster" }
   },
