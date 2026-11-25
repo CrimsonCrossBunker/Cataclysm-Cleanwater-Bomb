@@ -3,7 +3,6 @@
 #define CATA_SRC_MAPBUFFER_H
 
 #include <cstddef>
-#include <cstdint>
 #include <functional>
 #include <list>
 #include <map>
@@ -36,7 +35,7 @@ class mapbuffer
         using uniform_terrain_lookup = std::function<oter_id( const tripoint_abs_omt & )>;
         // Explicit owners never consult the active world for storage. The optional
         // resolver belongs to the same world and is called only on the owner thread.
-        explicit mapbuffer( map_storage_context context, uniform_terrain_lookup uniform = {} );
+        explicit mapbuffer( map_storage_context storage, uniform_terrain_lookup uniform = {} );
         ~mapbuffer();
 
         std::size_t submap_count() const;
@@ -83,19 +82,6 @@ class mapbuffer
          * submap object, don't delete it on your own.
          */
         submap *lookup_submap( const tripoint_abs_sm &p );
-        // Read saved terrain without asking the overmap to reconstruct missing uniform tiles.
-        const submap *lookup_saved_submap( const tripoint_abs_sm &p );
-        // Return a resident submap without disk I/O, parsing, or map generation.
-        // The pointer is borrowed and must only be used while the buffer is stable.
-        submap *get_submap_if_loaded( const tripoint_abs_sm &p );
-        // Changes when resident content is added, removed, or cleared. Consumers
-        // can use this to invalidate negative lookup caches after mapgen or eviction.
-        uint64_t content_revision() const;
-        // Release a submap just read by a renderer without saving its unchanged data.
-        // Fails when the resident map still references it.
-        bool evict_unmodified_submap( const tripoint_abs_sm &p, const map &resident );
-        // Persist and release a generated OMT column that no resident map references.
-        bool save_and_evict_omt_column( const tripoint_abs_omt &p, const map &resident );
         // Cheaper version of the above for when you only care about whether the
         // submap exists or not.
         bool submap_exists( const tripoint_abs_sm &p );
@@ -135,8 +121,7 @@ class mapbuffer
         // There's a very good reason this is private,
         // if not handled carefully, this can erase in-use submaps and crash the game.
         void remove_submap( const tripoint_abs_sm &addr );
-        submap *lookup_submap( const tripoint_abs_sm &p, bool restore_uniform );
-        submap *unserialize_submaps( const tripoint_abs_sm &p, bool restore_uniform = true );
+        submap *unserialize_submaps( const tripoint_abs_sm &p );
         bool submap_file_exists( const tripoint_abs_sm &p );
         const map_storage_context &storage();
         cata_path find_dirname( const tripoint_abs_omt &om_addr );
@@ -145,7 +130,7 @@ class mapbuffer
         /** Guards all accesses to submaps that may overlap with background
          *  worker threads. recursive_mutex allows mapgen code (running under
          *  a held lock) to call lookup_submap/add_submap without deadlocking. */
-        mutable std::recursive_mutex submaps_mutex_; // NOLINT(cata-serialize)
+        mutable std::recursive_mutex submaps_mutex_;
 
         void deserialize( const JsonArray &ja );
         void save_quad(
@@ -163,18 +148,16 @@ class mapbuffer
         // NOT keep the zzip handle (mmap) open, so a save that rewrites the archive
         // (compact_to + rename) is never blocked on Windows. Invalidated wholesale
         // around save() and on clear(), the only places that mutate these archives.
-        // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map<std::string, std::unordered_set<std::string>> zzip_listing_cache;
         // Return the entry-name set for the archive at zzip_path, loading it once and
         // caching it. An absent archive has an empty listing; nullptr means it failed to open.
         const std::unordered_set<std::string> *zzip_listing( const cata_path &zzip_path );
         submap_map_t submaps; // NOLINT(cata-serialize)
-        uint64_t content_revision_ = 0; // NOLINT(cata-serialize)
-        const bool active_world_adapter_; // NOLINT(cata-serialize)
-        std::unique_ptr<const map_storage_context> storage_; // NOLINT(cata-serialize)
-        uniform_terrain_lookup uniform_terrain_; // NOLINT(cata-serialize)
+        const bool active_world_adapter_;
+        std::unique_ptr<const map_storage_context> storage_;
+        uniform_terrain_lookup uniform_terrain_;
         // Destroy/join the worker before releasing its owner's context and maps.
-        submap_prefetcher prefetcher_; // NOLINT(cata-serialize)
+        submap_prefetcher prefetcher_;
 };
 
 extern mapbuffer MAPBUFFER;
