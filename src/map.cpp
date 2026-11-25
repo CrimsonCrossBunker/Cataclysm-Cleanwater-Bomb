@@ -14544,32 +14544,20 @@ int map::calc_max_populated_zlev()
     }
 
     // Ground is always populated when it belongs to the resident window.
-    int max_z = std::clamp( 0, min_z(), this->max_z() );
-
-    for( int sz = max_z + 1; sz <= this->max_z(); sz++ ) {
-        bool level_done = false;
-        for( int sx = 0; sx < my_MAPSIZE; sx++ ) {
-            for( int sy = 0; sy < my_MAPSIZE; sy++ ) {
-                const submap *sm = get_submap_at_grid( tripoint_rel_sm{ sx, sy, sz } );
-                if( sm == nullptr ) {
-                    debugmsg( "Tried to calc max populated zlev at (%d,%d,%d) but the submap is not loaded", sx, sy,
-                              sz );
-                    continue;
+    const int ground = std::clamp( 0, min_z(), max_z() );
+    for( int z = max_z(); z > ground; --z ) {
+        for( int x = 0; x < my_MAPSIZE; ++x ) {
+            for( int y = 0; y < my_MAPSIZE; ++y ) {
+                const submap *sm = get_submap_at_grid( tripoint_rel_sm{ x, y, z } );
+                if( sm && ( !sm->is_uniform() || !sm->is_open_air( point_sm_ms::zero ) ) ) {
+                    max_populated_zlev = std::make_pair( get_abs_sub(), z );
+                    return z;
                 }
-                if( !sm->is_uniform() ) {
-                    max_z = sz;
-                    level_done = true;
-                    break;
-                }
-            }
-            if( level_done ) {
-                break;
             }
         }
     }
-
-    max_populated_zlev = std::make_pair( get_abs_sub(), max_z );
-    return max_z;
+    max_populated_zlev = std::make_pair( get_abs_sub(), ground );
+    return ground;
 }
 
 void map::invalidate_max_populated_zlev( int zlev )

@@ -5035,6 +5035,10 @@ local OvermapSpecialDefinition = {}
 ---@field extend_exhaust? string[] Add only exhaust emissions absent from the inherited set.
 ---@field delete_exhaust? string[] Remove only exhaust emissions present in the inherited set.
 
+---@class VehiclePartFuelEconomyOptions
+---@field mass_kg integer Positive reference vehicle mass in kilograms.
+---@field litres_per_100km number Positive combined city/highway fuel consumption at the reference mass.
+
 ---@class VehiclePartDefinitionOptions
 ---@field id string Stable vehicle-part id.
 ---@field copy_from? string Existing vehicle-part id used as the patch base.
@@ -5052,6 +5056,7 @@ local OvermapSpecialDefinition = {}
 ---@field power_watts? integer Mechanical power in watts.
 ---@field epower_watts? integer Electrical power in watts.
 ---@field energy_consumption_watts? integer Fuel-energy consumption in watts.
+---@field typical_fuel_economy? VehiclePartFuelEconomyOptions Reference consumption for a liquid-fuel road engine.
 ---@field balloon_height? number Per-part balloon lift in kilograms.
 ---@field backfire_threshold? number Engine backfire threshold.
 ---@field backfire_frequency? integer Engine backfire frequency.

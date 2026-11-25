@@ -146,6 +146,11 @@ enum vpart_bitflags : int {
 };
 
 
+struct engine_fuel_economy {
+    int mass_kg;
+    double litres_per_100km;
+};
+
 struct vpslot_engine {
     bool was_loaded = false;
 
@@ -161,6 +166,7 @@ struct vpslot_engine {
     int peak_torque_rpm = 0;
     int altitude_compensation_m = 0;
     bool turbine = false;
+    std::optional<engine_fuel_economy> typical_fuel_economy;
     std::vector<std::string> exclusions;
     std::vector<itype_id> fuel_opts;
 

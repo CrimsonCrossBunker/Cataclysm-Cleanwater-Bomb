@@ -459,6 +459,20 @@ void vpslot_engine::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "peak_torque_rpm", peak_torque_rpm, 0 );
     optional( jo, was_loaded, "altitude_compensation_m", altitude_compensation_m, 0 );
     optional( jo, was_loaded, "fuel_model_turbine", turbine, false );
+    if( jo.has_null( "typical_fuel_economy" ) ) {
+        typical_fuel_economy.reset();
+    } else if( jo.has_member( "typical_fuel_economy" ) ) {
+        const JsonObject economy = jo.get_object( "typical_fuel_economy" );
+        const int mass = economy.get_int( "mass_kg" );
+        const double consumption = economy.get_float( "litres_per_100km" );
+        if( mass <= 0 ) {
+            economy.throw_error_at( "mass_kg", "Reference vehicle mass must be positive" );
+        }
+        if( !std::isfinite( consumption ) || consumption <= 0 ) {
+            economy.throw_error_at( "litres_per_100km", "Reference fuel consumption must be positive and finite" );
+        }
+        typical_fuel_economy = engine_fuel_economy{ mass, consumption };
+    }
     optional( jo, was_loaded, "muscle_power_factor", muscle_power_factor, 0 );
     optional( jo, was_loaded, "exclusions", exclusions, string_reader{} );
     optional( jo, was_loaded, "fuel_options", fuel_opts, string_id_reader<itype> {} );
@@ -1120,6 +1134,12 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
         } else {
             append_desc( string_format( _( "Peak torque: %d N·m." ), engine_info->peak_torque_nm ) );
         }
+    }
+
+    if( engine_info && engine_info->typical_fuel_economy ) {
+        const engine_fuel_economy &economy = *engine_info->typical_fuel_economy;
+        append_desc( string_format( _( "Typical combined fuel consumption: %1$.1f L/100 km at %2$d kg." ),
+                                    economy.litres_per_100km, economy.mass_kg ) );
     }
 
     if( rotor_info ) {

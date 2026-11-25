@@ -5932,9 +5932,18 @@ bool uses_liquid_fuel_model( const vehicle_part &part )
            !part.fuel_current().is_null() && item( part.fuel_current() ).made_of( phase_id::LIQUID );
 }
 
-double liquid_fuel_input_w( const vehicle_part &part, double shaft_w, double speed_mps )
+constexpr double city_speed_mps = 40.0 / 3.6;
+constexpr double highway_speed_mps = 90.0 / 3.6;
+constexpr double city_start_acceleration = 0.055;
+constexpr double city_distance_share = 0.55;
+
+constexpr double combined_road_cycle( double city, double highway )
 {
-    const vpart_info &data = part.info();
+    return city_distance_share * city + ( 1.0 - city_distance_share ) * highway;
+}
+
+double uncalibrated_liquid_fuel_input_w( const vpart_info &data, double shaft_w, double speed_mps )
+{
     const auto &engine = *data.engine_info;
     const double rated = std::max( 1.0, static_cast<double>( units::to_watt( data.power ) ) );
     const double pressure = std::clamp( shaft_w / rated, 0.0, 1.0 );
@@ -5957,6 +5966,37 @@ double liquid_fuel_input_w( const vehicle_part &part, double shaft_w, double spe
     const double loss = displacement * rpm * ( diesel ? 0.75 : 1.25 );
     const double efficiency = peak * ( 0.65 + 0.35 * std::min( 1.0, pressure * 2.5 ) );
     return ( shaft_w + loss ) / efficiency;
+}
+
+double liquid_fuel_input_w( const vehicle_part &part, double shaft_w, double speed_mps, bool road )
+{
+    const vpart_info &data = part.info();
+    const double input = uncalibrated_liquid_fuel_input_w( data, shaft_w, speed_mps );
+    const auto &economy = data.engine_info->typical_fuel_economy;
+    if( !road || !economy || data.fuel_type.is_null() || !data.fuel_type.is_valid() ) {
+        return input;
+    }
+    const double energy_per_litre = units::to_joule(
+                                        item::find_type( data.fuel_type )->get_base_material().get_fuel_data().energy );
+    if( energy_per_litre <= 0.0 ) {
+        return input;
+    }
+
+    // A level road and a representative road vehicle at sea level define the reference cycle.
+    const double mass = economy->mass_kg;
+    const double rolling_force = mass * accel_g * 0.012;
+    const double drag_area = std::clamp( 0.70 * std::sqrt( mass / 1600.0 ), 0.40, 6.0 );
+    const double rated = units::to_watt( data.power );
+    const auto reference_cycle = [&]( double speed, double start_acceleration ) {
+        const double aero_force = 0.5 * 1.225 * drag_area * speed * speed;
+        const double shaft = ( rolling_force + aero_force + mass * start_acceleration ) * speed;
+        return uncalibrated_liquid_fuel_input_w( data, std::clamp( shaft, 0.0, std::max( rated, 0.0 ) ),
+                                                speed ) * 100000.0 / speed;
+    };
+    const double energy_per_100km = combined_road_cycle(
+                                        reference_cycle( city_speed_mps, city_start_acceleration ),
+                                        reference_cycle( highway_speed_mps, 0.0 ) );
+    return input * ( economy->litres_per_100km * energy_per_litre / energy_per_100km );
 }
 } // namespace
 
@@ -6010,7 +6050,8 @@ std::optional<double> vehicle::combined_liquid_fuel_consumption( map &here ) con
             }
             has_liquid = true;
             const double shaft = units::to_watt( part_vpower_w( here, part ) ) * duty;
-            const units::power input = units::from_watt( liquid_fuel_input_w( part, shaft, speed ) );
+            const units::power input = units::from_watt( liquid_fuel_input_w( part, shaft, speed,
+                                       !flying && !afloat ) );
             const double input_w = units::to_watt( enchantment_cache.modify_value(
                     enchant_vals::mod::FUEL_USAGE, input ) );
             litres_per_second += input_w * ( part.has_fault_flag( "DOUBLE_FUEL_CONSUMPTION" ) ? 2 : 1 ) /
@@ -6020,7 +6061,8 @@ std::optional<double> vehicle::combined_liquid_fuel_consumption( map &here ) con
     };
     const double estimate = flying ? cycle( 52.0, 0 ) :
                             afloat ? cycle( 8.0, 0 ) :
-                            0.55 * cycle( 40 / 3.6, 0.055 ) + 0.45 * cycle( 90 / 3.6, 0 );
+                            combined_road_cycle( cycle( city_speed_mps, city_start_acceleration ),
+                                    cycle( highway_speed_mps, 0 ) );
     return has_liquid ? std::optional<double>( estimate ) : std::nullopt;
 }
 
@@ -6054,7 +6096,7 @@ void vehicle::consume_fuel( map &here, int load, bool idling )
             }
             const double shaft = units::to_watt( part_vpower_w( here, part ) ) * *liquid_duty;
             units::power input = units::from_watt( liquid_fuel_input_w( part, shaft, idling && !flying ?
-                                                   0.0 : speed ) );
+                                                   0.0 : speed, !flying && !afloat ) );
             input = enchantment_cache.modify_value( enchant_vals::mod::FUEL_USAGE, input );
             demand[fuel] += input * ( part.has_fault_flag( "DOUBLE_FUEL_CONSUMPTION" ) ? 2 : 1 );
         } else {

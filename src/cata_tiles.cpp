@@ -717,6 +717,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     const point max_visible( ( you_pos.x() % SEEX ) + ( MAPSIZE - 1 ) * SEEX,
                              ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
     const int draw_min_z = std::max( you_pos.z() - here.observer_z_range( you ), here.min_z() );
+    const int upper_wall_max_z = here.calc_max_populated_zlev();
 
     // Map memory should be at least the size of the view range
     // so that new tiles can be memorized, and at least the size of the display
@@ -872,24 +873,24 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
         // Generate new draw points
         creature_tracker &creatures = get_creature_tracker();
-        for( int row = min_row; row < max_row; row ++ ) {
-            // Reserve columns on each row
-            for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel -- ) {
-                draw_points_cache_.tiles[zlevel][row].reserve( std::max( 0, max_col - min_col ) );
-            }
+        std::vector<const level_cache *> draw_levels;
+        for( int zlevel = center.z(); zlevel >= draw_min_z; --zlevel ) {
+            draw_levels.push_back( &here.access_cache( zlevel ) );
+        }
+        for( int row = min_row; row < max_row; ++row ) {
             for( int col = min_col; col < max_col; col ++ ) {
                 const std::optional<point> temp = tile_to_player( { col, row } );
                 if( !temp.has_value() ) {
                     continue;
                 }
-                for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel -- ) {
-                    // todo: conversion slightly simplified, a couple of calls already use pos as tripoint_bub_ms
-                    const tripoint_bub_ms pos( point_bub_ms( temp.value() ), zlevel );
-                    const tripoint_abs_ms pos_global = here.get_abs( pos );
-                    const int &x = pos.x();
-                    const int &y = pos.y();
+                const int x = temp->x;
+                const int y = temp->y;
+                const bool outside_view = y < min_visible.y || y > max_visible.y ||
+                                          x < min_visible.x || x > max_visible.x;
+                for( int zlevel = center.z(); zlevel >= draw_min_z; --zlevel ) {
+                    const tripoint_bub_ms pos( point_bub_ms( *temp ), zlevel );
                     const bool is_center_z = zlevel == center.z();
-                    const level_cache &ch2 = here.access_cache( zlevel );
+                    const level_cache &ch2 = *draw_levels[center.z() - zlevel];
 
                     // light level is used for choosing between grayscale filter and normal lit tiles.
                     lit_level ll;
@@ -897,8 +898,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     std::array<bool, 5> invisible;
                     invisible[0] = false;
 
-                    if( y < min_visible.y || y > max_visible.y || x < min_visible.x || x > max_visible.x ) {
-                        if( you.has_memory_at( pos_global ) ) {
+                    if( outside_view ) {
+                        if( you.has_memory_at( here.get_abs( pos ) ) ) {
                             ll = lit_level::MEMORIZED;
                             invisible[0] = true;
                         } else if( has_draw_override( pos ) ) {
@@ -1095,7 +1096,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         const visibility_type vis_type = here.get_visibility( ll, cache );
                         if( would_apply_vision_effects( vis_type ) ) {
                             const Creature *critter = creatures.creature_at( pos, true );
-                            if( has_draw_override( pos ) || you.has_memory_at( pos_global ) ||
+                            if( has_draw_override( pos ) || you.has_memory_at( here.get_abs( pos ) ) ||
                                 ( critter &&
                                   ( critter->has_flag( mon_flag_ALWAYS_VISIBLE )
                                     || you.sees_with_specials( *critter ) ) ) ) {
@@ -1206,7 +1207,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // are captured, and no dynamic object layers consume these entries.
         upper_wall_points_.set_first_z( here.min_z() );
         upper_wall_points_.soft_clear();
-        for( int zlevel = center.z() + 1; zlevel <= here.max_z(); ++zlevel ) {
+        for( int zlevel = center.z() + 1; zlevel <= upper_wall_max_z; ++zlevel ) {
             const int dz = zlevel - center.z();
             const half_open_rectangle<point> range = is_isometric()
                     ? get_window_any_tile_range( { width, height }, dz )
@@ -1307,9 +1308,12 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         auto &vp_ov = vpart_override;
         for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel-- ) {
             for( int row = min_row; row < max_row; row++ ) {
-                draw_points_cache_t::row_vec &points = draw_points_cache_.tiles[zlevel][row];
-                for( const std::size_t index : points.sprite_indices() ) {
-                    tile_render_info &tri = points[index];
+                auto *points = draw_points_cache_.tiles[zlevel].find( row );
+                if( !points ) {
+                    continue;
+                }
+                for( const std::size_t index : points->sprite_indices() ) {
+                    tile_render_info &tri = ( *points )[index];
                     tile_render_info::sprite *const var =
                         &std::get<tile_render_info::sprite>( tri.var );
 
@@ -1548,7 +1552,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             for( int z = cur_zlevel; z <= center.z(); ++z ) {
                 const auto &range = is_isometric() ? z_any_tile_range[center.z() - z] : top_any_tile_range;
                 for( int row = range.p_min.y; row < range.p_max.y; ++row ) {
-                    preparation_tiles += draw_points_cache_.tiles[z][row].size();
+                    if( const auto *points = draw_points_cache_.tiles[z].find( row ) ) {
+                        preparation_tiles += points->size();
+                    }
                 }
             }
         }
@@ -1565,8 +1571,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     const level_cache &level = here.access_cache( z );
                     const bool colored = level.has_colored_lights && tint_overlay;
                     for( int row = range.p_min.y; row < range.p_max.y; ++row ) {
-                        for( const tile_render_info &tile : draw_points_cache_.tiles[z][row] ) {
-                            inputs.push_back( capture_preparation( tile, level, colored ) );
+                        if( const auto *points = draw_points_cache_.tiles[z].find( row ) ) {
+                            for( const tile_render_info &tile : *points ) {
+                                inputs.push_back( capture_preparation( tile, level, colored ) );
+                            }
                         }
                     }
                 }
@@ -1623,8 +1631,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 // tint overlay. We do this before the layer loop so that:
                 //   (a) we can skip bounds/sprite tracking for tiles that won't be tinted,
                 //   (b) the overlay pass later can iterate only tinted tiles.
-                draw_points_cache_t::row_vec &row_points =
-                    draw_points_cache_.tiles[cur_zlevel][row];
+                auto *points = draw_points_cache_.tiles[cur_zlevel].find( row );
+                if( !points ) {
+                    continue;
+                }
+                draw_points_cache_t::row_vec &row_points = *points;
                 row_sprites.clear();
                 row_tinted.clear();
                 if( row_sprites.capacity() < row_points.size() ) {
@@ -2125,7 +2136,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // Paint visible upper wall faces after the ordinary levels, using the
         // same Z stacking and row order. This pass is terrain-only by design.
         m_zlev_tint_bound = false;
-        for( ; cur_zlevel <= here.max_z() && !draw_aborted; ++cur_zlevel ) {
+        for( ; cur_zlevel <= upper_wall_max_z && !draw_aborted; ++cur_zlevel ) {
             const int dz = cur_zlevel - center.z();
             const half_open_rectangle<point> range = is_isometric()
                     ? get_window_any_tile_range( { width, height }, dz )
@@ -2138,9 +2149,12 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     draw_aborted = true;
                     break;
                 }
-                draw_points_cache_t::row_vec &points = upper_wall_points_[cur_zlevel][row];
-                for( const std::size_t index : points.sprite_indices() ) {
-                    tile_render_info &p = points[index];
+                auto *points = upper_wall_points_[cur_zlevel].find( row );
+                if( !points ) {
+                    continue;
+                }
+                for( const std::size_t index : points->sprite_indices() ) {
+                    tile_render_info &p = ( *points )[index];
                     const tile_render_info::sprite &var = std::get<tile_render_info::sprite>( p.var );
                     p.scratch.height_3d = dz * zlevel_height;
                     m_cur_tile = &p;
@@ -2176,9 +2190,12 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     if( !monster_override.empty() ) {
         // display number of monsters to spawn in mapgen preview
         for( int row = top_any_tile_range.p_min.y; row < top_any_tile_range.p_max.y; row ++ ) {
-            draw_points_cache_t::row_vec &points = draw_points_cache_.tiles[center.z()][row];
-            for( const std::size_t index : points.sprite_indices() ) {
-                const tile_render_info &p = points[index];
+            auto *points = draw_points_cache_.tiles[center.z()].find( row );
+            if( !points ) {
+                continue;
+            }
+            for( const std::size_t index : points->sprite_indices() ) {
+                const tile_render_info &p = ( *points )[index];
                 const auto mon_override = monster_override.find( p.view.pos );
                 if( mon_override != monster_override.end() ) {
                     const int count = std::get<1>( mon_override->second );

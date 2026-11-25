@@ -458,6 +458,7 @@ struct vehicle_part_data : definition_base {
     std::vector<std::string> fuel_options;
     bool fuel_options_set = false;
     std::optional<std::set<std::string>> engine_exclusions;
+    std::optional<engine_fuel_economy> typical_fuel_economy;
     std::map<std::string, float> damage_reduction;
     bool damage_reduction_set = false;
     std::string breaks_into;
@@ -1462,6 +1463,11 @@ void hash_definition( std::uint64_t &state, const vehicle_part_data &value )
     hash_bool( state, value.fuel_options_set );
     hash_strings( state, value.fuel_options );
     hash_optional_strings( state, value.engine_exclusions );
+    if( value.typical_fuel_economy ) {
+        hash_part( state, "typical_fuel_economy" );
+        hash_number( state, value.typical_fuel_economy->mass_kg );
+        hash_number( state, value.typical_fuel_economy->litres_per_100km );
+    }
     hash_bool( state, value.damage_reduction_set );
     for( const auto &[damage, amount] : value.damage_reduction ) {
         hash_part( state, damage );
@@ -2481,6 +2487,19 @@ void world_content_transaction::impl::install_vehicle_part_api( sol::table &cont
         value->epower_watts = read_optional<int>( options, "epower_watts" );
         value->energy_consumption_watts =
             read_optional<int>( options, "energy_consumption_watts" );
+        if( const auto economy = read_optional<sol::table>( options, "typical_fuel_economy" ) ) {
+            require_known_table_keys( *economy, { "mass_kg", "litres_per_100km" },
+                                      "vehicle part typical fuel economy" );
+            const auto mass = read_optional<double>( *economy, "mass_kg" );
+            const auto consumption = read_optional<double>( *economy, "litres_per_100km" );
+            if( !mass || *mass <= 0 || *mass > std::numeric_limits<int>::max() ||
+                std::trunc( *mass ) != *mass || !consumption ||
+                !std::isfinite( *consumption ) || *consumption <= 0 ) {
+                throw std::invalid_argument( "vehicle part typical fuel economy requires a positive integer mass_kg "
+                                             "and positive finite litres_per_100km" );
+            }
+            value->typical_fuel_economy = engine_fuel_economy{ static_cast<int>( *mass ), *consumption };
+        }
         value->balloon_height = read_optional<float>( options, "balloon_height" );
         value->backfire_threshold = read_optional<float>( options, "backfire_threshold" );
         value->backfire_frequency = read_optional<int>( options, "backfire_frequency" );
@@ -4256,7 +4275,7 @@ void world_content_transaction::impl::apply_vehicle_part( std::string &error )
         if( source.fuel_options_set || source.backfire_threshold ||
             source.backfire_frequency || source.damaged_power_factor ||
             source.noise_factor || source.m2c || source.muscle_power_factor ||
-            source.engine_exclusions ) {
+            source.engine_exclusions || source.typical_fuel_economy ) {
             if( !native.engine_info ) {
                 native.engine_info.emplace();
             }
@@ -4278,6 +4297,9 @@ void world_content_transaction::impl::apply_vehicle_part( std::string &error )
             }
             if( source.muscle_power_factor ) {
                 native.engine_info->muscle_power_factor = *source.muscle_power_factor;
+            }
+            if( source.typical_fuel_economy ) {
+                native.engine_info->typical_fuel_economy = source.typical_fuel_economy;
             }
             if( source.engine_exclusions ) {
                 native.engine_info->exclusions.assign(

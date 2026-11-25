@@ -112,6 +112,14 @@
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
+    "id": "tank_large",
+    "copy-from": "tank",
+    "type": "vehicle_part",
+    "name": { "str": "vehicle tank (100 L)" },
+    "item": "metal_tank_large",
+    "looks_like": "tank"
+  },
+  {
     "id": "fridgetank",
     "type": "vehicle_part",
     "item": "fridgetank",

@@ -60,7 +60,7 @@
     "copy-from": "car_sedan_v8",
     "type": "vehicle",
     "name": "5.0 L V8 Sports Sedan",
-    "replace_parts": [ { "from": "engine_v8", "to": "engine_v8_50_road" } ]
+    "replace_parts": [ { "from": "engine_v8", "to": "engine_v8_50_road" }, { "from": "tank", "to": "tank_large" } ]
   },
   {
     "id": "car_sedan_sports_v6_v6_35",

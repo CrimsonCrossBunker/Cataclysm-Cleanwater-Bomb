@@ -2502,6 +2502,14 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
     auto &out = connections_out[connection];
     const bool generate_city_streets = settings->city_spec &&
                                        settings->get_settings_city().city_size > 0;
+    const bool mapped_highways = settings->place_roads || settings->overmap_highway.has_value();
+    const auto highway_footprint = mapped_highways && generate_city_streets ?
+                                   north_america::wide_highway_footprint( origin - point( 1, 1 ),
+                                           OMAPX + 2, OMAPY + 2, true, false ) : std::vector<unsigned char>();
+    const auto on_highway = [&]( const tripoint_om_omt & p ) {
+        return !highway_footprint.empty() &&
+               highway_footprint[( p.y() + 1 ) * ( OMAPX + 2 ) + p.x() + 1] != 0;
+    };
     const auto atlas_water_at = [&]( const tripoint_om_omt & p ) {
         const int index = ( p.y() + 1 ) * ( OMAPX + 2 ) + p.x() + 1;
         return coast[index] != north_america::terrain::land;
@@ -2519,7 +2527,15 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
             const tripoint_om_omt p( x, y, 0 );
             const bool mapped = settings->place_roads ||
                                 ( settings->overmap_highway && tile.lanes >= 4 );
-            std::size_t links = mapped ? tile.mapped_connections : 0;
+            const bool highway = on_highway( p );
+            std::size_t links = 0;
+            for( const auto direction : om_direction::all ) {
+                if( mapped && om_lines::has_segment( tile.mapped_connections, direction ) &&
+                    ( om_lines::has_segment( tile.mapped_wide_connections, direction ) ||
+                      ( !highway && !on_highway( p + om_direction::displace( direction ) ) ) ) ) {
+                    links = om_lines::set_segment( links, direction );
+                }
+            }
             if( atlas_water_at( p ) && links ) {
                 const bool ns = links == om_lines::set_segment(
                                     om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::south );
@@ -2555,12 +2571,16 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                     }
                 }
                 for( const auto direction : om_direction::all ) {
-                    if( !generate_city_streets || !om_lines::has_segment( tile.connections, direction ) ||
+                    if( !generate_city_streets || highway ||
+                        !om_lines::has_segment( tile.connections, direction ) ||
                         om_lines::has_segment( links, direction ) ||
                         om_lines::has_segment( tile.mapped_connections, direction ) ) {
                         continue;
                     }
                     const tripoint_om_omt next = p + om_direction::displace( direction );
+                    if( on_highway( next ) ) {
+                        continue;
+                    }
                     bool land = false;
                     if( inbounds( next ) ) {
                         land = can_build_street( next );
@@ -2588,7 +2608,6 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
         }
     }
 
-    const bool mapped_highways = settings->place_roads || settings->overmap_highway.has_value();
     if( mapped_highways || generate_city_streets ) {
         const auto footprint = north_america::wide_highway_footprint( origin, OMAPX, OMAPY,
                                mapped_highways, generate_city_streets );
