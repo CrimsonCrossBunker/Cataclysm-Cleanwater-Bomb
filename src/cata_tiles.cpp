@@ -1206,7 +1206,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // are captured, and no dynamic object layers consume these entries.
         upper_wall_points_.set_first_z( here.min_z() );
         upper_wall_points_.soft_clear();
-        for( int zlevel = center.z() + 1; zlevel <= here.max_z(); ++zlevel ) {
+        // Upper wall faces are an isometric-only effect. Orthographic tilesets
+        // have zlevel_height == 0, so these sprites would be drawn on top of the
+        // current level instead of above it; skip collecting them there.
+        for( int zlevel = center.z() + 1; is_isometric() && zlevel <= here.max_z(); ++zlevel ) {
             const int dz = zlevel - center.z();
             const half_open_rectangle<point> range = is_isometric()
                     ? get_window_any_tile_range( { width, height }, dz )
@@ -2125,7 +2128,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // Paint visible upper wall faces after the ordinary levels, using the
         // same Z stacking and row order. This pass is terrain-only by design.
         m_zlev_tint_bound = false;
-        for( ; cur_zlevel <= here.max_z() && !draw_aborted; ++cur_zlevel ) {
+        for( ; is_isometric() && cur_zlevel <= here.max_z() && !draw_aborted; ++cur_zlevel ) {
             const int dz = cur_zlevel - center.z();
             const half_open_rectangle<point> range = is_isometric()
                     ? get_window_any_tile_range( { width, height }, dz )
