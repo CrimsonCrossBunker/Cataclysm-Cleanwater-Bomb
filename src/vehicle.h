@@ -1929,6 +1929,14 @@ class vehicle
         int get_z_change() const;
         bool is_flying_in_air() const;
         std::optional<double> flight_altitude() const;
+
+        struct flight_limits {
+            int operating_altitude_m;
+            std::optional<int> climb_ceiling_m;
+            std::optional<int> hover_ceiling_m;
+            bool rotorcraft;
+        };
+        std::optional<flight_limits> estimate_flight_limits( map &here ) const;
         void set_flying( bool new_flying_value );
         // True only for genuine rotorcraft: rotors providing enough lift to fly
         bool is_rotorcraft( map &here ) const;
@@ -2678,6 +2686,15 @@ class vehicle
         // is the vehicle currently flying
         mutable bool is_flying = false;
         std::optional<double> flight_altitude_m;
+        double operating_altitude( const map &here ) const;
+        units::power total_power_at_altitude( map &here, bool fueled, bool safe,
+                                              double altitude_m ) const;
+        double rotor_disk_area() const;
+        double rotor_ground_effect( const map &here, const tripoint_bub_ms &position,
+                                    double altitude_m ) const;
+        double rotor_lift_at_altitude( map &here, bool fueled, bool safe, double altitude_m,
+                                       double disk_area ) const;
+        bool can_climb_to( map &here, const tripoint_bub_ms &position, double altitude_m ) const;
         vehicle *move_atlas_aircraft( map &here, tripoint_rel_ms dp, const tileray &facing,
                                       Character *pilot );
         bool change_speed_on_grade( map &here, const tripoint_bub_ms &from,

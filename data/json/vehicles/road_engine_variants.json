@@ -1,0 +1,135 @@
+[
+  {
+    "id": "car_sedan_i4_15t",
+    "copy-from": "car_sedan",
+    "type": "vehicle",
+    "name": "1.5 L Turbo Sedan",
+    "replace_parts": [ { "from": "engine_inline4", "to": "engine_i4_15t_road" } ]
+  },
+  {
+    "id": "car_sedan_h4_20t",
+    "copy-from": "car_sedan",
+    "type": "vehicle",
+    "name": "2.0 L Turbo Sedan",
+    "replace_parts": [ { "from": "engine_inline4", "to": "engine_h4_20t_road" } ]
+  },
+  {
+    "id": "suv_h4_24t",
+    "copy-from": "suv",
+    "type": "vehicle",
+    "name": "2.4 L Turbo SUV",
+    "replace_parts": [ { "from": "engine_v6", "to": "engine_h4_24t_road" } ]
+  },
+  {
+    "id": "car_sedan_i4_25",
+    "copy-from": "car_sedan",
+    "type": "vehicle",
+    "name": "2.5 L Sedan",
+    "replace_parts": [ { "from": "engine_inline4", "to": "engine_i4_25_road" } ]
+  },
+  {
+    "id": "car_coupe_sports_v6_v6_25",
+    "copy-from": "car_coupe_sports_v6",
+    "type": "vehicle",
+    "name": "2.5 L V6 Coupe",
+    "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_25_road" } ]
+  },
+  {
+    "id": "car_coupe_sports_v12_i6_30tt",
+    "copy-from": "car_coupe_sports_v12",
+    "type": "vehicle",
+    "name": "3.0 L Twin-Turbo Sports Coupe",
+    "replace_parts": [ { "from": "engine_v12", "to": "engine_i6_30tt_road" } ]
+  },
+  {
+    "id": "suv_v6_35",
+    "copy-from": "suv",
+    "type": "vehicle",
+    "name": "3.5 L V6 SUV",
+    "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_35_road" } ]
+  },
+  {
+    "id": "car_coupe_sports_v6_v6_37",
+    "copy-from": "car_coupe_sports_v6",
+    "type": "vehicle",
+    "name": "3.7 L V6 Sports Coupe",
+    "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_37_road" } ]
+  },
+  {
+    "id": "car_sedan_v8_v8_50",
+    "copy-from": "car_sedan_v8",
+    "type": "vehicle",
+    "name": "5.0 L V8 Sports Sedan",
+    "replace_parts": [ { "from": "engine_v8", "to": "engine_v8_50_road" }, { "from": "tank", "to": "tank_large" } ]
+  },
+  {
+    "id": "car_sedan_sports_v6_v6_35",
+    "copy-from": "car_sedan_sports_v6",
+    "type": "vehicle",
+    "name": "3.5 L V6 Sports Sedan",
+    "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_35_road" } ]
+  },
+  {
+    "id": "car_sedan_sports_v6_v6_37",
+    "copy-from": "car_sedan_sports_v6",
+    "type": "vehicle",
+    "name": "3.7 L V6 Sports Sedan",
+    "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_37_road" } ]
+  },
+  {
+    "id": "car_sedan_luxury_v6_v6_25",
+    "copy-from": "car_sedan_luxury_v6",
+    "type": "vehicle",
+    "name": "2.5 L V6 Luxury Sedan",
+    "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_25_road" } ]
+  },
+  {
+    "id": "car_hatch_i4_15t",
+    "copy-from": "car_hatch",
+    "type": "vehicle",
+    "name": "1.5 L Turbo Hatchback",
+    "replace_parts": [ { "from": "engine_inline4", "to": "engine_i4_15t_road" } ]
+  },
+  {
+    "id": "car_hatch_h4_20t",
+    "copy-from": "car_hatch",
+    "type": "vehicle",
+    "name": "2.0 L Turbo Hatchback",
+    "replace_parts": [ { "from": "engine_inline4", "to": "engine_h4_20t_road" } ]
+  },
+  {
+    "id": "car_coupe_i4_25",
+    "copy-from": "car_coupe",
+    "type": "vehicle",
+    "name": "2.5 L Coupe",
+    "replace_parts": [ { "from": "engine_inline4", "to": "engine_i4_25_road" } ]
+  },
+  {
+    "id": "car_sports_v6_37",
+    "copy-from": "car_sports",
+    "type": "vehicle",
+    "name": "3.7 L V6 Sports Car",
+    "replace_parts": [ { "from": "engine_v12", "to": "engine_v6_37_road" } ]
+  },
+  {
+    "id": "car_shootingbrake_v8_i6_30tt",
+    "copy-from": "car_shootingbrake_v8",
+    "type": "vehicle",
+    "name": "3.0 L Twin-Turbo Shooting Brake",
+    "replace_parts": [ { "from": "engine_v8", "to": "engine_i6_30tt_road" } ]
+  },
+  {
+    "id": "car_shootingbrake_long_v8_h4_24t",
+    "copy-from": "car_shootingbrake_long_v8",
+    "type": "vehicle",
+    "name": "2.4 L Turbo Long Shooting Brake",
+    "replace_parts": [ { "from": "engine_v8", "to": "engine_h4_24t_road" } ]
+  },
+  {
+    "id": "4seat_pickup_v6_35",
+    "copy-from": "4seat_pickup",
+    "type": "vehicle",
+    "name": "3.5 L V6 Crew Cab Pickup",
+    "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_35_road" } ]
+  }
+]

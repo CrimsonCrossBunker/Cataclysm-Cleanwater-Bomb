@@ -319,6 +319,13 @@ class draw_points_cache_t
                     }
                     return rows[idx];
                 }
+                row_vec *find( const int row ) {
+                    if( !initialized || row < row_base ) {
+                        return nullptr;
+                    }
+                    const size_t index = static_cast<size_t>( row - row_base );
+                    return index < rows.size() && rows[index].size() > 0 ? &rows[index] : nullptr;
+                }
                 void soft_clear() {
                     for( row_vec &r : rows ) {
                         r.clear(); // keep capacity

@@ -3090,6 +3090,17 @@
     ]
   },
   {
+    "id": "metal_tank_large",
+    "copy-from": "metal_tank",
+    "type": "ITEM",
+    "name": { "str": "metal tank (100 L)", "str_pl": "metal tanks (100 L)" },
+    "weight": "8300 g",
+    "volume": "100050 ml",
+    "pocket_data": [
+      { "pocket_type": "CONTAINER", "rigid": true, "watertight": true, "max_contains_volume": "100 L", "max_contains_weight": "600 kg" }
+    ]
+  },
+  {
     "id": "metal_tank",
     "type": "ITEM",
     "category": "container",
