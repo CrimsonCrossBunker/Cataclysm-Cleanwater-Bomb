@@ -459,19 +459,22 @@ void vpslot_engine::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "peak_torque_rpm", peak_torque_rpm, 0 );
     optional( jo, was_loaded, "altitude_compensation_m", altitude_compensation_m, 0 );
     optional( jo, was_loaded, "fuel_model_turbine", turbine, false );
-    if( jo.has_null( "typical_fuel_economy" ) ) {
-        typical_fuel_economy.reset();
-    } else if( jo.has_member( "typical_fuel_economy" ) ) {
-        const JsonObject economy = jo.get_object( "typical_fuel_economy" );
-        const int mass = economy.get_int( "mass_kg" );
-        const double consumption = economy.get_float( "litres_per_100km" );
-        if( mass <= 0 ) {
-            economy.throw_error_at( "mass_kg", "Reference vehicle mass must be positive" );
+    if( const std::optional<JsonValue> value = jo.get_member_opt( "typical_fuel_economy" ) ) {
+        if( value->test_null() ) {
+            typical_fuel_economy.reset();
+        } else {
+            const JsonObject economy = value->get_object();
+            const int mass = economy.get_int( "mass_kg" );
+            const double consumption = economy.get_float( "litres_per_100km" );
+            if( mass <= 0 ) {
+                economy.throw_error_at( "mass_kg", "Reference vehicle mass must be positive" );
+            }
+            if( !std::isfinite( consumption ) || consumption <= 0 ) {
+                economy.throw_error_at( "litres_per_100km",
+                                        "Reference fuel consumption must be positive and finite" );
+            }
+            typical_fuel_economy = engine_fuel_economy{ mass, consumption };
         }
-        if( !std::isfinite( consumption ) || consumption <= 0 ) {
-            economy.throw_error_at( "litres_per_100km", "Reference fuel consumption must be positive and finite" );
-        }
-        typical_fuel_economy = engine_fuel_economy{ mass, consumption };
     }
     optional( jo, was_loaded, "muscle_power_factor", muscle_power_factor, 0 );
     optional( jo, was_loaded, "exclusions", exclusions, string_reader{} );
