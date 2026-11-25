@@ -27,6 +27,7 @@ layout(location = 1) out vec2 v_uv;
 layout(location = 2) out float v_flags;
 layout(location = 3) out float v_shade;
 layout(location = 4) out vec3 v_world;
+layout(location = 5) out vec2 v_screen;
 
 void main()
 {
@@ -137,6 +138,8 @@ void main()
     }
     v_world = world;
     gl_Position = mvp * vec4( world, 1.0 );
+    vec2 ndc = gl_Position.xy / gl_Position.w;
+    v_screen = vec2( ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5 );
     v_color = a_inst_color;
     v_uv = mix( a_inst_uv0, a_inst_uv1, uv_local );
     v_flags = a_inst_flags;

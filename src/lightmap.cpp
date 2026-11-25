@@ -47,6 +47,7 @@
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
+#include "output.h"
 #include "overmap_ui.h"
 #include "profiling.h"
 #include "point.h"
@@ -960,11 +961,14 @@ struct light_observer {
 };
 
 map::apparent_light_info apparent_light_helper( const level_cache &map_cache,
-        const tripoint_bub_ms &p, const light_observer &observer, const int dist )
+        const tripoint_bub_ms &p, const light_observer &observer, const int dist,
+        const bool include_wall_surfaces = false )
 {
     const avatar &u = observer.character;
-    const float abs_vis =
-        std::max( map_cache.seen_cache[p.x()][p.y()], map_cache.camera_cache[p.x()][p.y()] );
+    const float wall_vis = include_wall_surfaces ?
+                           map_cache.floor_blocked_seen_cache[p.x()][p.y()] : 0.0f;
+    const float abs_vis = std::max( { map_cache.seen_cache[p.x()][p.y()],
+                                      map_cache.camera_cache[p.x()][p.y()], wall_vis } );
     const float vis = dist > observer.unimpaired_range ? map_cache.camera_cache[p.x()][p.y()] : abs_vis;
     const bool obstructed = vis <= LIGHT_TRANSPARENCY_SOLID + 0.1;
     const bool abs_obstructed = abs_vis <= LIGHT_TRANSPARENCY_SOLID + 0.1;
@@ -1054,10 +1058,12 @@ bool clairvoyance_applies( const map &here, const tripoint_bub_ms &p,
 
 lit_level apparent_light_at( const level_cache &map_cache, const tripoint_bub_ms &p,
                              const visibility_variables &cache, const light_observer &observer,
-                             const int dist )
+                             const int dist, const bool include_wall_surfaces = false )
 {
+    const bool wall_visible = include_wall_surfaces &&
+                              map_cache.floor_blocked_seen_cache[p.x()][p.y()] > 0.0f;
     if( map_cache.seen_cache[p.x()][p.y()] == 0.0f &&
-        map_cache.camera_cache[p.x()][p.y()] == 0.0f ) {
+        map_cache.camera_cache[p.x()][p.y()] == 0.0f && !wall_visible ) {
         // With neither visibility path, both obstruction flags are true and
         // lighting cannot make this cell visible. Clairvoyance was handled by
         // the caller. Preserve the helper's lazy aiming-cache side effect.
@@ -1066,7 +1072,8 @@ lit_level apparent_light_at( const level_cache &map_cache, const tripoint_bub_ms
         }
         return lit_level::BLANK;
     }
-    const map::apparent_light_info a = apparent_light_helper( map_cache, p, observer, dist );
+    const map::apparent_light_info a = apparent_light_helper( map_cache, p, observer, dist,
+                                       include_wall_surfaces );
 
     // Unimpaired range is an override to strictly limit vision range based on various conditions,
     // but the player can still see light sources
@@ -1104,10 +1111,11 @@ lit_level apparent_light_at( const level_cache &map_cache, const tripoint_bub_ms
 } // namespace
 
 map::apparent_light_info map::apparent_light_helper( const level_cache &map_cache,
-        const tripoint_bub_ms &p )
+        const tripoint_bub_ms &p, const bool include_wall_surfaces )
 {
     const light_observer observer( get_map(), get_avatar() );
-    return ::apparent_light_helper( map_cache, p, observer, rl_dist( observer.position, p ) );
+    return ::apparent_light_helper( map_cache, p, observer, rl_dist( observer.position, p ),
+                                    include_wall_surfaces );
 }
 
 lit_level map::apparent_light_at( const tripoint_bub_ms &p,
@@ -1121,6 +1129,17 @@ lit_level map::apparent_light_at( const tripoint_bub_ms &p,
         return lit_level::BRIGHT;
     }
     return ::apparent_light_at( get_cache_ref( p.z() ), p, cache, observer, dist );
+}
+
+lit_level map::apparent_light_on_wall_at( const tripoint_bub_ms &p,
+        const visibility_variables &cache ) const
+{
+    const light_observer observer( *this, get_avatar() );
+    const int dist = rl_dist( observer.position, p );
+    if( clairvoyance_applies( *this, p, cache, dist ) ) {
+        return lit_level::BRIGHT;
+    }
+    return ::apparent_light_at( get_cache_ref( p.z() ), p, cache, observer, dist, true );
 }
 
 void rebuild_visibility_cache_grid( const map &here, level_cache &map_cache, const int zlev,
@@ -1398,6 +1417,8 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
     mdarray &seen_cache = map_cache.seen_cache;
     mdarray &camera_cache = map_cache.camera_cache;
     mdarray &out_cache = camera ? camera_cache : seen_cache;
+    const bool capture_floor_blocked = !camera && zlevels && is_draw_tiles_mode();
+    array_of_grids_of<float> floor_blocked_caches;
 
     constexpr float light_transparency_solid = LIGHT_TRANSPARENCY_SOLID;
     constexpr int map_dimensions = MAPSIZE_X * MAPSIZE_Y;
@@ -1417,6 +1438,13 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
         transparency_caches[layer_for_z( z )] = &cur_cache.vision_transparency_cache;
         seen_caches[layer_for_z( z )] = camera ? &cur_cache.camera_cache : &cur_cache.seen_cache;
         floor_caches[layer_for_z( z )] = &cur_cache.floor_cache;
+        if( capture_floor_blocked ) {
+            floor_blocked_caches[layer_for_z( z )] = &cur_cache.floor_blocked_seen_cache;
+            if( !cumulative ) {
+                std::uninitialized_fill_n( &cur_cache.floor_blocked_seen_cache[0][0], map_dimensions,
+                                           light_transparency_solid );
+            }
+        }
         if( !cumulative ) {
             std::uninitialized_fill_n(
                 &( *seen_caches[layer_for_z( z )] )[0][0], map_dimensions, light_transparency_solid );
@@ -1457,7 +1485,9 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
                             values.floors[z] = *floor_caches[z];
                         }
                     }
-                    if( vision_preparation_->prepare() && vision_preparation_->apply( seen_caches, request ) ) {
+                    if( vision_preparation_->prepare( capture_floor_blocked ) &&
+                        vision_preparation_->apply( seen_caches, request,
+                                                    capture_floor_blocked ? &floor_blocked_caches : nullptr ) ) {
                         prepared = true;
                         vision_horizontal_cost_ms_ = vision_preparation_->horizontal_cost_ms();
                     }
@@ -1470,11 +1500,13 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
             // Vertical casting remains on the owner; its original exception
             // semantics are not hidden by the parallel allocation fallback.
             vision_preparation::cast_vertical( seen_caches, transparency_caches, floor_caches,
-                                               casting_origin, penalty, 1.0f, directions_to_cast, trigdist );
+                                               casting_origin, penalty, 1.0f, directions_to_cast, trigdist,
+                                               capture_floor_blocked ? &floor_blocked_caches : nullptr );
         } else {
             cast_zlight<float, sight_calc, sight_check, accumulate_transparency>(
                 seen_caches, transparency_caches, floor_caches, casting_origin, penalty, 1.0,
-                directions_to_cast, workers > 0 ? &vision_horizontal_cost_ms_ : nullptr );
+                directions_to_cast, workers > 0 ? &vision_horizontal_cost_ms_ : nullptr,
+                capture_floor_blocked ? &floor_blocked_caches : nullptr );
         }
     }
     seen_cache_process_ledges( seen_caches, floor_caches, std::nullopt );
