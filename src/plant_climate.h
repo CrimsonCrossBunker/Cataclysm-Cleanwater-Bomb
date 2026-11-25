@@ -32,15 +32,18 @@ struct field_crop {
     itype_id seed;
     int planting_day;
     int harvest_day;
+    int planting_year_offset;
 
     // Dates follow the displayed game calendar and scale with the configured year length.
     std::optional<time_point> sowing_date( time_point when ) const;
 };
 
-std::optional<field_crop> regional_field_crop( point_abs_omt field, unsigned field_roll,
+std::optional<field_crop> regional_field_crop( point_abs_omt field,
         const itype_id &existing_seed = itype_id::NULL_ID() );
 std::optional<time_point> regional_field_sowing( const field_crop &crop, point_abs_omt field,
         time_point when );
+// Returns false if the historical field should be fallow and the generated seed was removed.
+bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed );
 
 struct fruit_climate_profile {
     crop_climate_profile growth;

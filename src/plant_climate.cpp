@@ -81,14 +81,12 @@ std::optional<time_point> field_crop::sowing_date( time_point when ) const
         return time_duration::from_turns( std::lround(
                                               to_turns<double>( year ) * day / calendar_days ) );
     };
-    const time_duration date = ( time_past_new_year( when ) + year ) % year;
-    time_point planted = when - date + day_offset( planting_day );
-    if( planted > when ) {
-        planted -= year;
+    time_point harvest_year = when - time_past_new_year( when );
+    if( when >= harvest_year + day_offset( harvest_day + 1 ) ) {
+        harvest_year += year;
     }
-    const int field_season = ( harvest_day - planting_day + calendar_days ) % calendar_days + 1;
-    return when - planted < day_offset( field_season ) ?
-           std::optional<time_point>( planted ) : std::nullopt;
+    const time_point planted = harvest_year + year * planting_year_offset + day_offset( planting_day );
+    return planted <= when ? std::optional<time_point>( planted ) : std::nullopt;
 }
 
 namespace
@@ -97,6 +95,14 @@ struct weighted_crop {
     field_crop crop;
     unsigned weight;
 };
+
+const itype_id itype_seed_wheat( "seed_wheat" );
+const itype_id itype_seed_red_winter_wheat( "seed_red_winter_wheat" );
+
+std::size_t field_hash( point_abs_omt field )
+{
+    return std::hash<point_abs_omt>{}( field ) ^ g->get_seed();
+}
 
 int crop_calendar_day( const JsonValue &value )
 {
@@ -118,7 +124,7 @@ int crop_calendar_day( const JsonValue &value )
 }
 } // namespace
 
-std::optional<field_crop> regional_field_crop( point_abs_omt field, unsigned field_roll,
+std::optional<field_crop> regional_field_crop( point_abs_omt field,
         const itype_id &existing_seed )
 {
     static const auto profiles = [] {
@@ -136,10 +142,17 @@ std::optional<field_crop> regional_field_crop( point_abs_omt field, unsigned fie
                     if( weight <= 0 || weight > 100 ) {
                         row.throw_error( "Field crop weights must be between 1 and 100" );
                     }
+                    const int planting = crop_calendar_day( values[2] );
+                    const int harvest = crop_calendar_day( values[3] );
+                    const int default_offset = planting > harvest ? -1 : 0;
+                    const int year_offset = values.size() > 4 ?
+                                            values.get_object( 4 ).get_int( "planting_year_offset" ) : default_offset;
+                    if( year_offset != default_offset ) {
+                        row.throw_error( "Field planting year must match the planting and harvest dates" );
+                    }
                     options.push_back( {
                         {
-                            itype_id( values.get_string( 0 ) ), crop_calendar_day( values[2] ),
-                            crop_calendar_day( values[3] )
+                            itype_id( values.get_string( 0 ) ), planting, harvest, year_offset
                         },
                         static_cast<unsigned>( weight )
                     } );
@@ -152,18 +165,31 @@ std::optional<field_crop> regional_field_crop( point_abs_omt field, unsigned fie
     const auto options = profiles.find( std::string( north_america::jurisdiction_at( center ) ) );
     if( !existing_seed.is_null() ) {
         if( options != profiles.end() ) {
+            const weighted_crop *matching = nullptr;
+            const weighted_crop *winter_wheat = nullptr;
             for( const weighted_crop &choice : options->second ) {
                 if( choice.crop.seed == existing_seed ) {
-                    return choice.crop;
+                    matching = &choice;
                 }
+                if( choice.crop.seed == itype_seed_red_winter_wheat ) {
+                    winter_wheat = &choice;
+                }
+            }
+            if( existing_seed == itype_seed_wheat && winter_wheat &&
+                ( !matching || field_hash( field ) % ( matching->weight + winter_wheat->weight ) <
+                  winter_wheat->weight ) ) {
+                return winter_wheat->crop;
+            }
+            if( matching ) {
+                return matching->crop;
             }
         }
         if( existing_seed.is_valid() && existing_seed->seed && existing_seed->seed->climate ) {
             const crop_climate_profile &climate = *existing_seed->seed->climate;
             if( climate.vernalization_days > 0 ) {
-                return field_crop{ existing_seed, 273, 211 };
+                return field_crop{ existing_seed, 273, 211, -1 };
             }
-            return field_crop{ existing_seed, climate.base_c >= 8 ? 125 : 105, 303 };
+            return field_crop{ existing_seed, climate.base_c >= 8 ? 125 : 105, 303, 0 };
         }
         return std::nullopt;
     }
@@ -174,7 +200,7 @@ std::optional<field_crop> regional_field_crop( point_abs_omt field, unsigned fie
     for( const weighted_crop &choice : options->second ) {
         total += choice.weight;
     }
-    unsigned roll = field_roll % total;
+    unsigned roll = static_cast<unsigned>( field_hash( field ) % total );
     for( const weighted_crop &choice : options->second ) {
         if( roll < choice.weight ) {
             return choice.crop;
@@ -397,26 +423,93 @@ std::optional<time_point> regional_field_sowing( const field_crop &crop, point_a
         time_point when )
 {
     field_crop local = crop;
+    // Stagger adjacent fields within the local planting window without varying within a field.
+    const int planting_delay = static_cast<int>( ( field_hash( field ) >> 8 ) % 10 );
     if( crop.seed.is_valid() && crop.seed->seed && crop.seed->seed->climate &&
-        crop.planting_day < crop.harvest_day ) {
+        crop.planting_year_offset == 0 && crop.planting_day < crop.harvest_day ) {
         const crop_climate_profile &growth = *crop.seed->seed->climate;
         const auto &normals = cell_at( snow_climate_cell( tripoint_abs_omt( field, 0 ) ),
                                       get_weather_const().get_cur_weather_gen() ).normals;
+        const int latest = std::min( crop.harvest_day - 1, crop.planting_day + 35 );
+        local.planting_day = std::min( latest, crop.planting_day + planting_delay );
         if( normals ) {
             const double minimum = std::max( 5.0, growth.base_c + 2.0 );
-            const int earliest = std::max( 0, crop.planting_day - 21 );
-            const int latest = std::min( crop.harvest_day - 1, crop.planting_day + 35 );
-            for( int day = earliest; day <= latest; ++day ) {
-                local.planting_day = day;
+            for( int day = crop.planting_day; day <= latest; ++day ) {
                 const auto temperature = regional_climate::temperature_for_day( *normals, day );
-                if( temperature.mean_c >= minimum &&
-                    temperature.mean_c - temperature.daily_range_c >= growth.base_c - 5 ) {
-                    break;
+                if( temperature.mean_c >= minimum && temperature.mean_c - temperature.daily_range_c >=
+                    std::max( growth.min_c, growth.base_c - 5 ) ) {
+                    local.planting_day = std::min( latest, day + planting_delay );
+                    return local.sowing_date( when );
                 }
             }
+            return std::nullopt;
         }
+    } else if( crop.planting_year_offset < 0 ) {
+        local.planting_day = std::min( crop.planting_day + planting_delay,
+                                      regional_climate::model_year_days - 1 );
     }
     return local.sowing_date( when );
+}
+
+bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed )
+{
+    if( seed.has_var( "crop_field_history_v4" ) || p.z() != 0 || !north_america::active() ||
+        seed.has_flag( json_flag_HIDDEN_ITEM ) || !seed.type->seed->climate ) {
+        return true;
+    }
+    static const furn_str_id field_seed( "f_plant_seed" );
+    static const furn_str_id field_seedling( "f_plant_seedling" );
+    static const furn_str_id field_mature( "f_plant_mature" );
+    static const furn_str_id field_harvest( "f_plant_harvest" );
+    static const furn_str_id field_overgrown( "f_plant_unharvested_overgrown" );
+    const furn_id furniture = here.furn( p );
+    if( !furniture->plant || ( furniture != field_seed.id() && furniture != field_seedling.id() &&
+                              furniture != field_mature.id() && furniture != field_harvest.id() &&
+                              furniture != field_overgrown.id() ) ) {
+        return true;
+    }
+    const tripoint_abs_omt omt = project_to<coords::omt>( here.get_abs( p ) );
+    if( !seed.has_var( "crop_field_sown" ) &&
+        ( seed.birthday() > calendar::start_of_cataclysm ||
+          overmap_buffer.ter_existing( omt )->get_travel_cost_type() != oter_travel_cost_type::crop_field ) ) {
+        return true;
+    }
+    seed.set_var( "crop_field_history_v4", true );
+    if( iexamine::is_plant_fertilized( seed ) || iexamine::get_plant_water( seed ) > 0 ) {
+        return true;
+    }
+    const auto crop = regional_field_crop( omt.xy(), seed.typeId() );
+    if( !crop ) {
+        return true;
+    }
+    const auto sown = regional_field_sowing( *crop, omt.xy(), calendar::start_of_cataclysm );
+    if( !sown ) {
+        here.i_rem( p, &seed );
+        here.furn_set( p, furniture->plant->base );
+        return false;
+    }
+    if( crop->seed == seed.typeId() && seed.has_var( "crop_field_sown" ) &&
+        seed.get_var( "crop_field_sown", 0.0 ) == to_turn<int>( *sown ) ) {
+        return true;
+    }
+
+    // Reconstruct growth from the corrected date so the old season's heat and rain aren't reused.
+    if( crop->seed != seed.typeId() ) {
+        seed.convert( crop->seed );
+    }
+    seed.set_birthday( std::max( *sown, calendar::turn_zero ) );
+    seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
+    seed.set_var( "crop_field_history_v3", true );
+    iexamine::set_plant_last_water_check( seed, *sown );
+    iexamine::set_plant_effective_growth_turns( seed, 0 );
+    seed.erase_var( "crop_soil_moisture_mm" );
+    seed.erase_var( "crop_thermal_growth" );
+    seed.erase_var( "crop_growing_time" );
+    seed.erase_var( "crop_vernalization_days" );
+    seed.erase_var( "crop_sampled_rain_mm" );
+    seed.erase_var( "crop_degree_days" );
+    here.furn_set( p, field_seed );
+    return true;
 }
 
 void clear_plant_climate_cache()
@@ -480,27 +573,10 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     time_point start = iexamine::get_plant_last_water_check( seed );
     const time_point history_end = calendar::start_of_game;
     const tripoint_abs_ms position = here.get_abs( p );
-    const bool had_field_date = seed.has_var( "crop_field_sown" );
-    time_point sown = time_point::from_turn( static_cast<int>(
-                          seed.get_var( "crop_field_sown", to_turn<int>( seed.birthday() ) ) ) );
-    const time_point previous_sowing = sown;
-    bool field_crop = had_field_date;
+    const time_point sown = time_point::from_turn( static_cast<int>(
+                                seed.get_var( "crop_field_sown", to_turn<int>( seed.birthday() ) ) ) );
+    const bool field_crop = seed.has_var( "crop_field_sown" );
     const bool repair_history = !seed.has_var( "crop_field_history_v3" );
-    if( repair_history && p.z() == 0 && north_america::active() &&
-        ( had_field_date || ( !seed.has_flag( json_flag_HIDDEN_ITEM ) &&
-                              ( seed.birthday() < calendar::start_of_cataclysm ||
-                                ( seed.birthday() == calendar::start_of_cataclysm &&
-                                  overmap_buffer.ter_existing( project_to<coords::omt>( position ) )->get_travel_cost_type() ==
-                                  oter_travel_cost_type::crop_field ) ) ) ) ) {
-        const point_abs_omt field = project_to<coords::omt>( position ).xy();
-        const auto crop = regional_field_crop( field, 0, seed.typeId() );
-        if( const auto date = crop ?
-                              regional_field_sowing( *crop, field, calendar::start_of_cataclysm ) : std::nullopt ) {
-            sown = *date;
-        }
-        seed.set_var( "crop_field_sown", to_turn<int>( sown ) );
-        field_crop = true;
-    }
     if( !seed.has_var( "seed_last_water_check" ) || start < sown ) {
         start = sown;
     }
@@ -527,8 +603,7 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     double sampled_rain = seed.get_var( "crop_sampled_rain_mm", 0.0 );
     double degree_days = seed.get_var( "crop_degree_days", 0.0 );
     if( field_crop && repair_history ) {
-        // Backfill an empty ledger. When a calendar correction moves sowing earlier, add
-        // only the newly included days to a ledger that already contains weather.
+        // Backfill an empty ledger in older saves.
         const auto backfill = [&]( bool rain, bool heat, bool cold, time_point recorded_until ) {
             for( time_point cursor = sown; cursor < recorded_until; ) {
                 const time_duration elapsed = crop_time_of_day( cursor );
@@ -559,9 +634,6 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
                                    !seed.has_var( "crop_vernalization_days" ) && thermal_growth >= 0.025;
         if( missing_rain || missing_heat || missing_chill ) {
             backfill( missing_rain, missing_heat, missing_chill, recorded_until );
-        }
-        if( sown < previous_sowing && ( !missing_rain || !missing_heat ) ) {
-            backfill( !missing_rain, !missing_heat, false, std::min( recorded_until, previous_sowing ) );
         }
         seed.set_var( "crop_field_history_v3", true );
     }

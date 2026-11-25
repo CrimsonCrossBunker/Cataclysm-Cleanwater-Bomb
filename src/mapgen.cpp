@@ -3657,15 +3657,16 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
             const tripoint_bub_ms pos( px.get(), py.get(), dat.zlevel() + pz.get() );
             const furn_id chosen_furn = furniture.get( dat );
             dat.m.furn_set( pos, furn_str_id::NULL_ID() );
-            if( regional_crop && pos.z() == 0 && north_america::active() &&
+            static const furn_str_id field_seedling( "f_plant_seedling" );
+            static const furn_str_id field_seed( "f_plant_seed" );
+            const bool field_crop = chosen_furn == field_seedling.id() &&
+                                    dat.terrain_type()->get_travel_cost_type() == oter_travel_cost_type::crop_field;
+            if( ( regional_crop || field_crop ) && pos.z() == 0 && north_america::active() &&
                 chosen_furn->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
-                const point_abs_omt field = dat.pos().xy();
-                // A field is planted as a unit. Hash its absolute position with the world seed.
-                const unsigned roll = static_cast<unsigned>( std::hash<point_abs_omt> {}( field ) ) ^
-                                      g->get_seed();
-                std::optional<field_crop> crop = regional_field_crop( field, roll );
+                const point_abs_omt field = project_to<coords::omt>( dat.m.get_abs( pos ) ).xy();
+                std::optional<field_crop> crop = regional_field_crop( field );
                 if( !crop && item_spawner ) {
-                    crop = regional_field_crop( field, roll, item_spawner->type.get( dat ) );
+                    crop = regional_field_crop( field, item_spawner->type.get( dat ) );
                 }
                 if( crop && crop->seed.is_valid() ) {
                     const auto sown = regional_field_sowing( *crop, field, calendar::start_of_cataclysm );
@@ -3679,10 +3680,9 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                         }
                         // The historical simulation can start before the game's turn zero.
                         seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
+                        seed.set_var( "crop_field_history_v4", true );
                         iexamine::set_plant_last_water_check( seed, *sown );
                         dat.m.add_item( pos, std::move( seed ) );
-                        static const furn_str_id field_seedling( "f_plant_seedling" );
-                        static const furn_str_id field_seed( "f_plant_seed" );
                         dat.m.furn_set( pos, chosen_furn == field_seedling.id() ?
                                         field_seed.id() : chosen_furn );
                         return;

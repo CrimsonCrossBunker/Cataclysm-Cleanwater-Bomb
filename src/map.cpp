@@ -11711,8 +11711,8 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
 void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_crop_interval,
                       std::optional<bool> indoor_light )
 {
-    const furn_t &initial_furn = this->furn( p ).obj();
-    if( !initial_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+    const furn_t &original_furn = this->furn( p ).obj();
+    if( !original_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
         return;
     }
     // Can't use item_stack::only_item() since there might be fertilizer
@@ -11728,7 +11728,7 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
         const tripoint_abs_sm sm_pos = project_to<coords::sm>( ms_pos );
         const oter_id ot = overmap_buffer.ter( project_to<coords::omt>( ms_pos ) );
         dbg( D_ERROR ) << "plant furniture has no seed item.  "
-                       << "furniture: " << initial_furn.id.str()
+                       << "furniture: " << original_furn.id.str()
                        << ", submap absolute: " << sm_pos
                        << ", map square absolute: " << ms_pos
                        << ", class map map square relative: " << p
@@ -11740,14 +11740,18 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
         // Preserve the base (usually tilled earth) instead of reverting to bare
         // ground, so old saves or corrupted tiles remain farmable rather than
         // instantly requiring new tilling and triggering a planting fetch loop.
-        if( initial_furn.plant ) {
-            furn_set( p, initial_furn.plant->base );
+        if( original_furn.plant ) {
+            furn_set( p, original_furn.plant->base );
         } else {
             furn_set( p, furn_str_id::NULL_ID() );
         }
         return;
     }
 
+    if( !repair_regional_field_crop( *this, p, *seed ) ) {
+        return;
+    }
+    const furn_t &initial_furn = this->furn( p ).obj();
     const islot_seed &seed_data = *seed->type->seed;
     const auto &growth_stages = seed_data.get_growth_stages();
     std::optional<time_duration> light_exposure;
