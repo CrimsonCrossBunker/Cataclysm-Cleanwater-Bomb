@@ -3585,6 +3585,22 @@ void veh_interact::display_stats( map &here ) const
     // advance to next column if necessary
     i = std::max( i, 2 * stats_h );
 
+    if( const auto limits = veh->estimate_flight_limits( here ); limits && i + 2 < slots ) {
+        const auto add_stat = [&]( const std::string &text ) {
+            trim_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray, text );
+            ++i;
+        };
+        add_stat( string_format( _( "Airframe limit: %d m MSL" ), limits->operating_altitude_m ) );
+        add_stat( limits->climb_ceiling_m ?
+                  string_format( _( "Climb ceiling: %d m MSL" ), *limits->climb_ceiling_m ) :
+                  _( "Climb ceiling unavailable" ) );
+        if( limits->rotorcraft && i + 1 < slots ) {
+            add_stat( limits->hover_ceiling_m ?
+                      string_format( _( "Free-air hover: %d m MSL" ), *limits->hover_ceiling_m ) :
+                      _( "Free-air hover unavailable" ) );
+        }
+    }
+
     // Print fuel percentage & type name only if it fits in the window, 10 is width of "E...F 100%"
     veh->print_fuel_indicators( here, *win[i], point( 0, row[i] ), fuel_index, true,
                                 ( getmaxx( *win[i] ) > 10 ),

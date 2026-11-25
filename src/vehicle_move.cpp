@@ -1634,16 +1634,17 @@ bool vehicle::check_heli_descend( map &here, Character &p ) const
 
 bool vehicle::check_heli_ascend( map &here, Character &p ) const
 {
-    if( !is_aircraft( here ) ) {
-        debugmsg( "A vehicle is somehow flying without being an aircraft" );
-        return true;
-    }
     if( velocity > 0 && !is_flying_in_air() ) {
         p.add_msg_if_player( m_bad, _( "It would be unsafe to try and take off while you are moving." ) );
         return false;
     }
     if( sm_pos.z() + 1 >= here.max_z() && !north_america::elevation_active() ) {
         return false; // don't allow trying to ascend to max zlevel
+    }
+    const double step = north_america::elevation_active() ? 2.0 : north_america::floor_height_m;
+    if( !can_climb_to( here, pos_bub( here ) + tripoint::above, operating_altitude( here ) + step ) ) {
+        p.add_msg_if_player( m_bad, _( "The %s has reached its climb limit." ), name );
+        return false;
     }
     creature_tracker &creatures = get_creature_tracker();
     for( const tripoint_abs_ms &pt : get_points( true ) ) {
@@ -2167,6 +2168,12 @@ vehicle *vehicle::move_atlas_aircraft( map &here, tripoint_rel_ms dp, const tile
         }
     }
     const tripoint_bub_ms destination( over.xy(), target_z );
+    if( command > 0 && !can_climb_to( here, destination, target ) ) {
+        if( pilot ) {
+            pilot->add_msg_if_player( m_bad, _( "The %s has reached its climb limit." ), name );
+        }
+        return this;
+    }
     const auto blocked = [&]() {
         if( pilot ) {
             pilot->add_msg_if_player( m_warning, _( "There is no safe clearance for that flight path." ) );
@@ -2487,8 +2494,13 @@ vehicle *vehicle::act_on_map( map &here )
     } else {
         dp.z() = requested_z_change;
         requested_z_change = 0;
-        if( dp.z() > 0 && is_aircraft( here ) ) {
-            is_flying = true;
+        if( dp.z() > 0 ) {
+            if( is_aircraft( here ) && can_climb_to( here, pt + dp,
+                    operating_altitude( here ) + dp.z() * north_america::floor_height_m ) ) {
+                is_flying = true;
+            } else {
+                dp.z() = 0;
+            }
         }
     }
 

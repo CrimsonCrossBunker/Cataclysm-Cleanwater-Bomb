@@ -819,9 +819,10 @@ std::optional<regional_climate::seasonal_cycle> local_season_cycle;
 
 int regional_model_day( const time_point &p )
 {
-    const double fraction = time_past_new_year( p ) / calendar::year_length();
-    return std::clamp( static_cast<int>( fraction * regional_climate::model_year_days ),
-                       0, regional_climate::model_year_days - 1 );
+    constexpr int year_days = regional_climate::model_year_days;
+    const long long elapsed = to_turns<int>( time_past_new_year( p ) );
+    const int day = static_cast<int>( elapsed * year_days / to_turns<int>( calendar::year_length() ) );
+    return std::clamp( day, 0, year_days - 1 );
 }
 
 std::pair<int, int> season_day_and_length( const time_point &p, bool ignore_eternal = false )
@@ -888,6 +889,30 @@ season_type season_of_year( const time_point &p, bool ignore_eternal_season )
         return local_season_cycle->air[regional_model_day( p )];
     }
     return fixed_season_of_year( p, ignore_eternal_season );
+}
+
+std::optional<time_duration> time_until_season_change( const time_point &p )
+{
+    if( calendar::eternal_season() ) {
+        return std::nullopt;
+    }
+    if( !local_season_cycle ) {
+        const time_duration quarter = calendar::season_length();
+        return quarter - ( p - calendar::turn_zero ) % quarter;
+    }
+
+    constexpr int year_days = regional_climate::model_year_days;
+    const auto &seasons = local_season_cycle->air;
+    const int day = regional_model_day( p );
+    const time_duration year = calendar::year_length();
+    for( int offset = 1; offset < year_days; ++offset ) {
+        if( seasons[( day + offset ) % year_days] != seasons[day] ) {
+            const auto boundary = static_cast<long long>( day + offset ) * to_turns<int>( year );
+            return time_duration::from_turns( ( boundary + year_days - 1 ) / year_days -
+                                              to_turns<int>( time_past_new_year( p ) ) );
+        }
+    }
+    return std::nullopt;
 }
 
 season_type foliage_season_of_year( const time_point &p )

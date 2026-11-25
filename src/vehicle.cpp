@@ -4354,8 +4354,30 @@ int vehicle::consumption_per_hour( const itype_id &ftype, units::energy fuel_per
     return -1000 * energy_per_h / energy_per_liter;
 }
 
+double vehicle::operating_altitude( const map &here ) const
+{
+    const tripoint_bub_ms position = pos_bub( here );
+    if( north_america::elevation_active() ) {
+        if( const auto flight_height = flight_altitude() ) {
+            return *flight_height;
+        }
+        return north_america::altitude_at( here, position );
+    }
+    return position.z() * north_america::floor_height_m;
+}
+
 units::power vehicle::total_power( map &here, const bool fueled, const bool safe ) const
 {
+    if( engines.empty() ) {
+        return 0_W;
+    }
+    return total_power_at_altitude( here, fueled, safe, operating_altitude( here ) );
+}
+
+units::power vehicle::total_power_at_altitude( map &here, bool fueled, bool safe,
+        double altitude_m ) const
+{
+    const double density = north_america::air_density_ratio_at_height( altitude_m );
     units::power pwr = 0_W;
     int count = 0;
 
@@ -4366,7 +4388,18 @@ units::power vehicle::total_power( map &here, const bool fueled, const bool safe
             if( vp.has_fault_flag( "REDUCE_ENG_POWER" ) ) {
                 m2c *= 0.6;
             }
-            pwr += part_vpower_w( here, vp ) * m2c / 100;
+            units::power output = part_vpower_w( here, vp ) * m2c / 100;
+            const vpslot_engine &engine = *vp.info().engine_info;
+            if( engine.turbine ) {
+                output *= std::min( 1.0, std::pow( density, 0.7 ) );
+            } else if( is_engine_type_combustion( vp ) && !vp.info().fuel_type.is_null() &&
+                       vp.info().fuel_type->phase != phase_id::SOLID ) {
+                const double rated_density = engine.altitude_compensation_m > 0 ?
+                                             north_america::air_density_ratio_at_height( engine.altitude_compensation_m ) :
+                                             1.0;
+                output *= std::min( 1.0, density / rated_density );
+            }
+            pwr += output;
             count++;
         }
     }
@@ -5105,38 +5138,88 @@ bool vehicle::can_float( map &here ) const
     return draft_m < hull_height;
 }
 
-// apologies for the imperial measurements, they'll get converted before used finally in the vehicle speed at the end of the function.
-// sources for the equations to calculate rotor lift thrust were only available in imperial, and the constants used are designed for that.
-// r= radius or d = diameter of rotor blades.
-// area A [ft^2] = Pi * r^2 -or- A [ft^2] = (Pi/4) * D^2
-// Power loading [hp/ft^2] = power( in hp ) / A
-// thrust loading [lb/hp]= 8.6859 * Power loading^(-0.3107)
-// Lift = Thrust loading * power >>>[lb] = [lb/hp] * [hp]
-
-double vehicle::lift_thrust_of_rotorcraft( map &here, const bool fuelled, const bool safe ) const
+namespace
 {
-    int rotor_area_in_feet = 0;
+// The existing empirical thrust curve takes horsepower and square feet. Apply
+// the fixed-power momentum-theory density correction to its sea-level result.
+double propulsor_thrust( units::power power, double disk_area, double altitude_m )
+{
+    const double horsepower = 0.00134102 * units::to_watt( power );
+    if( disk_area <= 0.0 || horsepower <= 0.0 ) {
+        return 0.0;
+    }
+    const double density = north_america::air_density_ratio_at_height( altitude_m );
+    return 8.8658 * std::pow( horsepower / disk_area, -0.3107 ) * horsepower * 4.45 *
+           std::cbrt( density );
+}
+
+constexpr int translational_lift_speed = 1800; // hundredths of mph
+constexpr double translational_lift_factor = 1.15;
+} // namespace
+
+double vehicle::rotor_disk_area() const
+{
+    double area = 0.0;
     for( const int rotor : rotors ) {
-        double rotor_diameter_in_feet = ( parts[rotor].info().rotor_info->rotor_diameter +
-                                          parts[rotor].info().bonus ) * 3.28084;
-        rotor_area_in_feet += ( M_PI / 4 ) * std::pow( rotor_diameter_in_feet, 2 );
+        const vehicle_part &vp = parts[rotor];
+        if( vp.is_fake || !vp.is_available() ) {
+            continue;
+        }
+        const double diameter = ( vp.info().rotor_info->rotor_diameter + vp.info().bonus ) * 3.28084;
+        area += ( M_PI / 4 ) * diameter * diameter * vp.health_percent();
     }
-    if( rotor_area_in_feet == 0 ) {
+    return area;
+}
+
+double vehicle::rotor_lift_at_altitude( map &here, bool fueled, bool safe, double altitude_m,
+                                      double disk_area ) const
+{
+    if( disk_area <= 0.0 ) {
         return 0.0;
     }
-    // take off 15 % due to the imaginary tail rotor power.
-    double engine_power_in_hp = 0.00134102 * units::to_watt( total_power( here, fuelled, safe ) );
-    if( engine_power_in_hp <= 0 ) {
+    return propulsor_thrust( total_power_at_altitude( here, fueled, safe, altitude_m ), disk_area,
+                            altitude_m );
+}
+
+double vehicle::lift_thrust_of_rotorcraft( map &here, bool fueled, bool safe ) const
+{
+    if( rotors.empty() ) {
         return 0.0;
     }
-    // lift_thrust in lbthrust
-    double lift_thrust = ( 8.8658 * std::pow( engine_power_in_hp / rotor_area_in_feet,
-                           -0.3107 ) ) * engine_power_in_hp;
-    add_msg_debug( debugmode::DF_VEHICLE,
-                   "lift thrust in lbs of %s = %f, rotor area in feet : %d, engine power in hp %f, thrust in newtons : %f",
-                   name, lift_thrust, rotor_area_in_feet, engine_power_in_hp, lift_thrust * 4.45 );
-    // convert to newtons.
-    return lift_thrust * 4.45;
+    return rotor_lift_at_altitude( here, fueled, safe, operating_altitude( here ), rotor_disk_area() );
+}
+
+double vehicle::rotor_ground_effect( const map &here, const tripoint_bub_ms &position,
+                                    double altitude_m ) const
+{
+    int diameter = 0;
+    for( const int rotor : rotors ) {
+        const vehicle_part &vp = parts[rotor];
+        if( !vp.is_fake && vp.is_available() ) {
+            diameter = std::max( diameter, vp.info().rotor_info->rotor_diameter + vp.info().bonus );
+        }
+    }
+    if( diameter <= 0 ) {
+        return 1.0;
+    }
+
+    const bool atlas = north_america::elevation_active();
+    double clearance = diameter;
+    const int search_depth = static_cast<int>( std::ceil( diameter / north_america::floor_height_m ) );
+    for( int z = std::min( position.z(), here.max_z() );
+         z >= std::max( here.min_z(), position.z() - search_depth ); --z ) {
+        const tripoint_bub_ms below( position.xy(), z );
+        if( !here.inbounds( below ) || !here.has_floor( below ) ) {
+            continue;
+        }
+        const double floor = atlas ? north_america::altitude_at( here, below ) :
+                             z * north_america::floor_height_m;
+        if( altitude_m >= floor ) {
+            clearance = std::min( altitude_m - floor, static_cast<double>( diameter ) );
+            break;
+        }
+    }
+    return 1.0 + 0.12 * ( 1.0 - clearance / diameter );
 }
 
 double vehicle::foward_thrust_of_propellers( map &here, const bool fuelled, const bool safe ) const
@@ -5144,24 +5227,20 @@ double vehicle::foward_thrust_of_propellers( map &here, const bool fuelled, cons
     double propeller_area_in_feet = 0.0;
     for( const int propeller : propellers ) {
         const vehicle_part &vp = parts[propeller];
-        if( vp.is_broken() || vp.removed || !vp.info().propeller_info ) {
+        if( vp.is_fake || !vp.is_available() || !vp.info().propeller_info ) {
             continue;
         }
         double diameter_in_feet = ( vp.info().propeller_info->propeller_diameter +
                                     vp.info().bonus ) * 3.28084;
-        propeller_area_in_feet += ( M_PI / 4 ) * std::pow( diameter_in_feet, 2 );
+        propeller_area_in_feet += ( M_PI / 4 ) * diameter_in_feet * diameter_in_feet *
+                                  vp.health_percent();
     }
     if( propeller_area_in_feet == 0 ) {
         return 0.0;
     }
-    // Same thrust-loading model as rotor lift, applied to horizontal propellers.
-    double engine_power_in_hp = 0.00134102 * units::to_watt( total_power( here, fuelled, safe ) );
-    if( engine_power_in_hp <= 0 ) {
-        return 0.0;
-    }
-    double forward_thrust = ( 8.8658 * std::pow( engine_power_in_hp / propeller_area_in_feet,
-                              -0.3107 ) ) * engine_power_in_hp;
-    return forward_thrust * 4.45;
+    const double altitude_m = operating_altitude( here );
+    return propulsor_thrust( total_power_at_altitude( here, fuelled, safe, altitude_m ),
+                            propeller_area_in_feet, altitude_m );
 }
 
 double vehicle::total_aircraft_thrust( map &here, const bool fuelled, const bool safe ) const
@@ -5172,8 +5251,15 @@ double vehicle::total_aircraft_thrust( map &here, const bool fuelled, const bool
 
 bool vehicle::has_sufficient_rotorlift( map &here ) const
 {
-    // comparison of newton to newton - convert kg to newton.
-    return lift_thrust_of_rotorcraft( here, true ) > to_kilogram( total_mass( here ) ) * 9.8;
+    if( rotors.empty() ) {
+        return false;
+    }
+    const double height = operating_altitude( here );
+    const double lift_factor = std::abs( velocity ) >= translational_lift_speed ?
+                               translational_lift_factor :
+                               rotor_ground_effect( here, pos_bub( here ), height );
+    return rotor_lift_at_altitude( here, true, false, height, rotor_disk_area() ) * lift_factor >
+           to_kilogram( total_mass( here ) ) * 9.8;
 }
 
 double vehicle::total_balloon_lift() const
@@ -5186,10 +5272,7 @@ double vehicle::total_balloon_lift() const
     double lift_kg = 0.0;
     for( const int balloon : balloons ) {
         const vehicle_part &vp = parts[balloon];
-        if( vp.is_broken() || vp.removed ) {
-            continue;
-        }
-        if( !vp.info().balloon_info ) {
+        if( vp.is_fake || !vp.is_available() || !vp.info().balloon_info ) {
             continue;
         }
         lift_kg += vp.info().balloon_info->height * net_lift_kg_per_m3 * vp.health_percent();
@@ -5200,8 +5283,84 @@ double vehicle::total_balloon_lift() const
 
 bool vehicle::has_sufficient_balloonlift( map &here ) const
 {
-    // comparison of newton to newton - convert kg to newton.
-    return total_balloon_lift() >= to_kilogram( total_mass( here ) ) * 9.8;
+    return total_balloon_lift() * north_america::air_density_ratio_at_height( operating_altitude( here ) ) >=
+           to_kilogram( total_mass( here ) ) * 9.8;
+}
+
+static int flight_part_limit( const std::vector<int> &indices,
+                              const std::vector<vehicle_part> &parts, bool rotor )
+{
+    int ceiling = static_cast<int>( north_america::altitude_limit_m );
+    for( const int index : indices ) {
+        const vehicle_part &vp = parts[index];
+        if( vp.is_fake || vp.removed ) {
+            continue;
+        }
+        ceiling = std::min( ceiling, rotor ? vp.info().rotor_info->max_flight_altitude_m :
+                            vp.info().balloon_info->max_flight_altitude_m );
+    }
+    return ceiling;
+}
+
+bool vehicle::can_climb_to( map &here, const tripoint_bub_ms &position, double altitude_m ) const
+{
+    const double weight = to_kilogram( total_mass( here ) ) * 9.8;
+    if( !balloons.empty() && altitude_m <= flight_part_limit( balloons, parts, false ) &&
+        total_balloon_lift() * north_america::air_density_ratio_at_height( altitude_m ) > weight ) {
+        return true;
+    }
+    if( rotors.empty() || altitude_m > flight_part_limit( rotors, parts, true ) ) {
+        return false;
+    }
+    const double lift_factor = std::abs( velocity ) >= translational_lift_speed ?
+                               translational_lift_factor : rotor_ground_effect( here, position, altitude_m );
+    return rotor_lift_at_altitude( here, true, false, altitude_m, rotor_disk_area() ) * lift_factor >
+           weight;
+}
+
+std::optional<vehicle::flight_limits> vehicle::estimate_flight_limits( map &here ) const
+{
+    if( rotors.empty() && balloons.empty() ) {
+        return std::nullopt;
+    }
+    const double weight = to_kilogram( total_mass( here ) ) * 9.8;
+    const auto find_ceiling = [weight]( int limit, const auto &lift ) -> std::optional<int> {
+        int low = -500;
+        if( limit < low || lift( low ) <= weight ) {
+            return std::nullopt;
+        }
+        while( low < limit ) {
+            const int mid = low + ( limit - low + 1 ) / 2;
+            if( lift( mid ) > weight ) {
+                low = mid;
+            } else {
+                limit = mid - 1;
+            }
+        }
+        return low;
+    };
+    const bool rotorcraft = !rotors.empty();
+    const double static_buoyancy = total_balloon_lift();
+    const int balloon_limit = balloons.empty() ? 0 : flight_part_limit( balloons, parts, false );
+    const auto balloon_ceiling = find_ceiling( balloon_limit, [static_buoyancy]( int altitude ) {
+        return static_buoyancy * north_america::air_density_ratio_at_height( altitude );
+    } );
+    if( !rotorcraft ) {
+        return flight_limits{ balloon_limit, balloon_ceiling, balloon_ceiling, false };
+    }
+
+    const int rotor_limit = flight_part_limit( rotors, parts, true );
+    const double disk_area = rotor_disk_area();
+    const auto rotor_lift = [&]( int altitude ) {
+        return rotor_lift_at_altitude( here, false, false, altitude, disk_area );
+    };
+    const auto rotor_hover = find_ceiling( rotor_limit, rotor_lift );
+    const auto rotor_climb = find_ceiling( rotor_limit, [&]( int altitude ) {
+        return rotor_lift( altitude ) * translational_lift_factor;
+    } );
+    return flight_limits{ std::max( rotor_limit, balloon_limit ),
+                          std::max( balloon_ceiling, rotor_climb ),
+                          std::max( balloon_ceiling, rotor_hover ), true };
 }
 
 bool vehicle::is_airship( map &here ) const
@@ -5806,16 +5965,12 @@ double vehicle::propulsion_power_w( map &here, double speed_mps, bool afloat, bo
     const double drag = coeff_air_drag() + ( afloat ? coeff_water_drag( here ) : 0.0 );
     double demand = drag * speed_mps * speed_mps * speed_mps;
     if( flying ) {
-        double rotor_area = 0;
-        for( int rotor : rotors ) {
-            const vpart_info &info = parts[rotor].info();
-            const double diameter = info.rotor_info->rotor_diameter + info.bonus;
-            rotor_area += M_PI * diameter * diameter / 4;
-        }
-        if( rotor_area > 0 ) {
+        const double rotor_area_m2 = rotor_disk_area() * 0.09290304;
+        if( rotor_area_m2 > 0.0 ) {
             const double weight = units::to_kilogram( total_mass( here ) ) * accel_g;
-            constexpr double air_density = 1.225;
-            const double induced = weight * std::sqrt( weight / ( 2 * air_density * rotor_area ) );
+            const double air_density = 1.225 * north_america::air_density_ratio_at_height(
+                                           operating_altitude( here ) );
+            const double induced = weight * std::sqrt( weight / ( 2 * air_density * rotor_area_m2 ) );
             demand += induced * ( 1.30 - 0.34 * std::clamp( speed_mps / 32.0, 0.0, 1.0 ) );
         }
     } else if( !afloat ) {

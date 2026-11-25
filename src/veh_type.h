@@ -157,6 +157,9 @@ struct vpslot_engine {
     int m2c = 100;
     int displacement_ml = 0;
     int rated_rpm = 0;
+    int peak_torque_nm = 0;
+    int peak_torque_rpm = 0;
+    int altitude_compensation_m = 0;
     bool turbine = false;
     std::vector<std::string> exclusions;
     std::vector<itype_id> fuel_opts;
@@ -191,6 +194,7 @@ struct vpslot_rotor {
     bool was_loaded = false;
 
     int rotor_diameter = 1;
+    int max_flight_altitude_m = 4300;
 
     void deserialize( const JsonObject &jo );
 };
@@ -206,6 +210,7 @@ struct vpslot_propeller {
 struct vpslot_balloon {
     bool was_loaded = false;
     float height = 0.0f;
+    int max_flight_altitude_m = 3000;
     void deserialize( const JsonObject &jo );
 };
 

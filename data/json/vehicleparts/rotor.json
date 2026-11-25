@@ -17,6 +17,7 @@
     "description": "A set of four rotor blades from a military attack helicopter.",
     "//": "rotor diameter is in meters",
     "rotor_diameter": 15,
+    "max_flight_altitude_m": 6096,
     "durability": 450,
     "damage_modifier": 80,
     "requirements": { "removal": { "skills": [ [ "mechanics", 3 ] ], "time": "1 h", "using": "vehicle_weld_removal" } },
@@ -31,6 +32,7 @@
     "description": "A set of four rotor blades from a civilian light helicopter.",
     "//": "rotor diameter is in meters",
     "rotor_diameter": 8,
+    "max_flight_altitude_m": 4267,
     "durability": 100,
     "damage_modifier": 80,
     "requirements": { "removal": { "skills": [ [ "mechanics", 3 ] ], "time": "1 h", "using": "vehicle_weld_removal" } },
@@ -43,7 +45,8 @@
     "type": "vehicle_part",
     "name": { "str": "heavy-duty military Blackhawk rotors" },
     "//": "rotor diameter is in meters",
-    "rotor_diameter": 16
+    "rotor_diameter": 16,
+    "max_flight_altitude_m": 5180
   },
   {
     "id": "heavy_duty_military_osprey_rotors",
@@ -51,6 +54,7 @@
     "type": "vehicle_part",
     "name": { "str": "heavy-duty military Osprey rotors" },
     "//": "rotor diameter is in meters",
-    "rotor_diameter": 11
+    "rotor_diameter": 11,
+    "max_flight_altitude_m": 7620
   }
 ]

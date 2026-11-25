@@ -135,8 +135,11 @@ void diary::open_summary_page()
     add_to_change_list( "" );
     const std::string season_name = calendar::name_season( season_of_year( calendar::turn ) );
     add_to_change_list( string_format( _( "It is currently %s." ), season_name ) );
-    add_to_change_list( string_format( _( "%s will last for %d more days." ), season_name,
-                                       to_days<int>( calendar::season_length() ) - day_of_season<int>( calendar::turn ) ) );
+    if( const auto remaining = time_until_season_change( calendar::turn ) ) {
+        const int days = to_days<int>( *remaining + 1_days - 1_turns );
+        add_to_change_list( string_format( n_gettext( "You estimate that %1$s will end in %2$d day.",
+                                           "You estimate that %1$s will end in %2$d days.", days ), season_name, days ) );
+    }
     add_to_change_list( "" );
     auto snippets = get_avatar().get_snippets();
     if( snippets.empty() ) {
