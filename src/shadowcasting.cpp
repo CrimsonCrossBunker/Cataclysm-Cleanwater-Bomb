@@ -1,13 +1,11 @@
 #include "shadowcasting.h"
 
-#include <lightmap.h>
-#include <map_scale_constants.h>
-#include <mdarray.h>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <iterator>
-#include <ratio>
+#include <vector>
 
 #include "coordinates.h"
 #include "cuboid_rectangle.h"
@@ -85,7 +83,7 @@ static void split_span( cata::list<span<T>> &spans,
                         const slope &trailing_edge_minor, const slope &leading_edge_minor )
 {
     const T next_cumulative_transparency = accumulate( this_span->cumulative_value,
-                                           current_transparency, distance );
+        current_transparency, distance );
     // We split the span into up to 4 sub-blocks (sub-frustums actually,
     // this is the view from the origin looking out):
     // +-------+ <- end major
@@ -177,8 +175,7 @@ static void cast_horizontal_zlight_segment(
     const array_of_grids_of<const T> &input_arrays,
     const array_of_grids_of<const bool> &floor_caches,
     const tripoint_bub_ms &offset, const int offset_distance,
-    const T numerator, const bool use_trig_distance,
-    const array_of_grids_of<T> *floor_blocked_caches )
+    const T numerator, const bool use_trig_distance )
 {
     const int radius = MAX_VIEW_DISTANCE - offset_distance;
 
@@ -315,13 +312,7 @@ static void cast_horizontal_zlight_segment(
                                                        square_dist( tripoint_rel_ms::zero, delta ) ) + offset_distance;
                     last_intensity = calc( numerator, this_span->cumulative_value, dist );
 
-                    if( floor_block ) {
-                        if( floor_blocked_caches != nullptr ) {
-                            cata::mdarray<T, point_bub_ms> &walls = *( *floor_blocked_caches )[z_index];
-                            walls[current.x()][current.y()] =
-                                std::max( walls[current.x()][current.y()], last_intensity );
-                        }
-                    } else {
+                    if( !floor_block ) {
                         ( *output_caches[z_index] )[current.x()][current.y()] =
                             std::max( ( *output_caches[z_index] )[current.x()][current.y()], last_intensity );
                     }
@@ -367,7 +358,7 @@ static void cast_horizontal_zlight_segment(
             } else {
                 // Cumulative average of the values encountered.
                 this_span->cumulative_value = accumulate( this_span->cumulative_value,
-                                              current_transparency, distance );
+                    current_transparency, distance );
                 ++this_span;
             }
         }
@@ -383,8 +374,7 @@ static void cast_vertical_zlight_segment(
     const array_of_grids_of<const T> &input_arrays,
     const array_of_grids_of<const bool> &floor_caches,
     const tripoint_bub_ms &offset, const int offset_distance,
-    const T numerator, const bool use_trig_distance,
-    const array_of_grids_of<T> *floor_blocked_caches )
+    const T numerator, const bool use_trig_distance )
 {
     const int radius = MAX_VIEW_DISTANCE - offset_distance;
 
@@ -496,13 +486,7 @@ static void cast_vertical_zlight_segment(
                                                        square_dist( tripoint_rel_ms::zero, delta ) ) + offset_distance;
                     last_intensity = calc( numerator, this_span->cumulative_value, dist );
 
-                    if( floor_block ) {
-                        if( floor_blocked_caches != nullptr ) {
-                            cata::mdarray<T, point_bub_ms> &walls = *( *floor_blocked_caches )[z_index];
-                            walls[current.x()][current.y()] =
-                                std::max( walls[current.x()][current.y()], last_intensity );
-                        }
-                    } else {
+                    if( !floor_block ) {
                         ( *output_caches[z_index] )[current.x()][current.y()] =
                             std::max( ( *output_caches[z_index] )[current.x()][current.y()], last_intensity );
                     }
@@ -548,7 +532,7 @@ static void cast_vertical_zlight_segment(
             } else {
                 // Cumulative average of the values encountered.
                 this_span->cumulative_value = accumulate( this_span->cumulative_value,
-                                              current_transparency, distance );
+                    current_transparency, distance );
                 ++this_span;
             }
         }
@@ -564,12 +548,11 @@ void horizontal_segment( const array_of_grids_of<T> &out,
                          const array_of_grids_of<const T> &in,
                          const array_of_grids_of<const bool> &floors,
                          const tripoint_bub_ms &origin, int penalty, T numerator,
-                         bool use_trig_distance, unsigned segment,
-                         const array_of_grids_of<T> *floor_blocked_caches )
+                         bool use_trig_distance, unsigned segment )
 {
 #define CAST_SEGMENT(N, XX, XY, YX, YY) \
     case N: cast_horizontal_zlight_segment<XX, XY, YX, YY, Z, T, calc, check, accumulate>( \
-            out, in, floors, origin, penalty, numerator, use_trig_distance, floor_blocked_caches ); break
+            out, in, floors, origin, penalty, numerator, use_trig_distance ); break
     switch( segment ) {
             CAST_SEGMENT( 0, 0, 1, 1, 0 );
             CAST_SEGMENT( 1, 1, 0, 0, 1 );
@@ -589,17 +572,16 @@ void vertical_segments( const array_of_grids_of<T> &out,
                         const array_of_grids_of<const T> &in,
                         const array_of_grids_of<const bool> &floors,
                         const tripoint_bub_ms &origin, int penalty, T numerator,
-                        bool use_trig_distance,
-                        const array_of_grids_of<T> *floor_blocked_caches )
+                        bool use_trig_distance )
 {
     cast_vertical_zlight_segment<1, 1, Z, T, calc, check, accumulate>( out, in, floors,
-            origin, penalty, numerator, use_trig_distance, floor_blocked_caches );
+            origin, penalty, numerator, use_trig_distance );
     cast_vertical_zlight_segment < 1, -1, Z, T, calc, check, accumulate > ( out, in, floors,
-            origin, penalty, numerator, use_trig_distance, floor_blocked_caches );
+            origin, penalty, numerator, use_trig_distance );
     cast_vertical_zlight_segment < -1, 1, Z, T, calc, check, accumulate > ( out, in, floors,
-            origin, penalty, numerator, use_trig_distance, floor_blocked_caches );
+            origin, penalty, numerator, use_trig_distance );
     cast_vertical_zlight_segment < -1, -1, Z, T, calc, check, accumulate > ( out, in, floors,
-            origin, penalty, numerator, use_trig_distance, floor_blocked_caches );
+            origin, penalty, numerator, use_trig_distance );
 }
 } // namespace
 
@@ -608,37 +590,33 @@ namespace vision_preparation
 void cast_horizontal( const array_of_grids_of<float> &out,
                       const array_of_grids_of<const float> &in,
                       const array_of_grids_of<const bool> &floors,
-                      const snapshot &p, unsigned segment,
-                      const array_of_grids_of<float> *floor_blocked_caches )
+                      const snapshot &p, unsigned segment )
 {
     const bool down = p.direction == vertical_direction::DOWN ||
                       ( p.direction == vertical_direction::BOTH && segment < 8 );
     if( down ) {
         horizontal_segment < -1, float, sight_calc, sight_check, accumulate_transparency > (
-            out, in, floors, p.origin, p.offset_distance, p.numerator, p.trig_distance, segment % 8,
-            floor_blocked_caches );
+            out, in, floors, p.origin, p.offset_distance, p.numerator, p.trig_distance, segment % 8 );
     } else {
         horizontal_segment<1, float, sight_calc, sight_check, accumulate_transparency>(
-            out, in, floors, p.origin, p.offset_distance, p.numerator, p.trig_distance, segment % 8,
-            floor_blocked_caches );
+            out, in, floors, p.origin, p.offset_distance, p.numerator, p.trig_distance, segment % 8 );
     }
 }
 void cast_vertical( const array_of_grids_of<float> &out,
                     const array_of_grids_of<const float> &in,
                     const array_of_grids_of<const bool> &floors,
                     const tripoint_bub_ms &origin, int penalty, float numerator,
-                    vertical_direction direction, bool use_trig_distance,
-                    const array_of_grids_of<float> *floor_blocked_caches )
+                    vertical_direction direction, bool use_trig_distance )
 {
     if( direction != vertical_direction::UP ) {
         CATA_PROFILE_SCOPE_NAMED( "vision.vertical_down" );
         vertical_segments < -1, float, sight_calc, sight_check, accumulate_transparency > (
-            out, in, floors, origin, penalty, numerator, use_trig_distance, floor_blocked_caches );
+            out, in, floors, origin, penalty, numerator, use_trig_distance );
     }
     if( direction != vertical_direction::DOWN ) {
         CATA_PROFILE_SCOPE_NAMED( "vision.vertical_up" );
         vertical_segments<1, float, sight_calc, sight_check, accumulate_transparency>(
-            out, in, floors, origin, penalty, numerator, use_trig_distance, floor_blocked_caches );
+            out, in, floors, origin, penalty, numerator, use_trig_distance );
     }
 }
 } // namespace vision_preparation
@@ -650,8 +628,7 @@ void cast_zlight( const array_of_grids_of<T> &out,
                   const array_of_grids_of<const T> &in,
                   const array_of_grids_of<const bool> &floors,
                   const tripoint_bub_ms &origin, int penalty, T numerator, vertical_direction dir,
-                  double *horizontal_cost_ms,
-                  const array_of_grids_of<T> *floor_blocked_caches )
+                  double *horizontal_cost_ms )
 {
     CATA_PROFILE_SCOPE();
     const bool use_trig_distance = trigdist;
@@ -661,13 +638,13 @@ void cast_zlight( const array_of_grids_of<T> &out,
     // Axes and diagonals overlap. Legacy/shared-output casting stays serial;
     // map vision uses owned snapshots and private outputs for bounded workers.
     if( dir != vertical_direction::UP ) {
-        const std::chrono::steady_clock::time_point start = horizontal_cost_ms ?
-                std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+        const auto start = horizontal_cost_ms ? std::chrono::steady_clock::now() :
+                           std::chrono::steady_clock::time_point{};
         {
             CATA_PROFILE_SCOPE_NAMED( "vision.horizontal_segments" );
             for( unsigned i = 0; i < 8; ++i ) {
                 horizontal_segment < -1, T, calc, check, accumulate > ( out, in, floors, origin,
-                        penalty, numerator, use_trig_distance, i, floor_blocked_caches );
+                    penalty, numerator, use_trig_distance, i );
             }
         }
         if( horizontal_cost_ms ) {
@@ -676,16 +653,16 @@ void cast_zlight( const array_of_grids_of<T> &out,
         }
         CATA_PROFILE_SCOPE_NAMED( "vision.vertical_down" );
         vertical_segments < -1, T, calc, check, accumulate > ( out, in, floors, origin,
-                penalty, numerator, use_trig_distance, floor_blocked_caches );
+                penalty, numerator, use_trig_distance );
     }
     if( dir != vertical_direction::DOWN ) {
-        const std::chrono::steady_clock::time_point start = horizontal_cost_ms ?
-                std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+        const auto start = horizontal_cost_ms ? std::chrono::steady_clock::now() :
+                           std::chrono::steady_clock::time_point{};
         {
             CATA_PROFILE_SCOPE_NAMED( "vision.horizontal_segments" );
             for( unsigned i = 0; i < 8; ++i ) {
                 horizontal_segment<1, T, calc, check, accumulate>( out, in, floors, origin,
-                        penalty, numerator, use_trig_distance, i, floor_blocked_caches );
+                    penalty, numerator, use_trig_distance, i );
             }
         }
         if( horizontal_cost_ms ) {
@@ -694,7 +671,7 @@ void cast_zlight( const array_of_grids_of<T> &out,
         }
         CATA_PROFILE_SCOPE_NAMED( "vision.vertical_up" );
         vertical_segments<1, T, calc, check, accumulate>( out, in, floors, origin,
-                penalty, numerator, use_trig_distance, floor_blocked_caches );
+                penalty, numerator, use_trig_distance );
     }
 }
 
@@ -705,13 +682,11 @@ template void cast_zlight<float, sight_calc, sight_check, accumulate_transparenc
     const array_of_grids_of<const float> &input_arrays,
     const array_of_grids_of<const bool> &floor_caches,
     const tripoint_bub_ms &origin, int offset_distance, float numerator,
-    vertical_direction dir, double *horizontal_cost_ms,
-    const array_of_grids_of<float> *floor_blocked_caches );
+    vertical_direction dir, double *horizontal_cost_ms );
 
 template void cast_zlight<fragment_cloud, shrapnel_calc, shrapnel_check, accumulate_fragment_cloud>(
     const array_of_grids_of<fragment_cloud> &output_caches,
     const array_of_grids_of<const fragment_cloud> &input_arrays,
     const array_of_grids_of<const bool> &floor_caches,
     const tripoint_bub_ms &origin, int offset_distance, fragment_cloud numerator,
-    vertical_direction dir, double *horizontal_cost_ms,
-    const array_of_grids_of<fragment_cloud> *floor_blocked_caches );
+    vertical_direction dir, double *horizontal_cost_ms );
