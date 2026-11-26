@@ -3659,9 +3659,9 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
             dat.m.furn_set( pos, furn_str_id::NULL_ID() );
             static const furn_str_id field_seedling( "f_plant_seedling" );
             static const furn_str_id field_seed( "f_plant_seed" );
-            const bool field_crop = chosen_furn == field_seedling.id() &&
-                                    dat.terrain_type()->get_travel_cost_type() == oter_travel_cost_type::crop_field;
-            if( ( regional_crop || field_crop ) && pos.z() == 0 && north_america::active() &&
+            const bool is_crop_field = chosen_furn == field_seedling.id() &&
+                                       dat.terrain_type()->get_travel_cost_type() == oter_travel_cost_type::crop_field;
+            if( ( regional_crop || is_crop_field ) && pos.z() == 0 && north_america::active() &&
                 chosen_furn->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
                 const point_abs_omt field = project_to<coords::omt>( dat.m.get_abs( pos ) ).xy();
                 std::optional<field_crop> crop = regional_field_crop( field );
