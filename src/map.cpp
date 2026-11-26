@@ -12386,11 +12386,6 @@ void map::actualize( const tripoint_rel_sm &grid, const map_simulation_regions *
     process_items_in_vehicles( *tmpsub );
     process_items_in_submap( *tmpsub, grid );
     explosion_handler::process_explosions();
-    if( grid.z() == 0 && !tmpsub->atlas_field_repair_checked && !tmpsub->is_uniform() &&
-        north_america::active() ) {
-        tmpsub->atlas_field_repair_checked = repair_empty_atlas_field( *this, origin,
-                                            tmpsub->player_adjusted_map );
-    }
     for( int x = 0; x < SEEX; x++ ) {
         for( int y = 0; y < SEEY; y++ ) {
             const point_sm_ms local( x, y );

@@ -46,7 +46,6 @@
 #include "dialogue.h"
 #include "enum_conversions.h"
 #include "enums.h"
-#include "farming.h"
 #include "field_type.h"
 #include "flat_set.h"
 #include "game.h"
@@ -3679,7 +3678,13 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                         if( seed.count_by_charges() ) {
                             seed.charges = 1;
                         }
-                        initialize_atlas_field_seed( seed, *sown, is_crop_field );
+                        // The historical simulation can start before the game's turn zero.
+                        seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
+                        seed.set_var( "crop_field_history_v4", true );
+                        if( crop->seed == itype_id( "seed_red_winter_wheat" ) ) {
+                            seed.set_var( "crop_winter_wheat_v2", true );
+                        }
+                        iexamine::set_plant_last_water_check( seed, *sown );
                         dat.m.add_item( pos, std::move( seed ) );
                         dat.m.furn_set( pos, chosen_furn == field_seedling.id() ?
                                         field_seed.id() : chosen_furn );

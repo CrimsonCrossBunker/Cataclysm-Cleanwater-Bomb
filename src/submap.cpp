@@ -418,7 +418,6 @@ void submap::revert_submap( submap &sr )
 {
     geometry_version_.changed();
     reverted = true;
-    atlas_field_repair_checked = sr.atlas_field_repair_checked;
     if( sr.is_uniform() ) {
         m.reset();
         terrain_growth.clear();
@@ -568,7 +567,6 @@ void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
     if( copy_from->last_touched > this->last_touched ) {
         this->last_touched = copy_from->last_touched;
     }
-    atlas_field_repair_checked |= copy_from->atlas_field_repair_checked;
 
     for( const spawn_point &spawn : copy_from->spawns ) {
         this->spawns.emplace_back( spawn );

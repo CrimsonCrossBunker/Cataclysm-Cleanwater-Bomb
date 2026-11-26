@@ -46,10 +46,9 @@ Outdoor winter wheat can be relay-planted with corn from heading onward
 when the weather is warm enough. The corn can establish under the wheat
 canopy and resumes normal development after the wheat is harvested or cleared.
 
-Connected farm-field tiles in the same overmap special share a crop and
-sowing date. The crop lottery uses varieties that could already have been
-sown at the start of the Cataclysm. Legacy fields that skipped planting can
-recover recognizable bare rows when they load.
+Newly generated, connected farm-field tiles in the same overmap special
+share a crop and sowing date. The crop lottery uses varieties that could
+already have been sown at the start of the Cataclysm.
 
 Wild terrain may define `fruit_climate` with a `growth` profile, a
 `harvest` ID and a `bearing_days` window. Perennial ripening is derived
