@@ -2611,6 +2611,8 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
     if( mapped_highways || generate_city_streets ) {
         const auto footprint = north_america::wide_highway_footprint( origin, OMAPX, OMAPY,
                                mapped_highways, generate_city_streets );
+        const auto bridges = north_america::wide_bridge_footprint( origin, OMAPX, OMAPY,
+                             mapped_highways, generate_city_streets, footprint );
         for( int row = 0; row < OMAPY; ++row ) {
             for( int column = 0; column < OMAPX; ++column ) {
                 const unsigned char cell = footprint[row * OMAPX + column];
@@ -2620,6 +2622,23 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 }
                 const bool vertical = cell % 2 != 0;
                 const om_direction::type axis = vertical ? om_direction::type::north : om_direction::type::east;
+                const north_america::wide_bridge_cell &bridge = bridges[row * OMAPX + column];
+                if( bridge.present && !overmap_special_placements.count( position ) ) {
+                    const om_direction::type forward = bridge.vertical ? om_direction::type::south :
+                                                       om_direction::type::east;
+                    if( bridge.approach ) {
+                        const om_direction::type facing = bridge.lower_end ? om_direction::opposite( forward ) :
+                                                          forward;
+                        ter_set( position, oter_type_bridgehead_ground->get_rotated( facing ) );
+                        ter_set( position + tripoint::above, oter_type_bridgehead_ramp->get_rotated( facing ) );
+                    } else {
+                        const std::size_t links = om_lines::set_segment(
+                                                      om_lines::set_segment( 0, forward ), om_direction::opposite( forward ) );
+                        ter_set( position, oter_type_bridge->get_rotated( forward ) );
+                        ter_set( position + tripoint::above, oter_type_atlas_raised_bridge_deck->get_linear( links ) );
+                    }
+                    continue;
+                }
                 if( atlas_water_at( position ) ) {
                     // Reserve the entire corridor over water, including tiles beside the mapped centerline.
                     const oter_type_str_id existing_deck = ter( position + tripoint::above )->get_type_id();

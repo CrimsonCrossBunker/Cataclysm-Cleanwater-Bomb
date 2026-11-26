@@ -19,6 +19,13 @@ profile fitted to their centreline, with the bank and water positions still
 set by the existing atlas. This is a profile for each mapped reach, without
 a hydraulic network simulation of flow or confluence heights.
 
+Shoreline vertices now use one shared height for neighboring land and water
+cells. Land away from water retains bilinear DEM interpolation. River
+samples are capped below the DEM on both sides of the mapped channel;
+the 0.25 m freeboard is a model allowance, not a measured flood level.
+Lakes use the lowest available shoreline sample as their outlet constraint
+rather than a shoreline median that could put water above a low bank.
+
 Mapped wide road crossings reserve their full carriageway on the water
 and both banks. Decks and bridgeheads use the mapped road alignment and
 width. The water remains on its navigable structural level beneath the
@@ -27,6 +34,32 @@ bank elevation and the waterline plus five metres. This allows four metres
 for small craft and one metre for bridge structure, as a gameplay design
 allowance. Low banks require approach grades. High banks can join a nearly
 level deck even though the deck and river use separate structural layers.
+
+City arterials use the same wide-road geometry as mapped highways on bridges,
+including bends and diagonal segments. Connected water-crossing corridors
+share approach planes across the whole carriageway. Guardrails follow the
+outer union of the carriageways, avoiding rails between adjoining pieces.
+Bridge planning uses a bounded, cached neighborhood of the source road and
+water geometry; incomplete crossings at the query boundary keep the existing
+fallback. Complete crossings can span neighboring overmaps independently of
+their generation order.
+
+Both sides of a structural ramp store the same physical elevation, with the
+four-metre structural offset removed once on the upper level. Ramp bands
+account for diagonal steps. Longitudinal approach length grows with the required rise,
+using an 8% design target, and joining road strokes blend their surface
+grades instead of abruptly switching between projected centerlines. The
+regional DEM remains approximate and does not encode engineering surveys.
+
+City crossings follow each approach's actual centerline and tangent. Zebra
+bars align with approaching traffic, stay within the pavement, and sit
+outside the intersecting carriageways. The requested yellow waiting line
+occupies only the incoming side, behind the crossing. Geometric placement
+references [FHWA crosswalk guidance](https://mutcd.fhwa.dot.gov/pdfs/11th_Editionr1/part3r1.pdf);
+the in-game tile scale and requested yellow line are retained.
+
+Generation changes apply to new areas. Existing saved bridge layouts and
+stored surface grades are not rewritten.
 
 The portable data asset uses a light continental elevation grid, with
 interpolation between samples. It models the broad slope and altitude of
