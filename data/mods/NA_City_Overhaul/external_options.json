@@ -1,0 +1,9 @@
+[
+  {
+    "type": "EXTERNAL_OPTION",
+    "name": "SPAWN_CITY_HORDE_SCALAR",
+    "//": "默认 80。尸群数量 = 城市 size × 本值 × SPAWN_DENSITY（overmap.cpp:4042）。80 → 30：北美上限城（size 55）由 4400 只降到 1650 只，约 −62%%，散布半径不变。",
+    "stype": "float",
+    "value": 30.0
+  }
+]

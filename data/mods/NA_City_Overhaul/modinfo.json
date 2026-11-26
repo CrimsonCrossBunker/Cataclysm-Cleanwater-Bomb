@@ -1,0 +1,14 @@
+[
+  {
+    "type": "MOD_INFO",
+    "id": "na_city_overhaul",
+    "name": "北美城市改造",
+    "//en_us_name": "North America City Overhaul",
+    "authors": [ "杏花" ],
+    "maintainers": [ "杏花" ],
+    "description": "只改 North America 城市的两件事：城市尸潮数量降到默认的三分之一左右；住宅地块里那三分之一随机民居改成商铺。纯数据 mod，不动本体任何文件，启用与否由玩家自己决定。",
+    "//en_us_description": "Two changes for North America cities only: city horde size cut to roughly a third of default, and part of the randomized residential slots in city blocks turned into shops. Pure data mod; no core files are touched, and it is opt-in.",
+    "category": "rebalance",
+    "dependencies": [ "ccb" ]
+  }
+]
