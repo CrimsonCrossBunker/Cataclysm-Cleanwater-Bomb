@@ -919,7 +919,10 @@ void place_native_vegetation( mapgendata &dat )
         }
         return;
     }
-    if( !field && !forest ) {
+    const bool rural_site = !field && !forest && !dat.terrain_type()->is_water() &&
+                            !dat.terrain_type()->has_flag( oter_flags::bridge ) &&
+                            !in_urban_footprint( dat.pos().xy() );
+    if( !field && !forest && !rural_site ) {
         return;
     }
     const ecology_profile *profile = profile_at( dat.pos().xy() );
@@ -939,7 +942,8 @@ void place_native_vegetation( mapgendata &dat )
     };
     const ter_id groundcover = profile->biome.groundcover.id();
     const ter_id null_terrain = ter_str_id::NULL_ID().id();
-    const bool keep_eastern_harvests = profile->ecoregion == "5.3" || profile->ecoregion == "8.1";
+    const bool keep_eastern_harvests = !rural_site &&
+                                     ( profile->ecoregion == "5.3" || profile->ecoregion == "8.1" );
     const bool sparse_canopy = profile->biome.forest_adjustment < -0.30f;
     map &here = dat.m;
     for( int y = 0; y < 2 * SEEY; ++y ) {
@@ -948,6 +952,9 @@ void place_native_vegetation( mapgendata &dat )
             const ter_id original = here.ter( pos );
             if( original->has_flag( ter_furn_flag::TFLAG_TREE ) ||
                 original->has_flag( ter_furn_flag::TFLAG_YOUNG ) ) {
+                if( rural_site && terrain.find( "orchard" ) != std::string::npos ) {
+                    continue;
+                }
                 if( keep_eastern_harvests && one_in( 2 ) ) {
                     continue;
                 }

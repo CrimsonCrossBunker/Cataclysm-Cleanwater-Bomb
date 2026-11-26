@@ -1180,7 +1180,8 @@
       "degree_days": 810,
       "water_mm": 540,
       "growing_days": 100,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 60
     },
     "growth_stages": [
       { "GROWTH_SEED": "24 days" },
@@ -2356,7 +2357,8 @@
       "degree_days": 1060,
       "water_mm": 480,
       "growing_days": 109,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 140
     },
     "growth_stages": [
       { "GROWTH_SEED": "30 days" },

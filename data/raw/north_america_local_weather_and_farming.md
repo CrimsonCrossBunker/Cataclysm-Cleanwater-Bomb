@@ -17,11 +17,24 @@ Celsius and millimetres of water.
 | `root_zone_water_mm` | Optional plant-available soil water before applying terrain modifiers |
 
 The game samples the local weather history, including its regional rainfall
-timing, and keeps a small soil-water store using existing seed item variables.
+timing, and keeps a root-zone soil-water store using existing seed item variables.
 Rain and planter irrigation contribute to the store. Roofs prevent direct
 rain. The existing crop-speed option, growth stages, harvest, and plant
 callbacks continue to apply. Soil moisture, cultivar differences, and
 hardiness are simplified. The temperature limits currently pause progress.
+
+Daily demand scales the reference seasonal water budget by local
+Hargreaves reference evapotranspiration, including latitude, season, daily
+temperature and temperature range. The reference budget corresponds to
+4 mm/day reference ET. Root-zone storage follows terrain capacity, with
+crop-specific values for wheat, canola and potatoes. See the
+[FAO-56 meteorological equations](https://www.fao.org/4/X0490E/x0490e07.htm)
+and [root depth and water-stress tables](https://www.fao.org/4/X0490E/x0490e0e.htm).
+Water stress can slow establishment. Once established, crops accumulate
+thermal development and minimum growing days without repeatedly losing
+both counters to the same moisture deficit. A seasonal water deficit reduces
+manual, mechanical and camp harvests with an approximate yield-response
+coefficient of 1.1.
 
 The profiles use crop base temperatures from the
 [Ontario vegetable guide](https://www.ontario.ca/files/2024-02/omafra-guide-to-vegetable-production-in-ontario-en-2024-02-15.pdf)
@@ -95,6 +108,13 @@ arterials can reserve an adjacent overmap tile for a 34-tile-wide,
 four-lane paved surface and two sidewalks. They taper ahead of junctions,
 on narrow waterfronts and at overmap edges. At a four-way junction, a
 yellow stop line spans the incoming lanes before each wide zebra crossing.
+
+Rural special entrances try nearby existing roads in order of distance,
+using the native terrain-aware pathfinder and excluding mapped controlled-access
+corridors as direct access points. Short extra links are allowed where an
+existing road route requires a substantial detour. Rural scenery uses the
+local ecology's trees and shrubs. Orchard blocks retain their cultivated
+trees.
 
 Every atlas settlement of at least 100,000 people gets a deterministic
 downtown, commercial, industrial and institutional center, with housing

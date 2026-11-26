@@ -19,6 +19,15 @@ profile fitted to their centreline, with the bank and water positions still
 set by the existing atlas. This is a profile for each mapped reach, without
 a hydraulic network simulation of flow or confluence heights.
 
+Mapped wide road crossings reserve their full carriageway on the water
+and both banks. Decks and bridgeheads use the mapped road alignment and
+width. The water remains on its navigable structural level beneath the
+deck. Stored surface grades place the deck at the higher of the interpolated
+bank elevation and the waterline plus five metres. This allows four metres
+for small craft and one metre for bridge structure, as a gameplay design
+allowance. Low banks require approach grades. High banks can join a nearly
+level deck even though the deck and river use separate structural layers.
+
 The portable data asset uses a light continental elevation grid, with
 interpolation between samples. It models the broad slope and altitude of
 terrain and cannot reconstruct individual cuts, embankments or cliffs.

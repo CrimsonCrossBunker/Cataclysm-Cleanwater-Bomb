@@ -2615,7 +2615,37 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
             for( int column = 0; column < OMAPX; ++column ) {
                 const unsigned char cell = footprint[row * OMAPX + column];
                 const tripoint_om_omt position( column, row, 0 );
-                if( cell && !ter( position )->is_road() && can_build_street( position ) ) {
+                if( !cell ) {
+                    continue;
+                }
+                const bool vertical = cell % 2 != 0;
+                const om_direction::type axis = vertical ? om_direction::type::north : om_direction::type::east;
+                if( atlas_water_at( position ) ) {
+                    // Reserve the entire corridor over water, including tiles beside the mapped centerline.
+                    const oter_type_str_id existing_deck = ter( position + tripoint::above )->get_type_id();
+                    if( existing_deck == oter_type_atlas_raised_bridge_deck || existing_deck == oter_type_bridge_road ) {
+                        continue;
+                    }
+                    ter_set( position, oter_type_bridge->get_rotated( axis ) );
+                    const std::size_t links = om_lines::set_segment(
+                                                 om_lines::set_segment( 0, axis ), om_direction::opposite( axis ) );
+                    ter_set( position + tripoint::above, oter_type_atlas_raised_bridge_deck->get_linear( links ) );
+                    continue;
+                }
+                bool bridgehead = false;
+                for( const om_direction::type direction : { axis, om_direction::opposite( axis ) } ) {
+                    const tripoint_om_omt next = position + om_direction::displace( direction );
+                    const tripoint_om_omt behind = position - om_direction::displace( direction );
+                    if( atlas_water_at( next ) && !atlas_water_at( behind ) &&
+                        !overmap_special_placements.count( position ) ) {
+                        const om_direction::type facing = om_direction::opposite( direction );
+                        ter_set( position, oter_type_bridgehead_ground->get_rotated( facing ) );
+                        ter_set( position + tripoint::above, oter_type_bridgehead_ramp->get_rotated( facing ) );
+                        bridgehead = true;
+                        break;
+                    }
+                }
+                if( !bridgehead && !ter( position )->is_road() && can_build_street( position ) ) {
                     ter_set( position, north_america::wide_highway_flank( cell % 2 != 0 ) );
                 }
             }
@@ -3176,6 +3206,73 @@ void overmap::build_special_connection( const point_om_omt &target,
                                         const bool must_be_unexplored,
                                         const cube_direction initial_dir )
 {
+    static const overmap_connection_id local_road( "local_road" );
+    if( north_america::active() && entrance.z() == 0 && connection.id == local_road &&
+        inbounds( entrance ) && !north_america::in_urban_footprint(
+            project_to<coords::omt>( pos() ) + entrance.xy().raw() ) ) {
+        const auto mapped = north_america::road_network( project_to<coords::omt>( pos() ), OMAPX, OMAPY, false );
+        std::vector<point_om_omt> roads;
+        for( int y = 0; y < OMAPY; ++y ) {
+            for( int x = 0; x < OMAPX; ++x ) {
+                const point_om_omt p( x, y );
+                const oter_id id = ter( tripoint_om_omt( p, 0 ) );
+                if( p != entrance.xy() && connection.has( id ) && id->is_linear() &&
+                    !id->has_flag( oter_flags::bridge ) && !mapped[y * OMAPX + x].mapped_wide_connections ) {
+                    roads.push_back( p );
+                }
+            }
+        }
+        std::stable_sort( roads.begin(), roads.end(), [&]( const point_om_omt & a, const point_om_omt & b ) {
+            return manhattan_dist( entrance.xy(), a ) < manhattan_dist( entrance.xy(), b );
+        } );
+        // Nearby shared lanes are access points even when the city centre is on the far side of a river.
+        const std::size_t attempts = std::min<std::size_t>( roads.size(), 16 );
+        for( std::size_t i = 0; i < attempts; ++i ) {
+            const auto access = lay_out_connection( connection, roads[i], entrance.xy(), 0, must_be_unexplored );
+            if( access.nodes.empty() ) {
+                continue;
+            }
+            build_connection( connection, access, 0, initial_dir );
+            std::vector<int> distance( OMAPX * OMAPY, -1 );
+            std::vector<point_om_omt> pending{ entrance.xy() };
+            distance[entrance.y() * OMAPX + entrance.x()] = 0;
+            for( std::size_t cursor = 0; cursor < pending.size(); ++cursor ) {
+                const point_om_omt p = pending[cursor];
+                const int traveled = distance[p.y() * OMAPX + p.x()];
+                const oter_id id = ter( tripoint_om_omt( p, 0 ) );
+                if( traveled >= 96 || !id->is_linear() ) {
+                    continue;
+                }
+                for( const om_direction::type dir : om_direction::all ) {
+                    const point_om_omt next = p + om_direction::displace( dir ).raw();
+                    if( !inbounds( next ) || !om_lines::has_segment( id->get_line(), dir ) ) {
+                        continue;
+                    }
+                    const oter_id neighbor = ter( tripoint_om_omt( next, 0 ) );
+                    int &steps = distance[next.y() * OMAPX + next.x()];
+                    if( steps < 0 && connection.has( neighbor ) && neighbor->is_linear() &&
+                        om_lines::has_segment( neighbor->get_line(), om_direction::opposite( dir ) ) ) {
+                        steps = traveled + 1;
+                        pending.push_back( next );
+                    }
+                }
+            }
+            for( const point_om_omt &candidate : roads ) {
+                const int direct = manhattan_dist( entrance.xy(), candidate );
+                const int detour = distance[candidate.y() * OMAPX + candidate.x()];
+                if( direct < 4 || direct > 16 || detour < 3 * direct ) {
+                    continue;
+                }
+                const auto shortcut = lay_out_connection( connection, candidate, entrance.xy(), 0,
+                                      must_be_unexplored );
+                if( !shortcut.nodes.empty() && shortcut.nodes.size() < static_cast<std::size_t>( detour / 2 ) ) {
+                    build_connection( connection, shortcut, 0, initial_dir );
+                    break;
+                }
+            }
+            return;
+        }
+    }
     if( connection.id != settings->overmap_connection.rail_connection ) {
         build_connection( target, entrance.xy(), entrance.z(), connection, must_be_unexplored,
                           initial_dir );

@@ -943,7 +943,7 @@ class overmap
         void build_connection( const point_om_omt &source, const point_om_omt &dest, int z,
                                const overmap_connection &connection, bool must_be_unexplored,
                                cube_direction initial_dir = cube_direction::last );
-        // Rail entrances join the existing network rather than the city centre.
+        // Rail and rural road entrances join nearby existing connections.
         void build_special_connection( const point_om_omt &target, const tripoint_om_omt &entrance,
                                        const overmap_connection &connection, bool must_be_unexplored,
                                        cube_direction initial_dir );

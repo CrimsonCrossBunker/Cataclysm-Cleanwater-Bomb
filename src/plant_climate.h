@@ -69,6 +69,7 @@ struct crop_water_status {
 
 crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms &p,
         const item &seed );
+double crop_harvest_multiplier( const item &seed );
 
 time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, item &seed,
                                    const furn_t &furniture, float growth_speed, float water_use,

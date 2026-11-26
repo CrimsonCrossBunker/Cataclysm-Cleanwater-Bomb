@@ -62,6 +62,7 @@ static const oter_type_str_id oter_type_bridge( "bridge" );
 static const oter_type_str_id oter_type_road( "road" );
 
 static const ter_str_id ter_t_atlas_pavement_white( "t_atlas_pavement_white" );
+static const ter_str_id ter_t_atlas_bridge_white( "t_atlas_bridge_white" );
 static const ter_str_id ter_t_concrete_wall( "t_concrete_wall" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_guardrail( "t_guardrail" );
@@ -1122,12 +1123,192 @@ static void draw_raised_deck( mapgendata &dat )
     }
 }
 
+struct crossing_profile {
+    point_abs_ms from;
+    point_abs_ms to;
+    double from_height;
+    double to_height;
+    double minimum_height;
+
+    double height_at( point_abs_ms p ) const {
+        const point span = to.raw() - from.raw();
+        const point delta = p.raw() - from.raw();
+        const double length_squared = static_cast<double>( span.x ) * span.x +
+                                      static_cast<double>( span.y ) * span.y;
+        const double fraction = length_squared > 0 ? std::clamp(
+                                    ( static_cast<double>( delta.x ) * span.x +
+                                      static_cast<double>( delta.y ) * span.y ) / length_squared, 0.0, 1.0 ) : 0.5;
+        return std::max( minimum_height, from_height + fraction * ( to_height - from_height ) );
+    }
+};
+
+static crossing_profile bridge_profile_at( point_abs_omt tile, bool vertical )
+{
+    static std::unordered_map<tripoint, crossing_profile> profiles;
+    const tripoint key( tile.raw(), vertical ? 1 : 0 );
+    if( const auto found = profiles.find( key ); found != profiles.end() ) {
+        return found->second;
+    }
+    if( profiles.size() >= 4096 ) {
+        profiles.clear();
+    }
+    constexpr int reach = 64;
+    const point axis = vertical ? point::south : point::east;
+    const point_abs_omt first = tile - axis * reach;
+    const auto water = raster( first, vertical ? 1 : 2 * reach + 1,
+                               vertical ? 2 * reach + 1 : 1 );
+    int low = reach;
+    int high = reach;
+    while( low > 0 && water[low] != terrain::land ) {
+        --low;
+    }
+    while( high < 2 * reach && water[high] != terrain::land ) {
+        ++high;
+    }
+    // Bridgeheads stand on land. Look through their river-facing neighbor for the full span.
+    if( low == high ) {
+        if( reach > 0 && water[reach - 1] != terrain::land ) {
+            --low;
+            while( low > 0 && water[low] != terrain::land ) {
+                --low;
+            }
+        } else if( water[reach + 1] != terrain::land ) {
+            ++high;
+            while( high < 2 * reach && water[high] != terrain::land ) {
+                ++high;
+            }
+        }
+    }
+    const auto center = [&]( int index ) {
+        return project_to<coords::ms>( first + axis * index ) + point( SEEX, SEEY );
+    };
+    const point_abs_ms from = center( low );
+    const point_abs_ms to = center( high );
+    const double a = dem_elevation( from ).value_or( surface_elevation( from ) );
+    const double b = dem_elevation( to ).value_or( surface_elevation( to ) );
+    double deck = std::min( a, b );
+    for( int i = low + 1; i < high; ++i ) {
+        // Four metres for small craft plus one metre for the bridge structure.
+        deck = std::max( deck, surface_elevation( center( i ) ) + 5.0 );
+    }
+    return profiles.emplace( key, crossing_profile{ from, to, a, b, deck } ).first->second;
+}
+
+static bool draw_wide_bridge( mapgendata &dat )
+{
+    static const oter_type_str_id bridge_road( "bridge_road" );
+    static const oter_type_str_id head_ground( "bridgehead_ground" );
+    static const oter_type_str_id head_ramp( "bridgehead_ramp" );
+    const oter_type_str_id type = dat.terrain_type()->get_type_id();
+    const bool head = type == head_ground || type == head_ramp;
+    const bool support = type == oter_type_bridge;
+    const bool deck = type == oter_type_atlas_raised_bridge_deck || type == bridge_road;
+    if( !( ( dat.zlevel() == 0 && ( support || head ) ) ||
+           ( dat.zlevel() == 1 && ( deck || head ) ) ) ) {
+        return false;
+    }
+    const bool mapped = dat.region.place_roads || dat.region.overmap_highway.has_value();
+    std::vector<wide_route> routes;
+    const point halo( wide_highway_halo, wide_highway_halo );
+    visit_wide_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1,
+                      mapped, false, false, [&]( const wide_route & route ) {
+        const highway_stroke stroke = make_highway_stroke( route );
+        const point local = dat.pos().xy().raw() * road_span - route.begin;
+        if( highway_distance( stroke, local.x + SEEX, local.y + SEEY ) <
+            stroke.half_width + highway_shoulder + std::hypot( SEEX, SEEY ) ) {
+            routes.push_back( route );
+        }
+    } );
+    if( routes.empty() ) {
+        return false;
+    }
+    if( dat.zlevel() == 1 ) {
+        dat.m.draw_fill_background( ter_t_open_air.id() );
+    } else if( support ) {
+        draw_bridge_water( dat );
+    } else {
+        dat.m.draw_fill_background( ter_t_grass.id() );
+    }
+    const point_abs_ms origin = project_to<coords::ms>( dat.pos().xy() );
+    for( const wide_route &route : routes ) {
+        const highway_stroke stroke = make_highway_stroke( route );
+        const point offset = origin.raw() + point( SEEX, SEEY ) - route.begin;
+        const double station_at_center = std::clamp( offset.x * stroke.east + offset.y * stroke.south,
+                                         0.0, stroke.length );
+        const point_abs_ms centerline( route.begin + point(
+                                          std::lround( station_at_center * stroke.east ),
+                                          std::lround( station_at_center * stroke.south ) ) );
+        const crossing_profile profile = bridge_profile_at( project_to<coords::omt>( centerline ),
+                                         stroke.vertical );
+        const point facing = head ? om_direction::displace( dat.terrain_type()->get_dir() ).raw() : point::zero;
+        for( int y = 0; y < road_span; ++y ) {
+            for( int x = 0; x < road_span; ++x ) {
+                const point_abs_ms absolute = origin + point( x, y );
+                const point delta = absolute.raw() - route.begin;
+                const double distance = highway_distance( stroke, delta.x + 0.5, delta.y + 0.5 );
+                const int stripe = static_cast<int>( distance );
+                if( stripe >= stroke.half_width + highway_shoulder ) {
+                    continue;
+                }
+                const tripoint_bub_ms p( x, y, dat.zlevel() );
+                if( support ) {
+                    // Leave the navigation channel open beneath the full-width deck.
+                    if( elevation_active() ) {
+                        dat.m.set_surface_grade( p, {
+                            static_cast<int>( std::lround( surface_elevation( absolute ) * 100 ) ), 0
+                        } );
+                    }
+                    continue;
+                }
+                const int approach = facing.x < 0 ? x : facing.x > 0 ? road_span - 1 - x :
+                                     facing.y < 0 ? y : road_span - 1 - y;
+                if( head && ( dat.zlevel() == 0 ? approach > 14 : approach < 13 ) ) {
+                    continue;
+                }
+                const bool roadway = stripe < stroke.half_width;
+                const bool rail = stripe == stroke.half_width + highway_shoulder - 1;
+                const int lane_width = ( stroke.half_width - 2 ) / ( route.lanes / 2 );
+                const int station = static_cast<int>( std::floor( absolute.x() * stroke.east +
+                                                         absolute.y() * stroke.south ) );
+                const bool white = stripe > 0 && stripe % lane_width == 0 &&
+                                   stripe < lane_width * static_cast<int>( route.lanes / 2 ) &&
+                                   modulo( station, 6 ) < 3;
+                ter_id ground = rail ? ter_t_guardrail_hw_air.id() : !roadway ? ter_t_sidewalk_hw_air.id() :
+                                stripe == 0 ? ter_t_pavement_y_hw_air.id() :
+                                white ? ter_t_atlas_bridge_white.id() : ter_t_pavement_hw_air.id();
+                if( head && approach >= 13 && approach <= 14 && !rail ) {
+                    ground = ter_str_id( dat.zlevel() == 0 ?
+                                        ( approach == 13 ? "t_ramp_up_low" : "t_ramp_up_high" ) :
+                                        ( approach == 13 ? "t_ramp_down_low" : "t_ramp_down_high" ) ).id();
+                }
+                dat.m.ter_set( p, ground );
+                if( elevation_active() ) {
+                    double height = profile.height_at( absolute );
+                    if( head ) {
+                        const point_abs_ms landing = origin + point( SEEX, SEEY ) + facing * SEEX;
+                        const double bank = dem_elevation( landing ).value_or( surface_elevation( landing ) );
+                        const double fraction = std::clamp( approach / 14.0, 0.0, 1.0 );
+                        height = bank + fraction * ( height - bank );
+                    }
+                    dat.m.set_surface_grade( p, {
+                        static_cast<int>( std::lround( ( height - dat.zlevel() * floor_height_m ) * 100 ) ), 0
+                    } );
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool draw_mapped_road( mapgendata &dat )
 {
     if( !active() ) {
         return false;
     }
     const oter_type_str_id type = dat.terrain_type()->get_type_id();
+    if( draw_wide_bridge( dat ) ) {
+        return true;
+    }
     if( dat.zlevel() == 1 && type == oter_type_atlas_raised_bridge_deck ) {
         draw_raised_deck( dat );
         return true;

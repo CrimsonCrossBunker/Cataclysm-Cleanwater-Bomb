@@ -3015,6 +3015,7 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
     const auto &fp = here.furn( examp )->plant;
     plant_count *= fp->harvest_multiplier * ::get_option<float>( "CROP_HARVEST_MULTIPLIER" );
     plant_count = std::max( plant_count, 1 );
+    plant_count = static_cast<int>( std::round( plant_count * crop_harvest_multiplier( seed_snapshot ) ) );
     const int seed_count = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
     const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
     const std::string stage = stage_idx >= 0 ?
