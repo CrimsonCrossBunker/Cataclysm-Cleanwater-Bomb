@@ -3889,11 +3889,12 @@ void npc::on_load( map *here )
     }
     effect_on_conditions::load_existing_character( *this );
 
-    // Migrate legacy camp assignees from GUARD_ALLY to CAMP_RESIDENT.
-    const bool migrate_current =
-        mission == NPC_MISSION_GUARD_ALLY && assigned_camp;
-    const bool migrate_previous =
-        previous_mission == NPC_MISSION_GUARD_ALLY && assigned_camp;
+    // Migrate legacy camp assignees from GUARD_ALLY to CAMP_RESIDENT.  A camp
+    // resident ordered to guard (see talk_function::assign_guard) keeps its post.
+    const bool legacy_camp_guard = assigned_camp &&
+                                   chatbin.first_topic != "TALK_FRIEND_GUARD_CAMP";
+    const bool migrate_current = legacy_camp_guard && mission == NPC_MISSION_GUARD_ALLY;
+    const bool migrate_previous = legacy_camp_guard && previous_mission == NPC_MISSION_GUARD_ALLY;
     if( migrate_current || migrate_previous ) {
         if( migrate_current ) {
             mission = NPC_MISSION_CAMP_RESIDENT;
