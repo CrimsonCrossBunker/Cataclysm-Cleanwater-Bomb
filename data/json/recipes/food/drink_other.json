@@ -32,7 +32,7 @@
         [ "seed_cotton_boll", 20 ],
         [ "seed_pumpkin", 20 ],
         [ "seed_sunflower", 20 ],
-        [ "seed_canola", 5 ],
+        [ "seed_canola", 5 ], [ "seed_canola_hardy", 5 ], [ "seed_canola_winter", 5 ],
         [ "seed_grapes", 20 ],
         [ "seed_poppy_bud", 20 ],
         [ "seed_weed", 20 ]
@@ -74,7 +74,7 @@
         [ "seed_cotton_boll", 20 ],
         [ "seed_pumpkin", 20 ],
         [ "seed_sunflower", 20 ],
-        [ "seed_canola", 5 ],
+        [ "seed_canola", 5 ], [ "seed_canola_hardy", 5 ], [ "seed_canola_winter", 5 ],
         [ "seed_grapes", 20 ],
         [ "seed_poppy_bud", 20 ],
         [ "seed_weed", 20 ]

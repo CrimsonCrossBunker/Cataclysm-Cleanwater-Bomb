@@ -115,6 +115,38 @@ Newly generated, connected farm-field tiles in the same overmap special
 share a crop and sowing date. The crop lottery uses varieties that could
 already have been sown at the start of the Cataclysm.
 
+Canola retains the original `seed_canola` ID for ordinary spring canola.
+Its heat budget now uses a 0 °C base and 1,500 °C-days, consistent with the
+[AAFC Saskatchewan observations published by Montana State](https://extension-store.montana.edu/montguides/using-growing-degree-days-to-predict-plant-stages).
+The 440 mm reference water budget and 1 m effective root zone follow
+[Alberta's canola irrigation guidance](https://www1.agric.gov.ab.ca/$Department/deptdocs.nsf/all/agdex13575).
+
+Cold-tolerant spring canola is a separate, non-branded cultivar profile.
+It remains spring-sown and has no vernalization requirement. Its 1,450
+°C-day target represents an earlier selection within the published spring
+range; its -8 °C cold growth limit represents adapted, hardened plants.
+[Ontario's canola guide](https://www.ontario.ca/files/2022-10/omafra-agronomy-guide-for-field-crops-chapter-6-en-2022-10-13.pdf)
+describes frost tolerance after acclimation, while
+[Hawkins et al.](https://doi.org/10.1007/s00425-002-0850-1) demonstrate that
+spring habit and freezing tolerance are separable traits. The JSON profile
+does not simulate acclimation, frost mortality or deacclimation; a lower
+limit permits growth through colder nights, not growth at subzero means.
+Cool northern field mixtures favor this spring selection, rather than
+substituting an autumn crop or imposing a chilling requirement.
+
+Winter canola uses a separate autumn sowing date and explicit
+`planting_year_offset: -1`. It requires 42 equivalent chilling days before
+reproductive growth and uses the existing winter dormancy behavior.
+Its 2,200 °C-day and 135 active-day budgets are representative model
+estimates, not universal cultivar constants. Distribution and sowing
+windows follow [U.S. production regions](https://www.uscanola.com/crop-production/spring-and-winter-canola/),
+[Great Plains management](https://bookstore.ksre.ksu.edu/pubs/great-plains-canola-production-handbook_MF2734.pdf)
+and [Pacific Northwest guidance](https://extension.oregonstate.edu/catalog/em-8955-oilseed-crops-canola).
+The regional table represents states and provinces, not every growing belt
+within them. All variants preserve their identity through drying,
+threshing and winnowing, share the original oil/food/feed ingredient
+quantities, and reuse the original graphics through `looks_like`.
+
 Wild terrain may define `fruit_climate` with a `growth` profile, a
 `harvest` ID and a `bearing_days` window. Perennial ripening is derived
 from the local normal growing season. Harvested terrain becomes productive

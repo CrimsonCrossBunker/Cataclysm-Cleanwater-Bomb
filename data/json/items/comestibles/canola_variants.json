@@ -1,0 +1,113 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "canola_stalks_hardy",
+    "copy-from": "canola_stalks",
+    "looks_like": "canola_stalks",
+    "name": { "str": "cold-tolerant spring canola stalks", "str_pl": "sheaves of cold-tolerant spring canola stalks" },
+    "smoking_result": "dry_canola_stalks_hardy"
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "dry_canola_stalks_hardy",
+    "copy-from": "dry_canola_stalks",
+    "looks_like": "dry_canola_stalks",
+    "name": { "str": "dried cold-tolerant spring canola stalks", "str_pl": "sheaves of dried cold-tolerant spring canola stalks" }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "threshed_canola_hardy",
+    "copy-from": "threshed_canola",
+    "looks_like": "threshed_canola",
+    "name": { "str": "threshed cold-tolerant spring canola", "str_pl": "handfuls of threshed cold-tolerant spring canola" }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "id": "seed_canola_hardy",
+    "copy-from": "seed_canola",
+    "looks_like": "seed_canola",
+    "name": { "str": "cold-tolerant spring canola seeds", "str_pl": "handfuls of cold-tolerant spring canola seeds" },
+    "description": "Seeds of an early-maturing, cold-tolerant spring canola selection.  It does not need winter chilling to flower.  The seeds have the same food and oil uses as ordinary canola.",
+    "plant_name": "cold-tolerant spring canola",
+    "fruit": "canola_stalks_hardy",
+    "growth_temp": "5 C",
+    "crop_climate": {
+      "base_c": 0,
+      "optimum_c": 25,
+      "min_c": -8,
+      "max_c": 36,
+      "degree_days": 1450,
+      "water_mm": 440,
+      "growing_days": 95,
+      "water_peak": 0.68,
+      "root_zone_water_mm": 120
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "10 days" },
+      { "GROWTH_SEEDLING": "30 days" },
+      { "GROWTH_MATURE": "55 days" },
+      { "GROWTH_HARVEST": "21 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "canola_stalks_winter",
+    "copy-from": "canola_stalks",
+    "looks_like": "canola_stalks",
+    "name": { "str": "winter canola stalks", "str_pl": "sheaves of winter canola stalks" },
+    "smoking_result": "dry_canola_stalks_winter"
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "dry_canola_stalks_winter",
+    "copy-from": "dry_canola_stalks",
+    "looks_like": "dry_canola_stalks",
+    "name": { "str": "dried winter canola stalks", "str_pl": "sheaves of dried winter canola stalks" }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "threshed_canola_winter",
+    "copy-from": "threshed_canola",
+    "looks_like": "threshed_canola",
+    "name": { "str": "threshed winter canola", "str_pl": "handfuls of threshed winter canola" }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "id": "seed_canola_winter",
+    "copy-from": "seed_canola",
+    "looks_like": "seed_canola",
+    "name": { "str": "winter canola seeds", "str_pl": "handfuls of winter canola seeds" },
+    "description": "Fall-sown canola seeds.  The plants overwinter as rosettes and need cold exposure before flowering the following spring.  The seeds have the same food and oil uses as ordinary canola.",
+    "plant_name": "winter canola",
+    "fruit": "canola_stalks_winter",
+    "growth_temp": "5 C",
+    "crop_climate": {
+      "base_c": 0,
+      "optimum_c": 25,
+      "min_c": -12,
+      "max_c": 36,
+      "degree_days": 2200,
+      "water_mm": 500,
+      "growing_days": 135,
+      "water_peak": 0.68,
+      "vernalization_days": 42,
+      "root_zone_water_mm": 150
+    },
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "70 days" },
+      { "GROWTH_MATURE": "51 days" },
+      { "GROWTH_HARVEST": "28 days" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ]
+  }
+]
