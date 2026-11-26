@@ -56,7 +56,8 @@
       "degree_days": 1000,
       "water_mm": 550,
       "growing_days": 120,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 120
     },
     "growth_stages": [
       { "GROWTH_SEED": "30 days" },
@@ -86,7 +87,8 @@
       "degree_days": 710,
       "water_mm": 330,
       "growing_days": 75,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 100
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -116,7 +118,8 @@
       "degree_days": 620,
       "water_mm": 280,
       "growing_days": 68,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -146,7 +149,8 @@
       "degree_days": 850,
       "water_mm": 380,
       "growing_days": 100,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 20
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -266,7 +270,8 @@
       "degree_days": 610,
       "water_mm": 290,
       "growing_days": 67,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 100
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -296,7 +301,8 @@
       "degree_days": 440,
       "water_mm": 235,
       "growing_days": 51,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 30
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -326,7 +332,8 @@
       "degree_days": 1030,
       "water_mm": 470,
       "growing_days": 105,
-      "water_peak": 0.55
+      "water_peak": 0.55,
+      "root_zone_water_mm": 180
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -386,7 +393,8 @@
       "degree_days": 1000,
       "water_mm": 490,
       "growing_days": 105,
-      "water_peak": 0.6
+      "water_peak": 0.6,
+      "root_zone_water_mm": 80
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -416,7 +424,8 @@
       "degree_days": 870,
       "water_mm": 460,
       "growing_days": 90,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 140
     },
     "growth_stages": [
       { "GROWTH_SEED": "18 days" },
@@ -449,7 +458,8 @@
       "degree_days": 1300,
       "water_mm": 620,
       "growing_days": 140,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 120
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -479,7 +489,8 @@
       "degree_days": 405,
       "water_mm": 150,
       "growing_days": 48,
-      "water_peak": 0.55
+      "water_peak": 0.55,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "22 days" },
@@ -511,7 +522,8 @@
       "degree_days": 790,
       "water_mm": 420,
       "growing_days": 95,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 80
     },
     "growth_stages": [
       { "GROWTH_SEED": "22 days" },
@@ -542,7 +554,8 @@
       "degree_days": 240,
       "water_mm": 115,
       "growing_days": 31,
-      "water_peak": 0.55
+      "water_peak": 0.55,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "9 days" },
@@ -574,7 +587,8 @@
       "degree_days": 690,
       "water_mm": 510,
       "growing_days": 88,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 120
     },
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
@@ -606,7 +620,8 @@
       "degree_days": 1240,
       "water_mm": 770,
       "growing_days": 160,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 160
     },
     "growth_stages": [
       { "GROWTH_SEED": "33 days" },
@@ -638,7 +653,8 @@
       "degree_days": 530,
       "water_mm": 340,
       "growing_days": 69,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 60
     },
     "growth_stages": [
       { "GROWTH_SEED": "19 days" },
@@ -669,7 +685,8 @@
       "degree_days": 490,
       "water_mm": 300,
       "growing_days": 55,
-      "water_peak": 0.62
+      "water_peak": 0.62,
+      "root_zone_water_mm": 100
     },
     "growth_stages": [
       { "GROWTH_SEED": "12 days" },
@@ -699,7 +716,8 @@
       "degree_days": 950,
       "water_mm": 440,
       "growing_days": 108,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
@@ -729,7 +747,8 @@
       "degree_days": 900,
       "water_mm": 360,
       "growing_days": 112,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
@@ -1017,7 +1036,8 @@
       "degree_days": 700,
       "water_mm": 350,
       "growing_days": 82,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 90
     },
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
@@ -1049,7 +1069,8 @@
       "degree_days": 860,
       "water_mm": 520,
       "growing_days": 87,
-      "water_peak": 0.62
+      "water_peak": 0.62,
+      "root_zone_water_mm": 120
     },
     "growth_stages": [
       { "GROWTH_SEED": "20 days" },
@@ -1083,7 +1104,8 @@
       "degree_days": 830,
       "water_mm": 500,
       "growing_days": 95,
-      "water_peak": 0.67
+      "water_peak": 0.67,
+      "root_zone_water_mm": 90
     },
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
@@ -1113,7 +1135,8 @@
       "degree_days": 520,
       "water_mm": 350,
       "growing_days": 64,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 120
     },
     "growth_stages": [
       { "GROWTH_SEED": "15 days" },
@@ -1143,7 +1166,8 @@
       "degree_days": 470,
       "water_mm": 300,
       "growing_days": 61,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 120
     },
     "growth_stages": [
       { "GROWTH_SEED": "15 days" },
@@ -1342,7 +1366,8 @@
       "degree_days": 480,
       "water_mm": 350,
       "growing_days": 63,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 80
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -1374,7 +1399,8 @@
       "degree_days": 1140,
       "water_mm": 560,
       "growing_days": 126,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 120
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -1407,7 +1433,8 @@
       "degree_days": 930,
       "water_mm": 365,
       "growing_days": 104,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 80
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -1468,7 +1495,8 @@
       "degree_days": 810,
       "water_mm": 480,
       "growing_days": 90,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 140
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -1498,7 +1526,8 @@
       "degree_days": 760,
       "water_mm": 440,
       "growing_days": 83,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 140
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -1534,7 +1563,8 @@
       "degree_days": 920,
       "water_mm": 430,
       "growing_days": 101,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 150
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -1571,7 +1601,8 @@
       "degree_days": 920,
       "water_mm": 430,
       "growing_days": 102,
-      "water_peak": 0.62
+      "water_peak": 0.62,
+      "root_zone_water_mm": 140
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -1695,7 +1726,8 @@
       "degree_days": 345,
       "water_mm": 175,
       "growing_days": 44,
-      "water_peak": 0.52
+      "water_peak": 0.52,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "13 days" },
@@ -1725,7 +1757,8 @@
       "degree_days": 635,
       "water_mm": 300,
       "growing_days": 75,
-      "water_peak": 0.63
+      "water_peak": 0.63,
+      "root_zone_water_mm": 30
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -2161,7 +2194,8 @@
       "degree_days": 490,
       "water_mm": 300,
       "growing_days": 68,
-      "water_peak": 0.55
+      "water_peak": 0.55,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -2264,7 +2298,8 @@
       "degree_days": 1000,
       "water_mm": 590,
       "growing_days": 110,
-      "water_peak": 0.63
+      "water_peak": 0.63,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "33 days" },
@@ -2294,7 +2329,8 @@
       "degree_days": 840,
       "water_mm": 480,
       "growing_days": 91,
-      "water_peak": 0.62
+      "water_peak": 0.62,
+      "root_zone_water_mm": 140
     },
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
@@ -2326,7 +2362,8 @@
       "degree_days": 900,
       "water_mm": 360,
       "growing_days": 112,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 50
     },
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
@@ -2392,7 +2429,7 @@
       "growing_days": 112,
       "water_peak": 0.7,
       "vernalization_days": 26,
-      "root_zone_water_mm": 85
+      "root_zone_water_mm": 190
     },
     "growth_stages": [
       { "GROWTH_SEED": "10 days" },
@@ -2566,7 +2603,8 @@
       "degree_days": 1120,
       "water_mm": 520,
       "growing_days": 111,
-      "water_peak": 0.66
+      "water_peak": 0.66,
+      "root_zone_water_mm": 160
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -2595,7 +2633,8 @@
       "degree_days": 850,
       "water_mm": 390,
       "growing_days": 104,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 60
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -2630,7 +2669,8 @@
       "degree_days": 450,
       "water_mm": 210,
       "growing_days": 55,
-      "water_peak": 0.59
+      "water_peak": 0.59,
+      "root_zone_water_mm": 100
     },
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
@@ -2661,7 +2701,8 @@
       "degree_days": 790,
       "water_mm": 480,
       "growing_days": 92,
-      "water_peak": 0.67
+      "water_peak": 0.67,
+      "root_zone_water_mm": 90
     },
     "growth_stages": [
       { "GROWTH_SEED": "18 days" },
@@ -2692,7 +2733,8 @@
       "degree_days": 890,
       "water_mm": 430,
       "growing_days": 97,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 70
     },
     "growth_stages": [
       { "GROWTH_SEED": "15 days" },
@@ -2723,7 +2765,8 @@
       "degree_days": 740,
       "water_mm": 480,
       "growing_days": 99,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 120
     },
     "growth_stages": [
       { "GROWTH_SEED": "15 days" },
@@ -2754,7 +2797,8 @@
       "degree_days": 620,
       "water_mm": 380,
       "growing_days": 83,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 60
     },
     "growth_stages": [
       { "GROWTH_SEED": "15 days" },
@@ -2784,7 +2828,8 @@
       "degree_days": 900,
       "water_mm": 440,
       "growing_days": 106,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 90
     },
     "growth_stages": [
       { "GROWTH_SEED": "20 days" },
@@ -2815,7 +2860,8 @@
       "degree_days": 730,
       "water_mm": 350,
       "growing_days": 86,
-      "water_peak": 0.64
+      "water_peak": 0.64,
+      "root_zone_water_mm": 180
     },
     "growth_stages": [
       { "GROWTH_SEED": "30 days" },
@@ -2846,7 +2892,8 @@
       "degree_days": 810,
       "water_mm": 410,
       "growing_days": 105,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 60
     },
     "growth_stages": [
       { "GROWTH_SEED": "20 days" },
@@ -2877,7 +2924,8 @@
       "degree_days": 450,
       "water_mm": 260,
       "growing_days": 60,
-      "water_peak": 0.55
+      "water_peak": 0.55,
+      "root_zone_water_mm": 60
     },
     "growth_stages": [
       { "GROWTH_SEED": "15 days" },
@@ -2908,7 +2956,8 @@
       "degree_days": 480,
       "water_mm": 320,
       "growing_days": 63,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 100
     },
     "growth_stages": [
       { "GROWTH_SEED": "20 days" },

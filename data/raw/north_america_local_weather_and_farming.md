@@ -27,7 +27,8 @@ Daily demand scales the reference seasonal water budget by local
 Hargreaves reference evapotranspiration, including latitude, season, daily
 temperature and temperature range. The reference budget corresponds to
 4 mm/day reference ET. Root-zone storage follows terrain capacity, with
-crop-specific values for wheat, canola and potatoes. See the
+explicit values for supported cereals, vegetables, legumes, oil crops and
+berries. See the
 [FAO-56 meteorological equations](https://www.fao.org/4/X0490E/x0490e07.htm)
 and [root depth and water-stress tables](https://www.fao.org/4/X0490E/x0490e0e.htm).
 Water stress can slow establishment. Once established, crops accumulate
@@ -35,6 +36,57 @@ thermal development and minimum growing days without repeatedly losing
 both counters to the same moisture deficit. A seasonal water deficit reduces
 manual, mechanical and camp harvests with an approximate yield-response
 coefficient of 1.1.
+
+The explicit root-zone capacities are model estimates, calculated as
+effective rooting depth times a reference 120 mm of plant-available water
+per metre of soil, rounded to 10 mm. FAO-56 gives this reference for silty
+clay in Example 36; the existing terrain capacity multiplier represents
+local differences in soil. These capacities describe the available store,
+not seasonal water demand or an irrigation allowance. Root depth is fixed
+in the current model rather than expanding with plant age.
+
+Representative depths within FAO-56 Table 22 supply the following profiles.
+Edible grain, dried grain and dedicated seed profiles of a crop use the
+same capacity; sweet corn and popcorn retain different effective depths.
+
+| Crop | Reference depth (m) | Root-zone water (mm) |
+| --- | --- | --- |
+| Spring wheat, barley, oats | 1.2 | 140 |
+| Winter wheat | 1.6 | 190 |
+| Sweet corn / popcorn | 1.0 / 1.3 | 120 / 160 |
+| Canola, sugar beet, soybean, tomato, eggplant | 1.0 | 120 |
+| Dry/snap beans, lentils | 0.7 | 80 |
+| Lettuce, radish, onion, garlic, spinach, celery | 0.4 | 50 |
+| Cabbage | 0.65 | 80 |
+| Broccoli, cauliflower, Brussels sprouts, potato | 0.5 | 60 |
+| Carrot, chilli and bell peppers, artichoke | 0.75 | 90 |
+| Cucumber, gherkin, hops | 1.0 | 120 |
+| Zucchini, peas | 0.8 | 100 |
+| Watermelon, melon, sunflower | 1.2 | 140 |
+| Pumpkin | 1.25 | 150 |
+| Cotton | 1.3 | 160 |
+| Asparagus, grapes | 1.5 | 180 |
+| Blackberry, raspberry | 0.8 | 100 |
+| Strawberry | 0.25 | 30 |
+
+Additional profiles use published crop-specific guidance:
+
+| Crop | Reference depth (m) | Root-zone water (mm) | Source |
+| --- | --- | --- | --- |
+| Tobacco | 0.7 | 80 | [FAO rooting-depth annex](https://www.fao.org/4/y5749e/y5749e0j.htm) |
+| Kale | 0.5 | 60 | [Colorado State irrigation guide](https://extension.colostate.edu/resource/determining-irrigation-run-times-with-drip-tape-on-specialty-crops/) |
+| Blueberry | 0.4 | 50 | [WSU small-fruit handbook](https://extension.wsu.edu/pnw-gardeners-handbook/chapter-9-berries-and-small-fruits/) |
+| Cranberry | 0.15 | 20 | [University of Maine cranberry guidance](https://extension.umaine.edu/gardening/2023/10/02/maine-home-garden-news-october-2023/) |
+| Rhubarb | 0.4 | 50 | [University of Maine rhubarb guidance](https://extension.umaine.edu/publications/2514e/) |
+| Buckwheat | 0.25 | 30 | [UC SAREP root observations](https://sarep.ucdavis.edu/covercrop/buckwheat) |
+| Mustard | 0.8 | 100 | [University of Saskatchewan effective water-extraction depths](https://harvest.usask.ca/items/69384034-910c-4c78-87a2-954613517687) |
+| Horseradish | 0.5 | 60 | [Utah State irrigation-depth guidance](https://extension.usu.edu/yardandgarden/research/horseradish-in-the-garden) |
+| Bottle gourd | 0.6 | 70 | [Field-trial active root zone](https://dspace.emu.ee/server/api/core/bitstreams/33d2da5f-3dd5-4201-83f4-542281a2f55d/content) |
+
+The buckwheat value represents the shallow zone with most observed root
+volume, not the maximum depth of its taproot. Wild plants without suitable
+root-depth data retain the existing default capacity. Mushrooms do not use
+these crop root-zone profiles.
 
 The profiles use crop base temperatures from the
 [Ontario vegetable guide](https://www.ontario.ca/files/2024-02/omafra-guide-to-vegetable-production-in-ontario-en-2024-02-15.pdf)
