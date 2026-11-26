@@ -43,8 +43,7 @@ std::optional<field_crop> regional_field_crop( point_abs_omt field,
         const itype_id &existing_seed = itype_id::NULL_ID() );
 std::optional<time_point> regional_field_sowing( const field_crop &crop, point_abs_omt field,
         time_point when );
-// Returns false if the historical field should be fallow and the generated seed was removed.
-bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed );
+void repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed );
 bool is_primary_crop_seed( const item &value );
 item *relay_crop_at( map &here, const tripoint_bub_ms &p );
 bool relay_corn_has_planting_weather( const map &here, const tripoint_bub_ms &p );

@@ -11744,9 +11744,7 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
         return;
     }
 
-    if( !repair_regional_field_crop( *this, p, *seed ) ) {
-        return;
-    }
+    repair_regional_field_crop( *this, p, *seed );
     const furn_t &initial_furn = this->furn( p ).obj();
     const islot_seed &seed_data = *seed->type->seed;
     const auto &growth_stages = seed_data.get_growth_stages();
@@ -12388,6 +12386,11 @@ void map::actualize( const tripoint_rel_sm &grid, const map_simulation_regions *
     process_items_in_vehicles( *tmpsub );
     process_items_in_submap( *tmpsub, grid );
     explosion_handler::process_explosions();
+    if( grid.z() == 0 && !tmpsub->atlas_field_repair_checked && !tmpsub->is_uniform() &&
+        north_america::active() ) {
+        tmpsub->atlas_field_repair_checked = repair_empty_atlas_field( *this, origin,
+                                            tmpsub->player_adjusted_map );
+    }
     for( int x = 0; x < SEEX; x++ ) {
         for( int y = 0; y < SEEY; y++ ) {
             const point_sm_ms local( x, y );

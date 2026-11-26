@@ -7492,6 +7492,9 @@ void field_type_migrations::check()
 void submap::store( JsonOut &jsout ) const
 {
     jsout.member( "turn_last_touched", last_touched );
+    if( atlas_field_repair_checked ) {
+        jsout.member( "atlas_field_repair_checked", true );
+    }
     jsout.member( "temperature", temperature_mod );
 
     // Terrain is saved using a simple RLE scheme.  Legacy saves don't have
@@ -7769,6 +7772,8 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
     bool rubpow_update = version < 22;
     if( member_name == "turn_last_touched" ) {
         last_touched = time_point( jv.get_int() );
+    } else if( member_name == "atlas_field_repair_checked" ) {
+        atlas_field_repair_checked = jv.get_bool();
     } else if( member_name == "temperature" ) {
         temperature_mod = jv.get_int();
     } else if( member_name == "terrain" ) {

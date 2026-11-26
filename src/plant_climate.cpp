@@ -4,12 +4,14 @@
 #include <array>
 #include <cmath>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <numeric>
 #include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -102,6 +104,46 @@ struct weighted_crop {
 const itype_id itype_seed_wheat( "seed_wheat" );
 const itype_id itype_seed_red_winter_wheat( "seed_red_winter_wheat" );
 
+std::unordered_map<point_abs_omt, point_abs_omt> field_origins;
+std::unordered_map<point_abs_omt, std::optional<field_crop>> field_crops;
+
+bool is_crop_field( point_abs_omt field )
+{
+    const oter_id &terrain = overmap_buffer.ter_existing( tripoint_abs_omt( field, 0 ) );
+    return terrain && terrain->get_travel_cost_type() == oter_travel_cost_type::crop_field;
+}
+
+point_abs_omt field_origin( point_abs_omt field )
+{
+    if( const auto known = field_origins.find( field ); known != field_origins.end() ) {
+        return known->second;
+    }
+    if( !is_crop_field( field ) ) {
+        return field;
+    }
+    // Farmland specials stay within an overmap. Roads and other terrain separate parcels.
+    const auto region = project_to<coords::om>( field );
+    const auto special = overmap_buffer.overmap_special_at( tripoint_abs_omt( field, 0 ) );
+    std::vector<point_abs_omt> parcel{ field };
+    std::unordered_set<point_abs_omt> seen{ field };
+    point_abs_omt origin = field;
+    for( std::size_t i = 0; i < parcel.size(); ++i ) {
+        for( const point &step : four_cardinal_directions ) {
+            const point_abs_omt next = parcel[i] + step;
+            if( project_to<coords::om>( next ) == region && seen.insert( next ).second &&
+                is_crop_field( next ) &&
+                overmap_buffer.overmap_special_at( tripoint_abs_omt( next, 0 ) ) == special ) {
+                parcel.push_back( next );
+                origin = std::min( origin, next );
+            }
+        }
+    }
+    for( const point_abs_omt &member : parcel ) {
+        field_origins.emplace( member, origin );
+    }
+    return origin;
+}
+
 std::size_t field_hash( point_abs_omt field )
 {
     return std::hash<point_abs_omt>{}( field ) ^ g->get_seed();
@@ -125,10 +167,7 @@ int crop_calendar_day( const JsonValue &value )
     return quarter * 91 + month_start[within_quarter] +
            std::min( day, within_quarter == 0 ? 31 : 30 ) - 1;
 }
-} // namespace
-
-std::optional<field_crop> regional_field_crop( point_abs_omt field,
-        const itype_id &existing_seed )
+const std::vector<weighted_crop> &regional_field_options( point_abs_omt field )
 {
     static const auto profiles = [] {
         std::unordered_map<std::string, std::vector<weighted_crop>> result;
@@ -166,26 +205,54 @@ std::optional<field_crop> regional_field_crop( point_abs_omt field,
     }();
     const point_abs_ms center = project_to<coords::ms>( field ) + point( SEEX, SEEY );
     const auto options = profiles.find( std::string( north_america::jurisdiction_at( center ) ) );
+    static const std::vector<weighted_crop> empty;
+    return options == profiles.end() ? empty : options->second;
+}
+
+std::optional<field_crop> weighted_field_crop( const std::vector<weighted_crop> &options,
+        point_abs_omt field )
+{
+    const unsigned total = std::accumulate( options.begin(), options.end(), 0u,
+    []( unsigned sum, const weighted_crop &choice ) {
+        return sum + choice.weight;
+    } );
+    if( total == 0 ) {
+        return std::nullopt;
+    }
+    unsigned roll = static_cast<unsigned>( field_hash( field ) % total );
+    for( const weighted_crop &choice : options ) {
+        if( roll < choice.weight ) {
+            return choice.crop;
+        }
+        roll -= choice.weight;
+    }
+    return std::nullopt;
+}
+} // namespace
+
+std::optional<field_crop> regional_field_crop( point_abs_omt field,
+        const itype_id &existing_seed )
+{
+    const point_abs_omt origin = field_origin( field );
+    const auto &options = regional_field_options( origin );
     if( !existing_seed.is_null() ) {
-        if( options != profiles.end() ) {
-            const weighted_crop *matching = nullptr;
-            const weighted_crop *winter_wheat = nullptr;
-            for( const weighted_crop &choice : options->second ) {
-                if( choice.crop.seed == existing_seed ) {
-                    matching = &choice;
-                }
-                if( choice.crop.seed == itype_seed_red_winter_wheat ) {
-                    winter_wheat = &choice;
-                }
+        const weighted_crop *matching = nullptr;
+        const weighted_crop *winter_wheat = nullptr;
+        for( const weighted_crop &choice : options ) {
+            if( choice.crop.seed == existing_seed ) {
+                matching = &choice;
             }
-            if( existing_seed == itype_seed_wheat && winter_wheat &&
-                ( !matching || field_hash( field ) % ( matching->weight + winter_wheat->weight ) <
-                  winter_wheat->weight ) ) {
-                return winter_wheat->crop;
+            if( choice.crop.seed == itype_seed_red_winter_wheat ) {
+                winter_wheat = &choice;
             }
-            if( matching ) {
-                return matching->crop;
-            }
+        }
+        if( existing_seed == itype_seed_wheat && winter_wheat &&
+            ( !matching || field_hash( origin ) % ( matching->weight + winter_wheat->weight ) <
+              winter_wheat->weight ) ) {
+            return winter_wheat->crop;
+        }
+        if( matching ) {
+            return matching->crop;
         }
         if( existing_seed.is_valid() && existing_seed->seed && existing_seed->seed->climate ) {
             const crop_climate_profile &climate = *existing_seed->seed->climate;
@@ -196,21 +263,22 @@ std::optional<field_crop> regional_field_crop( point_abs_omt field,
         }
         return std::nullopt;
     }
-    if( options == profiles.end() || options->second.empty() ) {
-        return std::nullopt;
+    if( const auto known = field_crops.find( origin ); known != field_crops.end() ) {
+        return known->second;
     }
-    unsigned total = 0;
-    for( const weighted_crop &choice : options->second ) {
-        total += choice.weight;
-    }
-    unsigned roll = static_cast<unsigned>( field_hash( field ) % total );
-    for( const weighted_crop &choice : options->second ) {
-        if( roll < choice.weight ) {
-            return choice.crop;
+    std::vector<weighted_crop> in_season;
+    std::copy_if( options.begin(), options.end(), std::back_inserter( in_season ),
+    [&]( const weighted_crop &choice ) {
+        return choice.crop.seed.is_valid() && choice.crop.seed->seed &&
+               regional_field_sowing( choice.crop, origin, calendar::start_of_cataclysm );
+    } );
+    if( options.empty() && is_crop_field( field ) ) {
+        const auto wheat = regional_field_crop( origin, itype_seed_wheat );
+        if( wheat && regional_field_sowing( *wheat, origin, calendar::start_of_cataclysm ) ) {
+            in_season.push_back( { *wheat, 1 } );
         }
-        roll -= choice.weight;
     }
-    return std::nullopt;
+    return field_crops.emplace( origin, weighted_field_crop( in_season, origin ) ).first->second;
 }
 
 fruit_climate_profile fruit_climate_profile::load( const JsonObject &jo )
@@ -417,7 +485,9 @@ double vernalization_fraction( double low, double high )
 }
 } // namespace
 
-std::optional<time_point> regional_field_sowing( const field_crop &crop, point_abs_omt field,
+namespace
+{
+std::optional<time_point> field_sowing_at( const field_crop &crop, point_abs_omt field,
         time_point when )
 {
     field_crop local = crop;
@@ -448,15 +518,85 @@ std::optional<time_point> regional_field_sowing( const field_crop &crop, point_a
     }
     return local.sowing_date( when );
 }
+} // namespace
 
-bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed )
+std::optional<time_point> regional_field_sowing( const field_crop &crop, point_abs_omt field,
+        time_point when )
+{
+    return field_sowing_at( crop, field_origin( field ), when );
+}
+
+void initialize_atlas_field_seed( item &seed, time_point sowing, bool parcel )
+{
+    // The historical simulation can start before the game's turn zero.
+    seed.set_var( "crop_field_sown", to_turn<int>( sowing ) );
+    seed.set_var( "crop_field_history_v4", true );
+    if( parcel ) {
+        seed.set_var( "crop_field_parcel_v1", true );
+    }
+    if( seed.typeId() == itype_seed_red_winter_wheat ) {
+        seed.set_var( "crop_winter_wheat_v2", true );
+    }
+    iexamine::set_plant_last_water_check( seed, sowing );
+}
+
+bool repair_empty_atlas_field( map &here, const tripoint_bub_ms &origin, bool edited )
+{
+    const point_abs_omt field = project_to<coords::omt>( here.get_abs( origin ) ).xy();
+    if( !is_crop_field( field ) ) {
+        return false;
+    }
+    if( edited ) {
+        return true;
+    }
+    // Legacy mapgen discarded the entire overmap tile when its unfiltered pick had no sowing date.
+    const time_point when = calendar::start_of_cataclysm;
+    const auto legacy = weighted_field_crop( regional_field_options( field ), field );
+    if( !legacy || field_sowing_at( *legacy, field, when ) ) {
+        return true;
+    }
+    const auto crop = regional_field_crop( field );
+    const auto sown = crop ? regional_field_sowing( *crop, field, when ) : std::nullopt;
+    if( !sown ) {
+        return true;
+    }
+    static const ter_str_id dirtmound( "t_dirtmound" );
+    static const furn_str_id seed_furniture( "f_plant_seed" );
+    std::vector<tripoint_bub_ms> rows;
+    for( const tripoint_bub_ms &p : here.points_in_rectangle( origin,
+            origin + point( SEEX - 1, SEEY - 1 ) ) ) {
+        if( here.furn( p )->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+            return true;
+        }
+        if( !here.has_furn( p ) && north_america::canonical_soil( here.ter( p ) ) == dirtmound &&
+            here.i_at( p ).empty() && !is_crop_sheltered( here, p ) ) {
+            rows.push_back( p );
+        }
+    }
+    if( rows.size() < SEEX ) {
+        return true;
+    }
+    for( const tripoint_bub_ms &p : rows ) {
+        item seed( crop->seed, std::max( *sown, calendar::turn_zero ) );
+        if( seed.count_by_charges() ) {
+            seed.charges = 1;
+        }
+        initialize_atlas_field_seed( seed, *sown, true );
+        if( !here.add_item_unprocessed( p, std::move( seed ) ).is_null() ) {
+            here.furn_set( p, seed_furniture );
+        }
+    }
+    return true;
+}
+
+void repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed )
 {
     const bool update_winter_wheat = seed.typeId() == itype_seed_red_winter_wheat &&
                                      !seed.has_var( "crop_winter_wheat_v2" );
-    if( ( seed.has_var( "crop_field_history_v4" ) && !update_winter_wheat ) ||
+    if( ( seed.has_var( "crop_field_parcel_v1" ) && !update_winter_wheat ) ||
         p.z() != 0 || !north_america::active() ||
         seed.has_flag( json_flag_HIDDEN_ITEM ) || !seed.type->seed->climate ) {
-        return true;
+        return;
     }
     static const furn_str_id field_seed( "f_plant_seed" );
     static const furn_str_id field_seedling( "f_plant_seedling" );
@@ -467,37 +607,43 @@ bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed
     if( !furniture->plant || ( furniture != field_seed.id() && furniture != field_seedling.id() &&
                               furniture != field_mature.id() && furniture != field_harvest.id() &&
                               furniture != field_overgrown.id() ) ) {
-        return true;
+        return;
     }
     const tripoint_abs_omt omt = project_to<coords::omt>( here.get_abs( p ) );
+    const bool field = is_crop_field( omt.xy() );
+    const bool update_parcel = field && !seed.has_var( "crop_field_parcel_v1" );
+    if( seed.has_var( "crop_field_history_v4" ) && !update_winter_wheat && !update_parcel ) {
+        return;
+    }
     if( !seed.has_var( "crop_field_sown" ) &&
-        ( seed.birthday() > calendar::start_of_cataclysm ||
-          overmap_buffer.ter_existing( omt )->get_travel_cost_type() != oter_travel_cost_type::crop_field ) ) {
-        return true;
+        ( seed.birthday() > calendar::start_of_cataclysm || !field ) ) {
+        return;
     }
     seed.set_var( "crop_field_history_v4", true );
+    if( update_parcel ) {
+        seed.set_var( "crop_field_parcel_v1", true );
+    }
     if( update_winter_wheat ) {
         seed.set_var( "crop_winter_wheat_v2", true );
     }
     if( iexamine::is_plant_fertilized( seed ) || iexamine::get_plant_water( seed ) > 0 ) {
-        return true;
+        return;
     }
-    const auto crop = regional_field_crop( omt.xy(), seed.typeId() );
+    const auto crop = update_parcel ? regional_field_crop( omt.xy() ) :
+                      regional_field_crop( omt.xy(), seed.typeId() );
     if( !crop ) {
-        return true;
+        return;
     }
-    const auto sown = update_winter_wheat && seed.has_var( "crop_field_sown" ) ?
+    const auto sown = update_winter_wheat && !update_parcel && seed.has_var( "crop_field_sown" ) ?
                       std::optional<time_point>( time_point::from_turn(
                                   static_cast<int>( seed.get_var( "crop_field_sown", 0.0 ) ) ) ) :
                       regional_field_sowing( *crop, omt.xy(), calendar::start_of_cataclysm );
     if( !sown ) {
-        here.i_rem( p, &seed );
-        here.furn_set( p, furniture->plant->base );
-        return false;
+        return;
     }
     if( !update_winter_wheat && crop->seed == seed.typeId() && seed.has_var( "crop_field_sown" ) &&
         seed.get_var( "crop_field_sown", 0.0 ) == to_turn<int>( *sown ) ) {
-        return true;
+        return;
     }
 
     // Reconstruct growth from the corrected date so the old season's heat and rain aren't reused.
@@ -519,12 +665,13 @@ bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed
     seed.erase_var( "crop_sampled_rain_mm" );
     seed.erase_var( "crop_degree_days" );
     here.furn_set( p, field_seed );
-    return true;
 }
 
 void clear_plant_climate_cache()
 {
     cells.clear();
+    field_origins.clear();
+    field_crops.clear();
 }
 
 bool is_primary_crop_seed( const item &value )

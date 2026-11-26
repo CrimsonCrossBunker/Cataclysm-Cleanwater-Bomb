@@ -46,6 +46,7 @@
 #include "dialogue.h"
 #include "enum_conversions.h"
 #include "enums.h"
+#include "farming.h"
 #include "field_type.h"
 #include "flat_set.h"
 #include "game.h"
@@ -3665,7 +3666,7 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                 chosen_furn->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
                 const point_abs_omt field = project_to<coords::omt>( dat.m.get_abs( pos ) ).xy();
                 std::optional<field_crop> crop = regional_field_crop( field );
-                if( !crop && item_spawner ) {
+                if( !crop && item_spawner && !is_crop_field ) {
                     crop = regional_field_crop( field, item_spawner->type.get( dat ) );
                 }
                 if( crop && crop->seed.is_valid() ) {
@@ -3678,18 +3679,15 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                         if( seed.count_by_charges() ) {
                             seed.charges = 1;
                         }
-                        // The historical simulation can start before the game's turn zero.
-                        seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
-                        seed.set_var( "crop_field_history_v4", true );
-                        if( crop->seed == itype_id( "seed_red_winter_wheat" ) ) {
-                            seed.set_var( "crop_winter_wheat_v2", true );
-                        }
-                        iexamine::set_plant_last_water_check( seed, *sown );
+                        initialize_atlas_field_seed( seed, *sown, is_crop_field );
                         dat.m.add_item( pos, std::move( seed ) );
                         dat.m.furn_set( pos, chosen_furn == field_seedling.id() ?
                                         field_seed.id() : chosen_furn );
                         return;
                     }
+                }
+                if( is_crop_field ) {
+                    return;
                 }
             }
             if( item_spawner ) {

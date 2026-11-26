@@ -16,6 +16,7 @@ class JsonObject;
 class JsonOut;
 class item;
 class map;
+class time_point;
 
 enum class farming_action {
     plant, fertilize, harvest, water, clear, gather, forage, flower, fungus, marloss,
@@ -50,6 +51,8 @@ bool execute_farming_command( Character &who, const farming_command &command,
 item *resolve_planted_seed( map &here, const item_source &source );
 bool is_crop_sheltered( const map &here, const tripoint_bub_ms &p );
 bool can_relay_plant_corn( map &here, const tripoint_bub_ms &p );
+void initialize_atlas_field_seed( item &seed, time_point sowing, bool parcel );
+bool repair_empty_atlas_field( map &here, const tripoint_bub_ms &origin, bool edited );
 
 // The first collecting container matches map::produce_sap, even when other
 // unrelated items share the tree tile. These are short-lived frontend handles.

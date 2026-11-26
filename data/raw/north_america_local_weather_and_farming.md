@@ -46,6 +46,11 @@ Outdoor winter wheat can be relay-planted with corn from heading onward
 when the weather is warm enough. The corn can establish under the wheat
 canopy and resumes normal development after the wheat is harvested or cleared.
 
+Connected farm-field tiles in the same overmap special share a crop and
+sowing date. The crop lottery uses varieties that could already have been
+sown at the start of the Cataclysm. Legacy fields that skipped planting can
+recover recognizable bare rows when they load.
+
 Wild terrain may define `fruit_climate` with a `growth` profile, a
 `harvest` ID and a `bearing_days` window. Perennial ripening is derived
 from the local normal growing season. Harvested terrain becomes productive
@@ -89,7 +94,8 @@ regional layouts also use staggered blocks and short local streets.
 Collectors and arterials carry traffic between neighborhoods. Straight
 arterials can reserve an adjacent overmap tile for a 34-tile-wide,
 four-lane paved surface and two sidewalks. They taper ahead of junctions,
-on narrow waterfronts and at overmap edges.
+on narrow waterfronts and at overmap edges. At a four-way junction, a
+yellow stop line spans the incoming lanes before each wide zebra crossing.
 
 Every atlas settlement of at least 100,000 people gets a deterministic
 downtown, commercial, industrial and institutional center, with housing

@@ -380,6 +380,7 @@ class submap
         // This tracks that a submap was edited outside of mapgen, and that it should be
         // considered for having its data hoisted to the overmap.
         bool player_adjusted_map = false;
+        bool atlas_field_repair_checked = false;
         std::vector<spawn_point> spawns;
         /**
          * Vehicles on this submap (their (0,0) point is on this submap).
