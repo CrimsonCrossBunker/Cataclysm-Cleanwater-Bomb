@@ -353,5 +353,15 @@
     "flags": [ "BIONIC_TOGGLED", "BIONIC_WEAPON" ],
     "included": true,
     "//2": "not actually included, this is a trick to not have to add an item version."
+  },
+  {
+    "//": "Slot fixture: needs more torso slots than the body part offers, so installation always reports a shortfall.",
+    "id": "test_bio_universal_probe",
+    "type": "bionic",
+    "name": { "str": "Universal Slot Probe" },
+    "description": "Test bionic that occupies more torso slots than the torso has.",
+    "occupied_bodyparts": [ [ "torso", 90 ] ],
+    "included": true,
+    "//2": "not actually included, this is a trick to not have to add an item version."
   }
 ]

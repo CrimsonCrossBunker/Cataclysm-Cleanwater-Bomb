@@ -3417,13 +3417,49 @@ std::map<bodypart_id, int> Character::bionic_installation_issues( const bionic_i
     if( !get_option < bool >( "CBM_SLOTS_ENABLED" ) ) {
         return issues;
     }
+    int available = get_free_universal_bionic_slots();
     for( const std::pair<const string_id<body_part_type>, size_t> &elem : bioid->occupied_bodyparts ) {
-        const int lacked_slots = elem.second - get_free_bionics_slots( elem.first );
+        int lacked_slots = elem.second - get_free_bionics_slots( elem.first );
+        if( lacked_slots <= 0 ) {
+            continue;
+        }
+        // Universal slots answer the shortfall before any body part is reported.
+        const int covered = std::min( available, lacked_slots );
+        available -= covered;
+        lacked_slots -= covered;
         if( lacked_slots > 0 ) {
             issues.emplace( elem.first, lacked_slots );
         }
     }
     return issues;
+}
+
+int Character::get_universal_bionic_slots() const
+{
+    int slots = 0;
+    for( const trait_id &mut : get_functioning_mutations() ) {
+        slots += mut->universal_bionic_slot_bonus();
+    }
+    return slots;
+}
+
+int Character::get_used_universal_bionic_slots() const
+{
+    int used = 0;
+    // A body part only dips into the universal pool once its own capacity is exceeded.
+    for( const bodypart_id &bp : get_all_body_parts() ) {
+        const int overflow = get_used_bionics_slots( bp ) - get_total_bionics_slots( bp );
+        if( overflow > 0 ) {
+            used += overflow;
+        }
+    }
+    return used;
+}
+
+int Character::get_free_universal_bionic_slots() const
+{
+    const int free_slots = get_universal_bionic_slots() - get_used_universal_bionic_slots();
+    return std::max( 0, free_slots );
 }
 
 int Character::get_total_bionics_slots( const bodypart_id &bp ) const
