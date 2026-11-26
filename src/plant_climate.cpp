@@ -18,6 +18,7 @@
 #include "cata_utility.h"
 #include "climate_seasons.h"
 #include "coordinates.h"
+#include "farming.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
@@ -577,7 +578,7 @@ void release_relay_crop( const map &here, const tripoint_bub_ms &p, item &seed,
     double development = 0;
     const tripoint_abs_ms pos = here.get_abs( p );
     // A shaded understory can establish a seedling while the wheat finishes grain fill.
-    const time_point start = here.crop_is_sheltered( p ) ? calendar::turn :
+    const time_point start = is_crop_sheltered( here, p ) ? calendar::turn :
                              std::max( seed.birthday(), calendar::turn - 60_days );
     for( time_point cursor = start; cursor < calendar::turn && development < limit; ) {
         const time_duration elapsed = crop_time_of_day( cursor );

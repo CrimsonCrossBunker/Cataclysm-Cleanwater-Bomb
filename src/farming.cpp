@@ -574,10 +574,16 @@ item *resolve_planted_seed( map &here, const item_source &source )
     return seed && seed->uid().get_value() == source.path.front() ? seed : nullptr;
 }
 
+bool is_crop_sheltered( const map &here, const tripoint_bub_ms &p )
+{
+    return p.z() < 0 || here.has_flag( ter_furn_flag::TFLAG_INDOORS, p ) ||
+           ( here.has_loaded_submap( p + tripoint::above ) && here.is_roofed( p ) );
+}
+
 bool can_relay_plant_corn( map &here, const tripoint_bub_ms &p )
 {
     const item *wheat = iexamine::get_seed_at( here, p );
-    return wheat && wheat->typeId() == relay_winter_wheat_seed && !here.crop_is_sheltered( p ) &&
+    return wheat && wheat->typeId() == relay_winter_wheat_seed && !is_crop_sheltered( here, p ) &&
            here.furn( p )->has_flag( ter_furn_flag::TFLAG_PLANT ) &&
            iexamine::is_plant_mature( here, p ) && !iexamine::is_plant_overgrown( here, p ) &&
            !relay_crop_at( here, p );

@@ -48,6 +48,7 @@ bool execute_farming_command( Character &who, const farming_command &command,
 
 // Resolve the seed stored directly in a plot, including sealed crop furniture.
 item *resolve_planted_seed( map &here, const item_source &source );
+bool is_crop_sheltered( const map &here, const tripoint_bub_ms &p );
 bool can_relay_plant_corn( map &here, const tripoint_bub_ms &p );
 
 // The first collecting container matches map::produce_sap, even when other

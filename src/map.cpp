@@ -53,6 +53,7 @@
 #include "enum_conversions.h"
 #include "enums.h"
 #include "explosion.h"
+#include "farming.h"
 #include "field.h"
 #include "field_type.h"
 #include "flag.h"
@@ -11666,8 +11667,7 @@ static constexpr time_duration indoor_crop_light_interval = 10_minutes;
 
 bool map::crop_is_sheltered( const tripoint_bub_ms &p ) const
 {
-    return p.z() < 0 || has_flag( ter_furn_flag::TFLAG_INDOORS, p ) ||
-           ( has_loaded_submap( p + tripoint::above ) && is_roofed( p ) );
+    return is_crop_sheltered( *this, p );
 }
 
 void map::process_indoor_crops( const map_simulation_regions *regions )
