@@ -82,6 +82,7 @@
 
 class Creature;
 enum npc_action : int;
+struct mtype;
 
 static const activity_id ACT_FORAGE( "ACT_FORAGE" );
 static const activity_id ACT_HARVEST( "ACT_HARVEST" );
@@ -3922,7 +3923,8 @@ TEST_CASE( "follower_drops_a_stale_combat_commitment", "[npc][behavior]" )
 static int lost_track_reports()
 {
     int reports = 0;
-    const std::vector<std::pair<std::string, std::string>> logged = Messages::recent_messages( 0 );
+    const std::vector<std::pair<std::string, std::string>> logged =
+                Messages::recent_messages( Messages::size() );
     for( const std::pair<std::string, std::string> &entry : logged ) {
         if( entry.second.find( "has lost track of you" ) != std::string::npos ) {
             ++reports;
@@ -4393,6 +4395,54 @@ TEST_CASE( "follower_pulps_only_corpses_the_activity_accepts", "[npc][pulp]" )
         REQUIRE( g->can_pulp_corpse( guy, mon_zeindeer.obj() ) );
         place_corpse( mon_zeindeer );
         CHECK_FALSE( guy.find_corpse_to_pulp() );
+    }
+    SECTION( "a follower done with a mixed pile does not stay at the acidic corpse" ) {
+        guy.set_mission( NPC_MISSION_NULL );
+        guy.guard_pos = std::nullopt;
+        guy.clear_ai_guard_pos();
+        guy.set_hunger( 0 );
+        guy.set_thirst( 0 );
+        guy.set_sleepiness( 0 );
+        guy.set_stored_kcal( guy.get_healthy_kcal() );
+        guy.set_all_parts_temp_conv( BODYTEMP_NORM );
+        guy.set_all_parts_temp_cur( BODYTEMP_NORM );
+        const tripoint_bub_ms pile( 54, 50, 0 );
+        place_corpse( mon_zombie );
+        place_corpse( mon_zombie_acidic );
+        const auto unpulped = [&here, &pile]( const mtype & type ) {
+            for( const item &it : here.i_at( pile ) ) {
+                if( it.can_revive() && it.get_corpse_mon() == &type ) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        int turns = 0;
+        const auto next_turn = [&guy, &turns]() {
+            guy.set_moves( 100 );
+            guy.move();
+            calendar::turn += 1_turns;
+            ++turns;
+        };
+        while( turns < 400 && unpulped( mon_zombie.obj() ) ) {
+            next_turn();
+        }
+        REQUIRE_FALSE( unpulped( mon_zombie.obj() ) );
+        REQUIRE( unpulped( mon_zombie_acidic.obj() ) );
+        // Nothing pulpable is left; picking the acidic corpse again would pin the follower there.
+        int reselected = 0;
+        for( int i = 0; i < 20; ++i ) {
+            next_turn();
+            if( guy.pulp_location ) {
+                ++reselected;
+            }
+        }
+        INFO( "after " << turns << " turns the follower is at " <<
+              guy.pos_bub().to_string_writable() );
+        CHECK( reselected == 0 );
+        // The pulp is over, so the follower must be a plain follower again.
+        CHECK_FALSE( guy.activity );
+        CHECK( guy.get_attitude() == NPCATT_FOLLOW );
     }
 }
 
