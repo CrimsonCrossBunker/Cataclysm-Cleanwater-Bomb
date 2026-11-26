@@ -259,6 +259,35 @@
     ]
   },
   {
+    "id": "exodii_khuunaofaai_mag_fungicidal",
+    "copy-from": "exodii_khuunaofaai_mag_firework",
+    "ammo_type": [ "khuunaofaai_payload_fungicide" ],
+    "capacity": 4,
+    "count": 4,
+    "name": { "str": "ordnance cannon fungicidal canister" },
+    "type": "ITEM",
+    "subtypes": [ "MAGAZINE" ],
+    "description": "A pressurized tank containing one of the special payloads the Exodii made for their ordnance cannon, a concentrated fungicide that bursts into a wide, lingering cloud on impact.  Fungal growths wither and fungal creatures choke in the haze.  Anyone who breathes it without gas-proof gear is poisoned too.",
+    "variant_type": "gun",
+    "variants": [
+      {
+        "id": "exodii_khuunaofaai_mag_fungicidal",
+        "name": { "str": "Khuunäöfaai fungicidal canister" },
+        "description": "A pressurized tank containing one of the special payloads the Exodii made for the Khuunäöfaai, a concentrated fungicide that bursts into a wide, lingering cloud on impact.  Fungal growths wither and fungal creatures choke in the haze.  Anyone who breathes it without gas-proof gear is poisoned too.",
+        "weight": 1
+      }
+    ],
+    "pocket_data": [
+      {
+        "pocket_type": "MAGAZINE",
+        "rigid": true,
+        "airtight": true,
+        "ammo_restriction": { "khuunaofaai_payload_fungicide": 4 },
+        "watertight": true
+      }
+    ]
+  },
+  {
     "id": "ree_33_4_mag",
     "looks_like": "stanag30",
     "type": "ITEM",

@@ -205,7 +205,8 @@
           { "item": "exodii_khuunaofaai_mag_adhesive", "prob": 50, "count": [ 1, 2 ] }
         ],
         "prob": 25
-      }
+      },
+      { "item": "exodii_khuunaofaai_mag_fungicidal", "prob": 30, "count": [ 1, 2 ] }
     ]
   },
   {

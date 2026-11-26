@@ -119,12 +119,19 @@
           "exodii_khuunaofaai_mag_firework",
           "exodii_khuunaofaai_mag_incendiary",
           "exodii_khuunaofaai_mag_corrosive",
-          "exodii_khuunaofaai_mag_adhesive"
+          "exodii_khuunaofaai_mag_adhesive",
+          "exodii_khuunaofaai_mag_fungicidal"
         ]
       }
     ],
     "reload_noise_volume": 20,
-    "ammo": [ "khuunaofaai_payload", "khuunaofaai_payload_fire", "khuunaofaai_payload_acid", "khuunaofaai_payload_glue" ]
+    "ammo": [
+      "khuunaofaai_payload",
+      "khuunaofaai_payload_fire",
+      "khuunaofaai_payload_acid",
+      "khuunaofaai_payload_glue",
+      "khuunaofaai_payload_fungicide"
+    ]
   },
   {
     "id": "spell_corrosive_spray",

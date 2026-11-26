@@ -344,6 +344,19 @@
     "price_postapoc": "5 USD 10 cent"
   },
   {
+    "id": "khuunaofaai_ammo_fungicidal",
+    "type": "ITEM",
+    "subtypes": [ "AMMO" ],
+    "name": { "str": "Khuunäöfaai fungicidal payload" },
+    "description": "Pressurized chemical payload for the Khuunäöfaai.  A concentrated fungicide aerosol that is deadly to fungal life and poisonous to anyone who breathes it without gas-proof gear.  Removing it from the tank would be a bad idea.",
+    "ammo_type": "khuunaofaai_payload_fungicide",
+    "effects": [ "NON_FOULING", "GAS_FUNGICIDAL_BIG" ],
+    "damage": { "damage_type": "bullet", "amount": 10, "armor_penetration": 4 },
+    "copy-from": "khuunaofaai_ammo_firework",
+    "weight": "6 g",
+    "price_postapoc": "6 USD 50 cent"
+  },
+  {
     "id": "33naval_ball",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],

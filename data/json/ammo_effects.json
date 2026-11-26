@@ -269,6 +269,12 @@
     "aoe": [ { "field_type": "fd_fungicidal_gas", "intensity_min": 3, "intensity_max": 3 } ]
   },
   {
+    "id": "GAS_FUNGICIDAL_BIG",
+    "type": "ammo_effect",
+    "//": "Creates a large cloud of fungicidal gas on hit",
+    "aoe": [ { "field_type": "fd_fungicidal_gas", "intensity_min": 3, "intensity_max": 3, "radius": 5 } ]
+  },
+  {
     "id": "GAS_INSECTICIDAL",
     "type": "ammo_effect",
     "//": "Creates a cloud of insecticidal gas on hit",
