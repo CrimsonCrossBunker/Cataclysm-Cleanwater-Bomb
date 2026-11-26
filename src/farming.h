@@ -19,7 +19,8 @@ class map;
 
 enum class farming_action {
     plant, fertilize, harvest, water, clear, gather, forage, flower, fungus, marloss,
-    hickory_roots, maple_tap, maple_untap, maple_add_container, maple_remove_container, maple_sap
+    hickory_roots, maple_tap, maple_untap, maple_add_container, maple_remove_container, maple_sap,
+    relay_plant_corn
 };
 
 // A choice refers to the observed plot and crop, never a client-authored item,
@@ -47,6 +48,8 @@ bool execute_farming_command( Character &who, const farming_command &command,
 
 // Resolve the seed stored directly in a plot, including sealed crop furniture.
 item *resolve_planted_seed( map &here, const item_source &source );
+bool is_crop_sheltered( const map &here, const tripoint_bub_ms &p );
+bool can_relay_plant_corn( map &here, const tripoint_bub_ms &p );
 
 // The first collecting container matches map::produce_sap, even when other
 // unrelated items share the tree tile. These are short-lived frontend handles.

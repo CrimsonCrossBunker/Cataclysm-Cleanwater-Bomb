@@ -3,7 +3,6 @@
 #define CATA_SRC_PLANT_CLIMATE_H
 
 #include <optional>
-#include <string_view>
 
 #include "calendar.h"
 #include "coordinates.h"
@@ -23,6 +22,8 @@ struct crop_climate_profile {
     double water_mm;
     int growing_days;
     double water_peak;
+    int vernalization_days;
+    double root_zone_water_mm;
 
     static crop_climate_profile load( const JsonObject &jo );
     double heat_units( double low, double high ) const;
@@ -32,13 +33,22 @@ struct field_crop {
     itype_id seed;
     int planting_day;
     int harvest_day;
+    int planting_year_offset;
 
     // Dates follow the displayed game calendar and scale with the configured year length.
     std::optional<time_point> sowing_date( time_point when ) const;
 };
 
-std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll,
+std::optional<field_crop> regional_field_crop( point_abs_omt field,
         const itype_id &existing_seed = itype_id::NULL_ID() );
+std::optional<time_point> regional_field_sowing( const field_crop &crop, point_abs_omt field,
+        time_point when );
+void repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed );
+bool is_primary_crop_seed( const item &value );
+item *relay_crop_at( map &here, const tripoint_bub_ms &p );
+bool relay_corn_has_planting_weather( const map &here, const tripoint_bub_ms &p );
+void release_relay_crop( const map &here, const tripoint_bub_ms &p, item &seed,
+                         double soil_water_mm );
 
 struct fruit_climate_profile {
     crop_climate_profile growth;
@@ -54,6 +64,7 @@ struct crop_water_status {
     double irrigation_mm;
     double daily_need_mm;
     bool temperature_limited;
+    bool dormant;
 };
 
 crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms &p,

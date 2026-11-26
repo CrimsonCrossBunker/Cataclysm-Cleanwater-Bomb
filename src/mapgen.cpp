@@ -3657,17 +3657,19 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
             const tripoint_bub_ms pos( px.get(), py.get(), dat.zlevel() + pz.get() );
             const furn_id chosen_furn = furniture.get( dat );
             dat.m.furn_set( pos, furn_str_id::NULL_ID() );
-            if( regional_crop && pos.z() == 0 && north_america::active() &&
+            static const furn_str_id field_seedling( "f_plant_seedling" );
+            static const furn_str_id field_seed( "f_plant_seed" );
+            const bool is_crop_field = chosen_furn == field_seedling.id() &&
+                                       dat.terrain_type()->get_travel_cost_type() == oter_travel_cost_type::crop_field;
+            if( ( regional_crop || is_crop_field ) && pos.z() == 0 && north_america::active() &&
                 chosen_furn->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
-                const point_abs_omt field = dat.pos().xy();
-                const point_abs_ms abs_field = project_to<coords::ms>( field ) + point( SEEX, SEEY );
-                // A field is planted as a unit. Hash its absolute position with the world seed.
-                const unsigned roll = static_cast<unsigned>( std::hash<point_abs_omt> {}( field ) ) ^
-                                      g->get_seed();
-                const std::optional<field_crop> crop = regional_field_crop(
-                        north_america::jurisdiction_at( abs_field ), roll );
+                const point_abs_omt field = project_to<coords::omt>( dat.m.get_abs( pos ) ).xy();
+                std::optional<field_crop> crop = regional_field_crop( field );
+                if( !crop && item_spawner && !is_crop_field ) {
+                    crop = regional_field_crop( field, item_spawner->type.get( dat ) );
+                }
                 if( crop && crop->seed.is_valid() ) {
-                    const auto sown = crop->sowing_date( calendar::start_of_cataclysm );
+                    const auto sown = regional_field_sowing( *crop, field, calendar::start_of_cataclysm );
                     if( !sown ) {
                         return;
                     }
@@ -3678,11 +3680,19 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                         }
                         // The historical simulation can start before the game's turn zero.
                         seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
+                        seed.set_var( "crop_field_history_v4", true );
+                        if( crop->seed == itype_id( "seed_red_winter_wheat" ) ) {
+                            seed.set_var( "crop_winter_wheat_v2", true );
+                        }
                         iexamine::set_plant_last_water_check( seed, *sown );
                         dat.m.add_item( pos, std::move( seed ) );
-                        dat.m.furn_set( pos, chosen_furn );
+                        dat.m.furn_set( pos, chosen_furn == field_seedling.id() ?
+                                        field_seed.id() : chosen_furn );
                         return;
                     }
+                }
+                if( is_crop_field ) {
+                    return;
                 }
             }
             if( item_spawner ) {

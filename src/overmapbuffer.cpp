@@ -1546,6 +1546,9 @@ static omt_find_params assign_params(
 bool overmapbuffer::is_findable_location( const tripoint_abs_omt &location,
         const omt_find_params &params )
 {
+    if( location.z() < params.min_z || location.z() > params.max_z ) {
+        return false;
+    }
     bool type_matches = false;
     if( params.existing_only ) {
         for( const std::pair<std::string, ot_match_type> &elem : params.types ) {
@@ -2829,6 +2832,61 @@ bool overmapbuffer::place_special( const overmap_special_id &special_id,
         }
     }
     if( !found ) {
+        return false;
+    }
+
+    const bool required_site = special_id.str() == "hub_01" ||
+                               special_id.str() == "physics_lab_LIXA" ||
+                               special_id.str() == "office_tower_collapsed";
+    if( required_site ) {
+        const int anchor_range = rad - special.longest_side() + 1;
+        const auto place_on = [&]( overmap & om, bool relax_city ) {
+            const point_abs_omt base = project_to<coords::omt>( om.pos() );
+            const point_rel_omt delta = center.xy() - base;
+            const point_om_omt start( std::clamp( delta.x(), 0, OMAPX - 1 ),
+                                      std::clamp( delta.y(), 0, OMAPY - 1 ) );
+            for( const point_om_omt &p : closest_points_first( start, 0,
+                    std::min( OMAPX, anchor_range ) ) ) {
+                if( p.x() < 0 || p.y() < 0 || p.x() >= OMAPX || p.y() >= OMAPY ||
+                    square_dist( center.xy(), project_combine( om.pos(), p ) ) >= anchor_range ) {
+                    continue;
+                }
+                const tripoint_om_omt anchor( p, 0 );
+                const city &nearest = om.get_nearest_city( anchor );
+                if( !relax_city && !special.can_belong_to_city( anchor, nearest, om ) ) {
+                    continue;
+                }
+                const om_direction::type rotation = om.random_special_rotation( special, anchor, true );
+                if( rotation != om_direction::type::invalid ) {
+                    om.place_special( special, anchor, rotation, nearest, true, false );
+                    return true;
+                }
+            }
+            return false;
+        };
+        if( anchor_range <= 0 ) {
+            return false;
+        }
+        for( overmap *om : get_overmaps_near( project_to<coords::sm>( center ),
+                 omt_to_sm_copy( rad ) ) ) {
+            if( place_on( *om, false ) || place_on( *om, true ) ) {
+                return true;
+            }
+        }
+        const point_abs_om origin = project_to<coords::om>( center.xy() );
+        for( const point_abs_om &p : closest_points_first( origin, 0, 1 ) ) {
+            const point_abs_omt base = project_to<coords::omt>( p );
+            const point_rel_omt delta = center.xy() - base;
+            if( has( p ) || delta.x() < -anchor_range || delta.y() < -anchor_range ||
+                delta.x() >= OMAPX + anchor_range || delta.y() >= OMAPY + anchor_range ) {
+                continue;
+            }
+            overmap &om = get( p );
+            if( contains_unique_special( special_id ) ||
+                place_on( om, false ) || place_on( om, true ) ) {
+                return true;
+            }
+        }
         return false;
     }
 

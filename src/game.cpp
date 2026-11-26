@@ -8522,7 +8522,7 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
 }
 
 bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const bool via_ramp,
-                      const bool furniture_move, const walk_move_choices *choices )
+                      const bool furniture_move, const walk_move_choices *choices, bool climb_slope )
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
@@ -8571,7 +8571,7 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
         const bool rope = who.has_amount( itype_rope_30, 1 );
         if( who.is_mounted() || who.get_grab_type() != object_type::NONE ||
             who.get_working_arm_count() < 2 ||
-            ( !rope && !anchor && !who.has_flag( json_flag_CLIMB_NO_LADDER ) ) ||
+            ( !climb_slope && !rope && !anchor && !who.has_flag( json_flag_CLIMB_NO_LADDER ) ) ||
             grade > north_america::rope_grade_limit ) {
             who.add_msg_if_player( m_info, _( "That slope is too steep to cross on foot." ) );
             return false;

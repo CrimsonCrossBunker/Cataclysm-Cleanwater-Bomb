@@ -53,6 +53,7 @@
 #include "enum_conversions.h"
 #include "enums.h"
 #include "explosion.h"
+#include "farming.h"
 #include "field.h"
 #include "field_type.h"
 #include "flag.h"
@@ -2943,9 +2944,7 @@ std::string map::furnname( const tripoint_bub_ms &p )
     if( f.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
         // Can't use item_stack::only_item() since there might be fertilizer
         map_stack items = i_at( p );
-        const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-            return it.is_seed();
-        } );
+        const map_stack::iterator seed = std::find_if( items.begin(), items.end(), is_primary_crop_seed );
         if( seed == items.end() ) {
             debugmsg( "Missing seed for plant at (%d, %d, %d)", p.x(), p.y(), p.z() );
             return "null";
@@ -11668,8 +11667,7 @@ static constexpr time_duration indoor_crop_light_interval = 10_minutes;
 
 bool map::crop_is_sheltered( const tripoint_bub_ms &p ) const
 {
-    return p.z() < 0 || has_flag( ter_furn_flag::TFLAG_INDOORS, p ) ||
-           ( has_loaded_submap( p + tripoint::above ) && is_roofed( p ) );
+    return is_crop_sheltered( *this, p );
 }
 
 void map::process_indoor_crops( const map_simulation_regions *regions )
@@ -11711,15 +11709,13 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
 void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_crop_interval,
                       std::optional<bool> indoor_light )
 {
-    const furn_t &initial_furn = this->furn( p ).obj();
-    if( !initial_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+    const furn_t &original_furn = this->furn( p ).obj();
+    if( !original_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
         return;
     }
     // Can't use item_stack::only_item() since there might be fertilizer
     map_stack items = i_at( p );
-    map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-        return it.is_seed();
-    } );
+    map_stack::iterator seed = std::find_if( items.begin(), items.end(), is_primary_crop_seed );
 
     if( seed == items.end() ) {
         // No seed there anymore, we don't know what kind of plant it was.
@@ -11728,7 +11724,7 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
         const tripoint_abs_sm sm_pos = project_to<coords::sm>( ms_pos );
         const oter_id ot = overmap_buffer.ter( project_to<coords::omt>( ms_pos ) );
         dbg( D_ERROR ) << "plant furniture has no seed item.  "
-                       << "furniture: " << initial_furn.id.str()
+                       << "furniture: " << original_furn.id.str()
                        << ", submap absolute: " << sm_pos
                        << ", map square absolute: " << ms_pos
                        << ", class map map square relative: " << p
@@ -11740,14 +11736,16 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
         // Preserve the base (usually tilled earth) instead of reverting to bare
         // ground, so old saves or corrupted tiles remain farmable rather than
         // instantly requiring new tilling and triggering a planting fetch loop.
-        if( initial_furn.plant ) {
-            furn_set( p, initial_furn.plant->base );
+        if( original_furn.plant ) {
+            furn_set( p, original_furn.plant->base );
         } else {
             furn_set( p, furn_str_id::NULL_ID() );
         }
         return;
     }
 
+    repair_regional_field_crop( *this, p, *seed );
+    const furn_t &initial_furn = this->furn( p ).obj();
     const islot_seed &seed_data = *seed->type->seed;
     const auto &growth_stages = seed_data.get_growth_stages();
     std::optional<time_duration> light_exposure;

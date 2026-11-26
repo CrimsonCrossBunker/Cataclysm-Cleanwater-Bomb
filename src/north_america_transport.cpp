@@ -440,7 +440,7 @@ oter_id wide_highway_flank( bool north_south )
     return ( north_south ? oter_atlas_highway_north_south : oter_atlas_highway_east_west ).id();
 }
 
-enum class crosswalk_tile : unsigned char { none, asphalt, zebra, junction };
+enum class crosswalk_tile : unsigned char { none, asphalt, stop_line, zebra, junction };
 
 static std::array<crosswalk_tile, road_span *road_span> wide_urban_crosswalks(
     const tripoint_abs_omt &omt, bool mapped, bool arterials )
@@ -524,16 +524,29 @@ static std::array<crosswalk_tile, road_span *road_span> wide_urban_crosswalks(
                 }
                 const int first = edge + ( forwards ? 1 : -3 );
                 const int curb = offsets[index] - half_width;
+                const int center = offsets[index];
+                const int inner = forwards ? edge : edge - 1;
+                const int stop = forwards ? first + 2 : first - 1;
+                const bool incoming_low = vertical != forwards;
+                const auto mark_tile = [&]( int across, int along, crosswalk_tile value ) {
+                    const point pos = tile_origin + ( vertical ? point( across, along ) :
+                                                      point( along, across ) );
+                    if( pos.x >= 0 && pos.x < road_span && pos.y >= 0 && pos.y < road_span ) {
+                        crosswalk_tile &mark = marks[pos.y * road_span + pos.x];
+                        mark = std::max( mark, value );
+                    }
+                };
                 // Match the stock crossing: two tiles deep, alternating paint and asphalt.
-                for( int across = curb; across < offsets[index] + half_width; ++across ) {
+                for( int across = curb; across < center + half_width; ++across ) {
                     for( int along = first; along < first + 2; ++along ) {
-                        const point pos = tile_origin + ( vertical ? point( across, along ) :
-                                                          point( along, across ) );
-                        if( pos.x >= 0 && pos.x < road_span && pos.y >= 0 && pos.y < road_span ) {
-                            crosswalk_tile &mark = marks[pos.y * road_span + pos.x];
-                            mark = std::max( mark, ( across - curb ) % 2 == 0 ?
-                                             crosswalk_tile::asphalt : crosswalk_tile::zebra );
-                        }
+                        mark_tile( across, along, ( across - curb ) % 2 == 0 ?
+                                   crosswalk_tile::asphalt : crosswalk_tile::zebra );
+                    }
+                    if( arms == 4 ) {
+                        mark_tile( across, inner, crosswalk_tile::asphalt );
+                        // Right-hand traffic approaches on only one side of the centerline.
+                        const bool incoming = incoming_low ? across < center - 1 : across > center;
+                        mark_tile( across, stop, incoming ? crosswalk_tile::stop_line : crosswalk_tile::asphalt );
                     }
                 }
             }
@@ -685,6 +698,7 @@ void place_wide_highway_surface( mapgendata &dat )
             const crosswalk_tile crossing = sample.controlled_access ? crosswalk_tile::none :
                                             crosswalks[row * road_span + column];
             const ter_id pavement = crossing == crosswalk_tile::zebra ? ter_t_zebra.id() :
+                                    crossing == crosswalk_tile::stop_line ? ter_t_pavement_y.id() :
                                     crossing != crosswalk_tile::none ? ter_t_pavement.id() :
                                     stripe == 0 ? ter_t_pavement_y.id() :
                                     dashed && stripe % lane_width == 0 &&

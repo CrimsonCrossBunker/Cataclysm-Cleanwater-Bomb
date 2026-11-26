@@ -24,6 +24,7 @@
 #include "mapdata.h"
 #include "monster.h"
 #include "mtype.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "output.h"
 #include "line.h"
@@ -35,6 +36,7 @@
 #include "vehicle.h"
 #include "vehicle_uid.h"
 #include "vpart_position.h"
+#include "walking.h"
 
 void vertical_move_choices::serialize( JsonOut &out ) const
 {
@@ -606,6 +608,38 @@ static bool execute_ledge_move( Character &who, map &here, const vertical_move_s
     return false;
 }
 
+static std::optional<tripoint_bub_ms> slope_climb_landing( const Character &who, const map &here )
+{
+    const tripoint_bub_ms pos = who.pos_bub( here );
+    if( !north_america::elevation_active() || pos.z() != 0 || !here.is_outside( pos ) ||
+        who.is_mounted() || who.is_underwater() || who.get_grab_type() != object_type::NONE ||
+        who.get_working_arm_count() < 2 || here.veh_at( pos ) ||
+        here.has_flag( ter_furn_flag::TFLAG_GOES_UP, pos ) ) {
+        return std::nullopt;
+    }
+    const auto weapon = who.get_wielded_item();
+    if( weapon && weapon->is_two_handed( who ) ) {
+        return std::nullopt;
+    }
+    // Standing reach includes the arm above shoulder height. Character height is in cm.
+    double best_rise = who.height() * 0.014;
+    std::optional<tripoint_bub_ms> landing;
+    const double altitude = north_america::altitude_at( here, pos );
+    for( const tripoint_bub_ms &p : here.points_in_radius( pos, 1 ) ) {
+        if( !north_america::sheer_slope( here, pos, p ) || !here.is_outside( p ) ||
+            !here.passable( p ) || !here.has_floor_or_support( p ) || here.veh_at( p ) ||
+            get_creature_tracker().creature_at( p ) ) {
+            continue;
+        }
+        const double rise = north_america::altitude_at( here, p ) - altitude;
+        if( rise > 0 && rise <= best_rise ) {
+            best_rise = rise;
+            landing = p;
+        }
+    }
+    return landing;
+}
+
 vertical_move_prompt make_vertical_move_prompt( Character &who, map &here, int direction )
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
@@ -683,6 +717,16 @@ vertical_move_prompt make_vertical_move_prompt( Character &who, map &here, int d
         }
         const bool swimming = here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos );
         const bool phase = who.has_flag( json_character_flag( "PHASE_MOVEMENT" ) );
+        if( direction > 0 && !swimming && !phase ) {
+            if( const auto landing = slope_climb_landing( who, here ) ) {
+                selection.action = "climb_slope";
+                selection.target = here.get_abs( *landing );
+                choices.landing = selection.target;
+                option.label = _( "Climb the slope." );
+                append( std::move( option ) );
+                return prompt;
+            }
+        }
         if( direction < 0 && !swimming && !phase &&
             !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, pos ) ) {
             std::vector<tripoint_bub_ms> ledges;
@@ -816,6 +860,18 @@ bool execute_vertical_move( Character &who, map &here, const vertical_move_selec
         }
         g->climb_down_using( who, here.get_bub( selection.target ), selection.aid, true, true );
         return true;
+    }
+    if( selection.action == "climb_slope" ) {
+        const auto landing = slope_climb_landing( who, here );
+        if( selection.direction != 1 || !landing || here.get_abs( *landing ) != selection.target ||
+            !who.move_effects( false ) || !lifetime || who.pos_abs() != selection.origin ||
+            slope_climb_landing( who, here ) != landing ) {
+            return false;
+        }
+        walk_move_choices choices;
+        choices.destination = selection.target;
+        choices.allow_danger = selection.choices.allow_danger;
+        return g->walk_move( who, *landing, false, false, &choices, true );
     }
     if( selection.action == "vehicle_deck" ) {
         const auto pos = who.pos_bub( here );
