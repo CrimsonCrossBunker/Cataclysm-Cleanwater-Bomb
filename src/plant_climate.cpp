@@ -50,12 +50,14 @@ crop_climate_profile crop_climate_profile::load( const JsonObject &jo )
         jo.get_float( "base_c" ), jo.get_float( "optimum_c" ),
         jo.get_float( "min_c" ), jo.get_float( "max_c" ),
         jo.get_float( "degree_days" ), jo.get_float( "water_mm" ), jo.get_int( "growing_days" ),
-        jo.get_float( "water_peak", 0.5 ), jo.get_int( "vernalization_days", 0 )
+        jo.get_float( "water_peak", 0.5 ), jo.get_int( "vernalization_days", 0 ),
+        jo.get_float( "root_zone_water_mm", 0.0 )
     };
     if( result.min_c > result.base_c || result.base_c >= result.optimum_c ||
         result.optimum_c >= result.max_c || result.degree_days <= 0 ||
         result.water_mm <= 0 || result.growing_days <= 0 ||
-        result.water_peak < 0 || result.water_peak > 1 || result.vernalization_days < 0 ) {
+        result.water_peak < 0 || result.water_peak > 1 || result.vernalization_days < 0 ||
+        result.root_zone_water_mm < 0 ) {
         jo.throw_error( "Invalid crop climate profile" );
     }
     return result;
@@ -297,21 +299,7 @@ const crop_day &sample_day( const tripoint_abs_ms &pos, time_point date,
     const weather_type_id forced = field_history ? WEATHER_NULL :
                                    eternal == "normal" ? weather.weather_override : weather_type_id( eternal );
     const auto &normals = cached.normals;
-    // For pregame fields, use the local precipitation normal rather than the
-    // current weather override or a particular roll of the storm model.
-    std::optional<double> historical_rate;
-    if( field_history && normals ) {
-        const time_duration year = calendar::year_length();
-        const time_duration date_in_year = ( time_past_new_year( start + 12_hours ) + year ) % year;
-        const double model_day = date_in_year / year * model_days;
-        const auto normal = regional_climate::temperature_for_day( *normals, model_day );
-        const double days_in_month = ( normal.month % 3 == 0 ? 31.0 : 30.0 ) *
-                                     to_days<double>( year ) / model_days;
-        // Partition the monthly normal into rain and snow from the local seasonal temperature.
-        const double rain_fraction = std::clamp( ( normal.mean_c + 1.0 ) / 4.0, 0.0, 1.0 );
-        historical_rate = rain_fraction * normals->months[normal.month].precipitation_mm /
-                          ( days_in_month * 24 );
-    }
+    // Historical fields use the same regional rain events as live weather, without debug overrides.
     crop_day result{ 100, -100, {} };
     for( int hour = 0; hour < 24; ++hour ) {
         const w_point sample = generator.get_weather( location, start + hour * 1_hours, g->get_seed(),
@@ -322,9 +310,7 @@ const crop_day &sample_day( const tripoint_abs_ms &pos, time_point date,
             result.low = std::min( result.low, c );
             result.high = std::max( result.high, c );
         }
-        if( historical_rate ) {
-            result.rain[hour] = *historical_rate;
-        } else if( c > 1 ) {
+        if( c > 1 ) {
             if( forced == WEATHER_NULL && sample.climate_precipitation_mm_per_hour ) {
                 result.rain[hour] = *sample.climate_precipitation_mm_per_hour;
                 continue;
@@ -385,6 +371,17 @@ double crop_water_need( const item &seed, const furn_t &furniture, double stage,
            to_days<double>( calendar::year_length() ) * water_use *
            iexamine::get_plant_water_consumption_multiplier( furniture ) *
            ( 1.25 - 0.6 * std::abs( std::clamp( stage, 0.0, 1.0 ) - climate.water_peak ) );
+}
+
+double crop_base_water_capacity( const crop_climate_profile &climate )
+{
+    return climate.root_zone_water_mm > 0 ? climate.root_zone_water_mm :
+           std::max( 12.0, climate.water_mm / climate.growing_days * 5 );
+}
+
+bool winter_crop_dormant( const crop_climate_profile &climate, double mean_c )
+{
+    return climate.vernalization_days > 0 && mean_c <= std::max( 4.0, climate.base_c );
 }
 
 double crop_temperature_offset( const map &here, const tripoint_bub_ms &p, bool sheltered )
@@ -453,7 +450,10 @@ std::optional<time_point> regional_field_sowing( const field_crop &crop, point_a
 
 bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed )
 {
-    if( seed.has_var( "crop_field_history_v4" ) || p.z() != 0 || !north_america::active() ||
+    const bool update_winter_wheat = seed.typeId() == itype_seed_red_winter_wheat &&
+                                     !seed.has_var( "crop_winter_wheat_v2" );
+    if( ( seed.has_var( "crop_field_history_v4" ) && !update_winter_wheat ) ||
+        p.z() != 0 || !north_america::active() ||
         seed.has_flag( json_flag_HIDDEN_ITEM ) || !seed.type->seed->climate ) {
         return true;
     }
@@ -475,6 +475,9 @@ bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed
         return true;
     }
     seed.set_var( "crop_field_history_v4", true );
+    if( update_winter_wheat ) {
+        seed.set_var( "crop_winter_wheat_v2", true );
+    }
     if( iexamine::is_plant_fertilized( seed ) || iexamine::get_plant_water( seed ) > 0 ) {
         return true;
     }
@@ -482,13 +485,16 @@ bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed
     if( !crop ) {
         return true;
     }
-    const auto sown = regional_field_sowing( *crop, omt.xy(), calendar::start_of_cataclysm );
+    const auto sown = update_winter_wheat && seed.has_var( "crop_field_sown" ) ?
+                      std::optional<time_point>( time_point::from_turn(
+                                  static_cast<int>( seed.get_var( "crop_field_sown", 0.0 ) ) ) ) :
+                      regional_field_sowing( *crop, omt.xy(), calendar::start_of_cataclysm );
     if( !sown ) {
         here.i_rem( p, &seed );
         here.furn_set( p, furniture->plant->base );
         return false;
     }
-    if( crop->seed == seed.typeId() && seed.has_var( "crop_field_sown" ) &&
+    if( !update_winter_wheat && crop->seed == seed.typeId() && seed.has_var( "crop_field_sown" ) &&
         seed.get_var( "crop_field_sown", 0.0 ) == to_turn<int>( *sown ) ) {
         return true;
     }
@@ -496,6 +502,9 @@ bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed
     // Reconstruct growth from the corrected date so the old season's heat and rain aren't reused.
     if( crop->seed != seed.typeId() ) {
         seed.convert( crop->seed );
+    }
+    if( crop->seed == itype_seed_red_winter_wheat ) {
+        seed.set_var( "crop_winter_wheat_v2", true );
     }
     seed.set_birthday( std::max( *sown, calendar::turn_zero ) );
     seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
@@ -517,6 +526,81 @@ void clear_plant_climate_cache()
     cells.clear();
 }
 
+bool is_primary_crop_seed( const item &value )
+{
+    return value.is_seed() && !value.has_var( "crop_relay_waiting" );
+}
+
+item *relay_crop_at( map &here, const tripoint_bub_ms &p )
+{
+    for( item &value : here.i_at( p ) ) {
+        if( value.has_var( "crop_relay_waiting" ) && value.is_seed() ) {
+            return &value;
+        }
+    }
+    return nullptr;
+}
+
+bool relay_corn_has_planting_weather( const map &here, const tripoint_bub_ms &p )
+{
+    const tripoint_abs_ms pos = here.get_abs( p );
+    const crop_day &today = sample_day( pos, calendar::turn );
+    if( ( today.low + today.high ) / 2 < 10 || today.low < 4 ) {
+        return false;
+    }
+    const crop_day &tomorrow = sample_day( pos, calendar::turn + 1_days );
+    return ( tomorrow.low + tomorrow.high ) / 2 >= 10 && tomorrow.low >= 4;
+}
+
+void release_relay_crop( const map &here, const tripoint_bub_ms &p, item &seed,
+                         double soil_water_mm )
+{
+    seed.erase_var( "crop_relay_waiting" );
+    iexamine::set_plant_last_water_check( seed, calendar::turn );
+    const islot_seed &slot = *seed.type->seed;
+    if( !slot.climate || slot.get_harvest_stage_idx() <= 0 ) {
+        return;
+    }
+    const auto &climate = *slot.climate;
+    const auto &stages = slot.get_cumulative_stage_thresholds();
+    const double emergence = to_turns<double>( stages.front() );
+    const double maturity = to_turns<double>( stages[slot.get_harvest_stage_idx() - 1] );
+    const double limit = emergence / maturity;
+    const double per_model_day = model_days / to_days<double>( calendar::year_length() );
+    const auto soil = north_america::crop_soil_at( here.ter( p ) );
+    const double capacity = crop_base_water_capacity( climate ) * soil.water_capacity;
+    double moisture = std::clamp( seed.get_var( "crop_relay_start_water_mm", soil_water_mm ),
+                                  0.0, capacity );
+    seed.erase_var( "crop_relay_start_water_mm" );
+    const double water_use = std::max( 0.01f, get_option<float>( "CROP_WATER_CONSUMPTION" ) );
+    const double growth_speed = get_option<float>( "CROP_GROWTH_SPEED" );
+    double development = 0;
+    const tripoint_abs_ms pos = here.get_abs( p );
+    // A shaded understory can establish a seedling while the wheat finishes grain fill.
+    const time_point start = here.crop_is_sheltered( p ) ? calendar::turn :
+                             std::max( seed.birthday(), calendar::turn - 60_days );
+    for( time_point cursor = start; cursor < calendar::turn && development < limit; ) {
+        const time_duration elapsed = crop_time_of_day( cursor );
+        const time_duration step = std::min( 1_days - elapsed, calendar::turn - cursor );
+        const crop_day &day = sample_day( pos, cursor );
+        const double days = to_days<double>( step ) * per_model_day;
+        moisture = std::min( capacity, moisture +
+                             crop_rain_for_interval( day, elapsed, step ) * soil.infiltration );
+        const double demand = days * climate.water_mm / climate.growing_days * 0.35 * water_use;
+        const double water = std::min( moisture, demand );
+        moisture -= water;
+        development += 0.5 * days * ( water / demand ) * growth_speed * soil.root_growth *
+                       std::min( climate.heat_units( day.low, day.high ) / climate.degree_days,
+                                 1.0 / climate.growing_days );
+        cursor += step;
+    }
+    development = std::min( limit, development );
+    seed.set_var( "crop_thermal_growth", development );
+    seed.set_var( "crop_growing_time", development );
+    seed.set_var( "crop_soil_moisture_mm", std::clamp( soil_water_mm, 0.0, capacity ) );
+    iexamine::set_plant_effective_growth_turns( seed, static_cast<int>( maturity * development ) );
+}
+
 crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms &p,
         const item &seed )
 {
@@ -525,7 +609,7 @@ crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms 
     const crop_climate_profile &climate = *slot.climate;
     const auto &thresholds = slot.get_cumulative_stage_thresholds();
     const double maturity = to_turns<double>( thresholds[slot.get_harvest_stage_idx() - 1] );
-    const double capacity = std::max( 12.0, climate.water_mm / climate.growing_days * 5 ) *
+    const double capacity = crop_base_water_capacity( climate ) *
                             crop_soil( here, p, furniture ).water_capacity;
     const double moisture = std::clamp( seed.get_var( "crop_soil_moisture_mm", capacity * 0.65 ),
                                         0.0, capacity );
@@ -536,8 +620,8 @@ crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms 
                                 climate.growing_days;
     const crop_day &day = sample_day( here.get_abs( p ), calendar::turn );
     const bool sheltered = p.z() < 0 || here.is_roofed( p );
-    const bool dormant = climate.vernalization_days > 0 &&
-                         ( day.low + day.high ) / 2 + crop_temperature_offset( here, p, sheltered ) <= climate.base_c;
+    const bool dormant = winter_crop_dormant( climate, ( day.low + day.high ) / 2 +
+                         crop_temperature_offset( here, p, sheltered ) );
     return { moisture, capacity, irrigation,
              crop_water_need( seed, furniture, effective_crop_turns( seed ) / maturity,
                               get_option<float>( "CROP_WATER_CONSUMPTION" ) ) * ( dormant ? 0.05 : 1.0 ),
@@ -563,7 +647,7 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     const bool covered = here.is_roofed( p ) || p.z() < 0;
     const furn_t *stage_furniture = &furniture;
     north_america::crop_soil_properties soil = crop_soil( here, p, furniture );
-    const double base_capacity = std::max( 12.0, climate.water_mm / climate.growing_days * 5 );
+    const double base_capacity = crop_base_water_capacity( climate );
     double capacity = base_capacity * soil.water_capacity;
     double irrigation = iexamine::get_plant_max_water( furniture ) > 0 ?
                         ( iexamine::get_plant_water( seed ) +
@@ -673,7 +757,7 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         }
         const int hour = to_hours<int>( elapsed );
         const bool winter_crop = climate.vernalization_days > 0;
-        const bool dormant = winter_crop && daily_mean <= climate.base_c;
+        const bool dormant = winter_crop_dormant( climate, daily_mean );
         if( winter_crop && thermal_growth >= 0.025 ) {
             chill = std::min( static_cast<double>( climate.vernalization_days ),
                               chill + days * per_model_day * daily_chill );

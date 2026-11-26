@@ -23,6 +23,7 @@ struct crop_climate_profile {
     int growing_days;
     double water_peak;
     int vernalization_days;
+    double root_zone_water_mm;
 
     static crop_climate_profile load( const JsonObject &jo );
     double heat_units( double low, double high ) const;
@@ -44,6 +45,11 @@ std::optional<time_point> regional_field_sowing( const field_crop &crop, point_a
         time_point when );
 // Returns false if the historical field should be fallow and the generated seed was removed.
 bool repair_regional_field_crop( map &here, const tripoint_bub_ms &p, item &seed );
+bool is_primary_crop_seed( const item &value );
+item *relay_crop_at( map &here, const tripoint_bub_ms &p );
+bool relay_corn_has_planting_weather( const map &here, const tripoint_bub_ms &p );
+void release_relay_crop( const map &here, const tripoint_bub_ms &p, item &seed,
+                         double soil_water_mm );
 
 struct fruit_climate_profile {
     crop_climate_profile growth;

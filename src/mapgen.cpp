@@ -3681,6 +3681,9 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
                         // The historical simulation can start before the game's turn zero.
                         seed.set_var( "crop_field_sown", to_turn<int>( *sown ) );
                         seed.set_var( "crop_field_history_v4", true );
+                        if( crop->seed == itype_id( "seed_red_winter_wheat" ) ) {
+                            seed.set_var( "crop_winter_wheat_v2", true );
+                        }
                         iexamine::set_plant_last_water_check( seed, *sown );
                         dat.m.add_item( pos, std::move( seed ) );
                         dat.m.furn_set( pos, chosen_furn == field_seedling.id() ?

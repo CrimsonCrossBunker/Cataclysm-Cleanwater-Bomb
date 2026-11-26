@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <list>
 #include <utility>
 #include <vector>
 
@@ -27,6 +28,7 @@
 #include "map_selector.h"
 #include "mapdata.h"
 #include "mp_client_conn.h"
+#include "plant_climate.h"
 #include "player_activity.h"
 #include "rng.h"
 #include "ret_val.h"
@@ -59,6 +61,54 @@ maple_tree_items inspect_maple_tree( map &here, const tripoint_abs_ms &position 
 
 namespace
 {
+const itype_id relay_corn_seed( "seed_corn" );
+const itype_id relay_winter_wheat_seed( "seed_red_winter_wheat" );
+
+bool plant_relay_corn( Character &who, map &here, const tripoint_bub_ms &tile,
+                       const farming_command &command )
+{
+    if( !can_relay_plant_corn( here, tile ) || !relay_corn_seed.is_valid() ||
+        !relay_corn_seed->seed ) {
+        return false;
+    }
+    if( !relay_corn_has_planting_weather( here, tile ) ) {
+        who.add_msg_if_player( m_info, _( "It is still too cold to relay-plant corn." ) );
+        return false;
+    }
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    std::list<item> seeds = item::count_by_charges( relay_corn_seed ) ?
+                            who.use_charges( relay_corn_seed, 1, craft_reservation::usable_by_automation ) :
+                            who.use_amount( relay_corn_seed, 1, craft_reservation::usable_by_automation );
+    if( seeds.empty() ) {
+        who.add_msg_if_player( m_info, _( "You need corn seeds to relay-plant this field." ) );
+        return false;
+    }
+    const item *wheat = context ? resolve_planted_seed( here, *command.seed ) : nullptr;
+    if( !lifetime || !wheat || !command.target.matches( here ) || relay_crop_at( here, tile ) ) {
+        if( lifetime ) {
+            who.i_add( std::move( seeds.front() ) );
+        }
+        return false;
+    }
+    item corn = seeds.front();
+    corn.set_age( 0_turns );
+    corn.set_flag( json_flag_HIDDEN_ITEM );
+    corn.set_var( "crop_relay_waiting", true );
+    corn.set_var( "crop_relay_start_water_mm", wheat->get_var( "crop_soil_moisture_mm", 0.0 ) );
+    iexamine::set_plant_water( corn, 0 );
+    iexamine::set_plant_effective_growth_turns( corn, 0 );
+    if( here.add_item_unprocessed( tile, std::move( corn ) ).is_null() ) {
+        who.i_add( std::move( seeds.front() ) );
+        return false;
+    }
+    who.mod_moves( -to_moves<int>( 30_seconds ) );
+    who.add_msg_if_player( _( "You sow corn between the standing wheat." ) );
+    get_event_bus().send<event_type::character_plants_seed>(
+        who.getID(), command.target.position.raw(), relay_corn_seed, command.target.furniture );
+    return true;
+}
+
 bool maple_container_accepts_sap( const item_location &container )
 {
     return container && container->get_remaining_capacity_for_liquid(
@@ -474,7 +524,7 @@ void farming_command::deserialize( const JsonObject &data )
 {
     const int value = data.get_int( "action" );
     if( value < static_cast<int>( farming_action::plant ) ||
-        value > static_cast<int>( farming_action::maple_sap ) ) {
+        value > static_cast<int>( farming_action::relay_plant_corn ) ) {
         data.throw_error_at( "action", "Invalid farming operation" );
     }
     action = static_cast<farming_action>( value );
@@ -522,6 +572,15 @@ item *resolve_planted_seed( map &here, const item_source &source )
     // Resolve only the planted seed, never other contents of the sealed tile.
     item *seed = iexamine::get_seed_at( here, position );
     return seed && seed->uid().get_value() == source.path.front() ? seed : nullptr;
+}
+
+bool can_relay_plant_corn( map &here, const tripoint_bub_ms &p )
+{
+    const item *wheat = iexamine::get_seed_at( here, p );
+    return wheat && wheat->typeId() == relay_winter_wheat_seed && !here.crop_is_sheltered( p ) &&
+           here.furn( p )->has_flag( ter_furn_flag::TFLAG_PLANT ) &&
+           iexamine::is_plant_mature( here, p ) && !iexamine::is_plant_overgrown( here, p ) &&
+           !relay_crop_at( here, p );
 }
 
 bool execute_farming_command( Character &who, const farming_command &command, bool auto_forage )
@@ -646,6 +705,8 @@ bool execute_farming_command( Character &who, const farming_command &command, bo
             }
             iexamine::water_plant( who, tile );
             return true;
+        case farming_action::relay_plant_corn:
+            return command.seed && plant_relay_corn( who, here, tile, command );
     }
     return false;
 }

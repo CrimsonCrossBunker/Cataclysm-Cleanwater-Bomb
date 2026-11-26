@@ -2867,6 +2867,30 @@ bool reachable_crop( const Character &who, map &here, const tripoint_bub_ms &pos
     return !cata_mp::is_client_mode() && !who.is_dead_state() && here.inbounds( position ) &&
            position.z() == who.pos_bub().z() && rl_dist( who.pos_bub(), position ) <= 1;
 }
+
+bool clear_crop_and_release_relay( map &here, const tripoint_bub_ms &p, const furn_str_id &base )
+{
+    item *relay = relay_crop_at( here, p );
+    if( !relay ) {
+        here.i_clear( p );
+        here.furn_set( p, base );
+        return false;
+    }
+    const item *previous = iexamine::get_seed_at( here, p );
+    const double moisture = previous ? previous->get_var( "crop_soil_moisture_mm", 0.0 ) : 0.0;
+    map_stack items = here.i_at( p );
+    for( auto iter = items.begin(); iter != items.end(); ) {
+        if( &*iter == relay ) {
+            ++iter;
+        } else {
+            iter = here.i_rem( p, iter );
+        }
+    }
+    static const furn_str_id seed_furniture( "f_plant_seed" );
+    here.furn_set( p, seed_furniture );
+    release_relay_crop( here, p, *relay, moisture );
+    return true;
+}
 } // namespace
 
 // Cleaning up plants that have decayed and overgrown.
@@ -2890,13 +2914,13 @@ void iexamine::clear_overgrown( Character &you, const tripoint_bub_ms &examp )
         return;
     }
     const furn_str_id base = here.furn( examp )->plant->base;
-    here.i_clear( examp );
-    here.furn_set( examp, base );
+    const bool relayed = clear_crop_and_release_relay( here, examp, base );
     player_activity act( ACT_HARVEST, to_moves<int>( 60_seconds ) );
     act.set_execution( activity_execution::authoritative );
     you.assign_activity( act );
     if( lifetime && context ) {
-        you.add_msg_if_player( m_neutral,
+        you.add_msg_if_player( m_neutral, relayed ?
+                               _( "You clear the dead wheat and leave the corn growing." ) :
                                _( "You pull up what's left of the planted crop and trample the rest." ) );
     }
 }
@@ -2996,8 +3020,7 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
     const std::string stage = stage_idx >= 0 ?
                               seed_type->seed->get_growth_stages()[stage_idx].first.str() : "";
     const furn_str_id base = fp->base;
-    here.i_clear( examp );
-    here.furn_set( examp, base );
+    const bool relayed = clear_crop_and_release_relay( here, examp, base );
 
     // Materialize the entire native yield before any callback. A callback that
     // removes the farmer or changes their activity cannot lose the remaining yield.
@@ -3022,6 +3045,9 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
     }
     const std::uint64_t generation = you.activity.identity_generation();
     you.add_msg_if_player( m_neutral, _( "You harvest the plant." ) );
+    if( relayed ) {
+        you.add_msg_if_player( _( "The relay-planted corn can now grow in full sun." ) );
+    }
     get_event_bus().send<event_type::character_harvests_plant>(
         you.getID(), plot.raw(), seed_type, furniture, plant_count, seed_count );
     if( !lifetime || !context ) {
@@ -3133,6 +3159,7 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
                                !is_plant_harvestable( here, examp ) &&
                                !is_plant_overgrown( here, examp ) && !is_plant_fertilized( *seed );
     const bool can_water = get_plant_max_water( here.furn( examp ).obj() ) > 0;
+    const bool can_relay = can_relay_plant_corn( here, examp );
     farming_command choice = capture_farming_command( you, here, here.get_abs( examp ),
                              farming_action::harvest );
     uilist menu;
@@ -3145,6 +3172,9 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
     }
     if( can_water ) {
         menu.addentry( 2, true, 'w', _( "Pour water" ) );
+    }
+    if( can_relay ) {
+        menu.addentry( 4, true, 'c', _( "Relay-plant corn between the wheat" ) );
     }
     menu.addentry( 3, true, 'q', _( "Cancel" ) );
     menu.query();
@@ -3161,6 +3191,8 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
         }
     } else if( menu.ret == 2 && can_water ) {
         choice.action = farming_action::water;
+    } else if( menu.ret == 4 && can_relay ) {
+        choice.action = farming_action::relay_plant_corn;
     } else {
         return;
     }
@@ -3206,7 +3238,7 @@ item *iexamine::get_seed_at( map &here, const tripoint_bub_ms &p )
 {
     map_stack items = here.i_at( p );
     for( item &it : items ) {
-        if( it.is_seed() ) {
+        if( is_primary_crop_seed( it ) ) {
             return &it;
         }
     }
@@ -3472,6 +3504,9 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
             }
             desc += '\n' + string_format( _( "Recorded rain: %.1f mm" ),
                                           seed->get_var( "crop_sampled_rain_mm", 0.0 ) );
+            if( relay_crop_at( here, p ) ) {
+                desc += _( "\nCorn has been relay-planted under the wheat." );
+            }
             if( status.soil_moisture_mm + status.irrigation_mm < status.daily_need_mm ) {
                 desc += _( "\n<color_yellow>Water supply is below one day's demand.</color>" );
             } else {

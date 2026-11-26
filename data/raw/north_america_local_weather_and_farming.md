@@ -13,6 +13,8 @@ Celsius and millimetres of water.
 | `growing_days` | Minimum growing span at full growth speed |
 | `water_mm` | Approximate seasonal water requirement |
 | `water_peak` | Stage of highest water demand, from 0 at sowing to 1 at ripeness |
+| `vernalization_days` | Optional cold exposure needed for winter crops to head |
+| `root_zone_water_mm` | Optional plant-available soil water before applying terrain modifiers |
 
 The game samples the local weather history, including its regional rainfall
 timing, and keeps a small soil-water store using existing seed item variables.
@@ -30,6 +32,19 @@ and [Purdue's crop tables](https://mrcc.purdue.edu/VIP/cropspecs),
 Where no cultivar-specific figure was available, the values are gameplay
 estimates based on similar crops, suitable temperatures and reported
 growing periods.
+
+Red winter wheat uses a 0 °C base, 1,700 °C-days to harvest, and a separate
+grain-filling stage after heading. Its 460 mm seasonal demand is within
+[K-State's crop water-use range](https://bookstore.ksre.k-state.edu/pubs/efficient-crop-water-use-in-kansas_MF3066.pdf),
+and its thermal requirements are based on [Kansas Mesonet growth stages](https://mesonet.k-state.edu/agriculture/wheat/gdd/)
+and the [Great Plains wheat production handbook](https://aes.colostate.edu/swrcr/wp-content/uploads/sites/92/2019/03/WheatProductionManual-1.pdf).
+Pregame crops use the local seasonal weather simulation. Central Plains
+weather includes monthly precipitation and wet-day counts for Goodland,
+Dodge City, Salina and Wichita from the [NOAA 1991–2020 climate normals](https://www.ncei.noaa.gov/data/normals-monthly/1991-2020/access/).
+
+Outdoor winter wheat can be relay-planted with corn from heading onward
+when the weather is warm enough. The corn can establish under the wheat
+canopy and resumes normal development after the wheat is harvested or cleared.
 
 Wild terrain may define `fruit_climate` with a `growth` profile, a
 `harvest` ID and a `bearing_days` window. Perennial ripening is derived

@@ -2943,9 +2943,7 @@ std::string map::furnname( const tripoint_bub_ms &p )
     if( f.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
         // Can't use item_stack::only_item() since there might be fertilizer
         map_stack items = i_at( p );
-        const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-            return it.is_seed();
-        } );
+        const map_stack::iterator seed = std::find_if( items.begin(), items.end(), is_primary_crop_seed );
         if( seed == items.end() ) {
             debugmsg( "Missing seed for plant at (%d, %d, %d)", p.x(), p.y(), p.z() );
             return "null";
@@ -11717,9 +11715,7 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_c
     }
     // Can't use item_stack::only_item() since there might be fertilizer
     map_stack items = i_at( p );
-    map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-        return it.is_seed();
-    } );
+    map_stack::iterator seed = std::find_if( items.begin(), items.end(), is_primary_crop_seed );
 
     if( seed == items.end() ) {
         // No seed there anymore, we don't know what kind of plant it was.
