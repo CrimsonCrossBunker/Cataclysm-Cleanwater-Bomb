@@ -866,6 +866,12 @@
   },
   {
     "type": "ammunition_type",
+    "id": "khuunaofaai_payload_fungicide",
+    "name": "Khuunäöfaai fungicidal payload",
+    "default": "khuunaofaai_ammo_fungicidal"
+  },
+  {
+    "type": "ammunition_type",
     "id": "glowstick_juice",
     "name": "glowstick juice",
     "default": "glowstick_juice"
