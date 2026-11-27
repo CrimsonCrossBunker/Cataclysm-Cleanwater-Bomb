@@ -2241,25 +2241,36 @@ void connect_wide_road_driveways( mapgendata &dat )
 {
     const oter_id terrain = dat.terrain_type();
     if( !active() || dat.zlevel() != 0 || terrain->is_road() ||
-        terrain->has_flag( oter_flags::bridge ) || !dat.region.city_spec ||
-        dat.region.get_settings_city().city_size <= 0 ) {
+        terrain->has_flag( oter_flags::bridge ) ) {
         return;
     }
     const bool mapped = dat.region.place_roads || dat.region.overmap_highway.has_value();
+    const bool arterials = dat.region.city_spec && dat.region.get_settings_city().city_size > 0;
+    const auto paved = []( ter_id ground ) {
+        return ground == ter_t_pavement || ground == ter_t_pavement_y ||
+               ground == ter_t_atlas_pavement_white;
+    };
+    bool has_driveway = false;
+    for( int y = 0; y < road_span && !has_driveway; ++y ) {
+        for( int x = 0; x < road_span && !has_driveway; ++x ) {
+            has_driveway = paved( dat.m.ter( point_bub_ms( x, y ) ) );
+        }
+    }
+    if( !has_driveway || ( !mapped && !arterials ) ) {
+        return;
+    }
     const point halo( wide_highway_halo, wide_highway_halo );
     std::vector<wide_route> streets;
     visit_wide_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1,
-    false, true, true, [&streets]( const wide_route & route ) {
-        streets.push_back( route );
+    mapped, arterials, true, [&streets]( const wide_route & route ) {
+        if( !route.controlled_access ) {
+            streets.push_back( route );
+        }
     } );
     if( streets.empty() ) {
         return;
     }
     const point_abs_ms origin = project_to<coords::ms>( dat.pos().xy() );
-    const auto paved = []( ter_id ground ) {
-        return ground == ter_t_pavement || ground == ter_t_pavement_y ||
-               ground == ter_t_atlas_pavement_white;
-    };
     const auto clear = [&dat, &paved]( point p ) {
         const tripoint_bub_ms tile( p.x, p.y, 0 );
         const ter_id ground = dat.m.ter( tile );
@@ -2331,7 +2342,7 @@ void connect_wide_road_driveways( mapgendata &dat )
                 continue;
             }
             const double road_height = wide_road_height( point_abs_ms( *road_center ),
-                                       point_abs_ms( outside ), mapped, true );
+                                       point_abs_ms( outside ), mapped, arterials );
             for( int across = begin; across < begin + width; ++across ) {
                 const int interior = entry[across];
                 const point inside = at( across, interior );
