@@ -270,6 +270,7 @@ struct wide_route {
     bool controlled_access;
     int half_width = 0;
     bool ramp = false;
+    bool local_access = false;
 };
 
 struct highway_stroke {
@@ -432,7 +433,7 @@ static void visit_wide_routes( point_abs_omt origin, int width, int height, bool
                 if( b < a ) {
                     std::swap( a, b );
                 }
-                visit( wide_route{ a, b, 4, false } );
+                visit( wide_route{ a, b, 4, false, 0, false, cell.mapped_wide_connections != 0 } );
             };
             // Join the same edge points in both tiles, cutting across two-arm corners.
             if( count == 2 ) {
@@ -733,7 +734,8 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
             for( const om_direction::type dir : om_direction::all ) {
                 if( om_lines::has_segment( links, dir ) ) {
                     const point edge = center + om_direction::displace( dir ).raw() * SEEX;
-                    routes.push_back( { std::min( center, edge ), std::max( center, edge ), 2, false, 8 } );
+                    routes.push_back( { std::min( center, edge ), std::max( center, edge ), 2, false, 8,
+                                        false, cell.mapped_wide_connections != 0 } );
                 }
             }
         }
@@ -777,21 +779,22 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
         }
     }
     const auto through = [&routes]( point center, const highway_stroke & axis ) {
+        int connected = 0;
         for( const int side : {
                  -1, 1
                  } ) {
             const point sample = center + point( std::lround( side * 120 * axis.east ),
                                                  std::lround( side * 120 * axis.south ) );
-            if( std::none_of( routes.begin(), routes.end(), [&axis, sample]( const wide_route & route ) {
+            if( std::any_of( routes.begin(), routes.end(), [&axis, sample]( const wide_route & route ) {
             const highway_stroke stroke = make_highway_stroke( route );
                 const point offset = sample - route.begin;
                 return std::abs( stroke.east * axis.east + stroke.south * axis.south ) > 0.9 &&
                        highway_distance( stroke, offset.x, offset.y ) < stroke.half_width;
             } ) ) {
-                return false;
+                connected |= side < 0 ? 1 : 2;
             }
         }
-        return true;
+        return connected;
     };
     std::vector<point> placed;
     std::vector<std::pair<wide_route, wide_route>> axes;
@@ -809,12 +812,16 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
             const point offset = routes[j].begin - routes[i].begin;
             const double along_a = ( offset.x * b.south - offset.y * b.east ) / cross;
             const double along_b = ( offset.x * a.south - offset.y * a.east ) / cross;
-            if( along_a < -1 || along_b < -1 || along_a > a.length + 1 || along_b > b.length + 1 ) {
+            const int extension = routes[j].controlled_access ? 1 : 2 * road_span;
+            if( along_a < -1 || along_b < -extension || along_a > a.length + 1 ||
+                along_b > b.length + extension ) {
                 continue;
             }
             const point center = routes[i].begin + point( std::lround( along_a * a.east ),
                                  std::lround( along_a * a.south ) );
-            if( !through( center, a ) || !through( center, b ) ||
+            const int local_sides = through( center, b );
+            if( through( center, a ) != 3 || local_sides == 0 ||
+                ( local_sides != 3 && ( routes[j].controlled_access || !routes[j].local_access ) ) ||
             std::any_of( placed.begin(), placed.end(), [center]( point other ) {
             return std::hypot( center.x - other.x, center.y - other.y ) < 2 * road_span;
             } ) || !dry( center ) ) {

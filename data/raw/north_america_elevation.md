@@ -68,7 +68,8 @@ native `t_zebra` visual through `looks_like`, including on elevated decks.
 Controlled-access wide roads have a central barrier and separated opposing
 carriageways. Through crossings use one raised route with five metres of
 physical clearance and approach grades, leaving the other road below.
-Local crossings have narrow connecting roads and curved one-way ramp
+Local crossings, including side roads ending at the highway, have narrow
+connecting roads and curved one-way ramp
 footprints. Access is grouped into 1.536 km urban and 3.072 km rural spatial
 cells, selecting a nearby crossing within each road corridor; these are
 game-generation densities, not literal minimum interchange distances.
