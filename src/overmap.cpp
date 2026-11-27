@@ -2669,6 +2669,22 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 }
             }
         }
+        if( mapped_highways ) {
+            const overmap_special_id service( "s_gas_1" );
+            if( service.is_valid() ) {
+                for( const north_america::highway_service_site &site :
+                     north_america::highway_services( origin, OMAPX, OMAPY, generate_city_streets ) ) {
+                    const point offset = site.position.raw() - origin.raw();
+                    const tripoint_om_omt position( offset.x, offset.y, 0 );
+                    const om_direction::type facing = site.facing.x > 0 ? om_direction::type::east :
+                                                      site.facing.x < 0 ? om_direction::type::west :
+                                                      site.facing.y > 0 ? om_direction::type::south : om_direction::type::north;
+                    if( can_place_special( *service, position, facing, false ) ) {
+                        place_special( *service, position, facing, get_nearest_city( position ), false, false );
+                    }
+                }
+            }
+        }
     }
 }
 

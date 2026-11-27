@@ -58,6 +58,38 @@ occupies only the incoming side, behind the crossing. Geometric placement
 references [FHWA crosswalk guidance](https://mutcd.fhwa.dot.gov/pdfs/11th_Editionr1/part3r1.pdf);
 the in-game tile scale and requested yellow line are retained.
 
+Intersection marking removal includes the approaches through the waiting
+stripe, so centerlines cannot curl across a crossing or continue into the
+junction. Crossings sample both actual curbs and use an averaged approach
+tangent through short bends. Their four-metre bands and two-metre bars
+avoid isolated single-tile diagonal specks. White lane paint reuses the
+native `t_zebra` visual through `looks_like`, including on elevated decks.
+
+Controlled-access wide roads have a central barrier and separated opposing
+carriageways. Through crossings use one raised route with five metres of
+physical clearance and approach grades, leaving the other road below.
+Local crossings have narrow connecting roads and curved one-way ramp
+footprints. Access is grouped into 1.536 km urban and 3.072 km rural spatial
+cells, selecting a nearby crossing within each road corridor; these are
+game-generation densities, not literal minimum interchange distances.
+Terrain and source-road geometry can prevent a connection.
+These are procedural layouts, not reconstructions of surveyed interchanges.
+The access arrangement references
+[FHWA's Interstate access guide](https://www.fhwa.dot.gov/design/interstate/pubs/access/access.pdf).
+
+Rural service connections use a deterministic 76.8 km station lattice with
+jitter, giving approximately 38--115 km along a straight dominant axis,
+and longer distances on diagonals or when a site cannot be placed. Paired
+native gas stations sit outside the main carriageway, reached by ramps,
+a crossing road and short access spurs. They do not open a gap in the median.
+This follows the off-highway service arrangement described in the
+[FHWA Interstate FAQ](https://www.fhwa.dot.gov/interstate/faq.htm).
+
+Existing paved parking and drive-through approaches can extend across up to
+six metres of clear frontage to an adjoining wide city road. Connections
+are three to six metres wide, preserve building walls and furniture, and
+blend the driveway height into the street approach.
+
 Generation changes apply to new areas. Existing saved bridge layouts and
 stored surface grades are not rewritten.
 

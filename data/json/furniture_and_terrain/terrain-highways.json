@@ -6,6 +6,8 @@
     "name": "bridge lane marking",
     "description": "White paint marking a lane on a concrete bridge deck.",
     "looks_like": "t_atlas_pavement_white",
+    "connect_groups": [ "PAVEMENT", "PAVEMENT_ZEBRA" ],
+    "connects_to": "PAVEMENT_ZEBRA",
     "color": "white"
   },
   {
