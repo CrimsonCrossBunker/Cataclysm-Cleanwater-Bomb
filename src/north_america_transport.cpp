@@ -1504,7 +1504,7 @@ void place_wide_highway_surface( mapgendata &dat )
             const point_bub_ms pos( column, row );
             const lane_sample &sample = surface[row * road_span + column];
             if( only_wide_links && ( sample.lanes == 0 ||
-                                     sample.distance >= sample.half_width ) ) ) {
+                                     sample.distance >= sample.half_width ) ) {
                 const ter_id ground = dat.m.ter( pos );
                 if( ground == ter_t_pavement || ground == ter_t_pavement_y ||
                     ground == ter_t_atlas_pavement_white || ground == ter_t_sidewalk ) {
@@ -1512,15 +1512,15 @@ void place_wide_highway_surface( mapgendata &dat )
                 }
             }
             if( sample.lanes == 0 ) {
-            continue;
-        }
-        const int half_width = sample.half_width;
-        const double elevation = grade_weight[row * road_span + column] > 0 ?
-                                 grade_sum[row * road_span + column] / grade_weight[row * road_span + column] : 0;
-        const int stripe = static_cast<int>( sample.distance );
-        const tripoint_bub_ms tile( pos, 0 );
-        if( stripe >= half_width && sample.controlled_access ) {
-            dat.m.ter_set( pos, ter_t_sidewalk.id() );
+                continue;
+            }
+            const int half_width = sample.half_width;
+            const double elevation = grade_weight[row * road_span + column] > 0 ?
+                                     grade_sum[row * road_span + column] / grade_weight[row * road_span + column] : 0;
+            const int stripe = static_cast<int>( sample.distance );
+            const tripoint_bub_ms tile( pos, 0 );
+            if( stripe >= half_width && sample.controlled_access ) {
+                dat.m.ter_set( pos, ter_t_sidewalk.id() );
                 if( dat.m.has_furn( pos ) && dat.m.furn( pos ) != furn_f_street_light ) {
                     dat.m.furn_set( pos, furn_str_id::NULL_ID().id() );
                 }
@@ -1532,7 +1532,7 @@ void place_wide_highway_surface( mapgendata &dat )
                 continue;
             }
             if( stripe >= half_width ) {
-            const ter_id ground = dat.m.ter( pos );
+                const ter_id ground = dat.m.ter( pos );
                 const bool verge = ground == ter_t_grass || ground == ter_t_sidewalk;
                 if( urban && verge ) {
                     dat.m.ter_set( pos, ter_t_sidewalk.id() );
@@ -1559,13 +1559,13 @@ void place_wide_highway_surface( mapgendata &dat )
                                     highway_lane_surface( sample.lanes, stripe, dashed, sample.controlled_access,
                                             false, sample.half_width, sample.ramp );
             if( sample.controlled_access ? dat.m.has_furn( pos ) :
-                    dat.m.furn( pos ) == furn_f_street_light ) {
+                dat.m.furn( pos ) == furn_f_street_light ) {
                 dat.m.furn_set( pos, furn_str_id::NULL_ID().id() );
             }
             dat.m.ter_set( pos, pavement );
             if( grade_surface ) {
-            dat.m.set_surface_grade( tile, {
-                static_cast<int>( std::lround( elevation * 100.0 ) ), 0
+                dat.m.set_surface_grade( tile, {
+                    static_cast<int>( std::lround( elevation * 100.0 ) ), 0
                 } );
             }
         }
