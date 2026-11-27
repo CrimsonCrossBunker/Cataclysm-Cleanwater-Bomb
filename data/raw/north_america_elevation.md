@@ -94,6 +94,17 @@ blend the driveway height into the street approach.
 Generation changes apply to new areas. Existing saved bridge layouts and
 stored surface grades are not rewritten.
 
+Road generation indexes nearby route strokes for intersection and continuity
+queries instead of scanning every street in the planning neighborhood for
+each candidate. Streets far from controlled-access corridors are excluded
+from that planner. Long source rasters skip directly to the requested tile
+interval while preserving the native t=0 Bresenham phase and edge links.
+Bridge and interchange plans use bounded LRU caches with shared ownership,
+so eviction retains other warm entries and cannot invalidate active queries.
+Road grades select nearby plans once per generated map tile. Crosswalk
+layouts are cached by the exact approach paths and widths, allowing adjacent
+tiles to reuse curb fitting while changed geometry gets a different key.
+
 The portable data asset uses a light continental elevation grid, with
 interpolation between samples. It models the broad slope and altitude of
 terrain and cannot reconstruct individual cuts, embankments or cliffs.
