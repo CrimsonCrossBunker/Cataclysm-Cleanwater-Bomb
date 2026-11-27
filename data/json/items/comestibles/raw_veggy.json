@@ -1252,7 +1252,8 @@
       "degree_days": 480,
       "water_mm": 350,
       "growing_days": 63,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 80
     }
   },
   {

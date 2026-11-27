@@ -61,7 +61,8 @@
       "degree_days": 860,
       "water_mm": 520,
       "growing_days": 87,
-      "water_peak": 0.62
+      "water_peak": 0.62,
+      "root_zone_water_mm": 120
     }
   },
   {
@@ -129,7 +130,8 @@
       "degree_days": 1120,
       "water_mm": 520,
       "growing_days": 111,
-      "water_peak": 0.66
+      "water_peak": 0.66,
+      "root_zone_water_mm": 160
     }
   },
   {
@@ -172,7 +174,8 @@
       "degree_days": 1120,
       "water_mm": 520,
       "growing_days": 111,
-      "water_peak": 0.66
+      "water_peak": 0.66,
+      "root_zone_water_mm": 160
     }
   },
   {
@@ -403,7 +406,8 @@
       "degree_days": 1060,
       "water_mm": 480,
       "growing_days": 109,
-      "water_peak": 0.7
+      "water_peak": 0.7,
+      "root_zone_water_mm": 140
     }
   },
   {
@@ -522,7 +526,8 @@
       "degree_days": 870,
       "water_mm": 460,
       "growing_days": 90,
-      "water_peak": 0.65
+      "water_peak": 0.65,
+      "root_zone_water_mm": 140
     }
   },
   {
@@ -613,7 +618,8 @@
       "degree_days": 840,
       "water_mm": 480,
       "growing_days": 91,
-      "water_peak": 0.62
+      "water_peak": 0.62,
+      "root_zone_water_mm": 140
     }
   },
   {
@@ -726,7 +732,8 @@
       "degree_days": 635,
       "water_mm": 300,
       "growing_days": 75,
-      "water_peak": 0.63
+      "water_peak": 0.63,
+      "root_zone_water_mm": 30
     }
   },
   {
@@ -776,7 +783,7 @@
     "type": "ITEM",
     "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
     "id": "seed_canola",
-    "name": { "str": "canola seeds", "str_pl": "handfuls of canola seeds" },
+    "name": { "str": "spring canola seeds", "str_pl": "handfuls of spring canola seeds" },
     "weight": "132 g",
     "color": "light_gray",
     "comestible_type": "FOOD",
@@ -803,28 +810,30 @@
       "RAT",
       "MOUSE"
     ],
-    "plant_name": "canola",
+    "plant_name": "spring canola",
+    "growth_temp": "5 C",
     "fruit": "canola_stalks",
     "seeds": false,
     "growth_stages": [
-      { "GROWTH_SEED": "23 days" },
-      { "GROWTH_SEEDLING": "23 days" },
-      { "GROWTH_MATURE": "23 days" },
-      { "GROWTH_HARVEST": "22 days" },
+      { "GROWTH_SEED": "10 days" },
+      { "GROWTH_SEEDLING": "30 days" },
+      { "GROWTH_MATURE": "55 days" },
+      { "GROWTH_HARVEST": "21 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "into": "paste_seed",
     "recipe": "paste_seed_mill_1_1",
     "stackable": true,
     "crop_climate": {
-      "base_c": 5,
-      "optimum_c": 22,
-      "min_c": -5,
-      "max_c": 34,
-      "degree_days": 1200,
-      "water_mm": 420,
-      "growing_days": 102,
-      "water_peak": 0.68
+      "base_c": 0,
+      "optimum_c": 25,
+      "min_c": -4,
+      "max_c": 36,
+      "degree_days": 1500,
+      "water_mm": 440,
+      "growing_days": 95,
+      "water_peak": 0.68,
+      "root_zone_water_mm": 120
     }
   },
   {
@@ -895,7 +904,8 @@
       "degree_days": 930,
       "water_mm": 365,
       "growing_days": 104,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 80
     }
   },
   {

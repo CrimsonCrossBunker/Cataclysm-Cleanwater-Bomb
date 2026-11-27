@@ -15,13 +15,108 @@ Celsius and millimetres of water.
 | `water_peak` | Stage of highest water demand, from 0 at sowing to 1 at ripeness |
 | `vernalization_days` | Optional cold exposure needed for winter crops to head |
 | `root_zone_water_mm` | Optional plant-available soil water before applying terrain modifiers |
+| `harvest_yield_g_per_m2` | Optional primary harvest mass per one-square-metre plot, before water stress and the harvest option |
 
 The game samples the local weather history, including its regional rainfall
-timing, and keeps a small soil-water store using existing seed item variables.
+timing, and keeps a root-zone soil-water store using existing seed item variables.
 Rain and planter irrigation contribute to the store. Roofs prevent direct
 rain. The existing crop-speed option, growth stages, harvest, and plant
 callbacks continue to apply. Soil moisture, cultivar differences, and
 hardiness are simplified. The temperature limits currently pause progress.
+
+Daily demand scales the reference seasonal water budget by local
+Hargreaves reference evapotranspiration, including latitude, season, daily
+temperature and temperature range. The reference budget corresponds to
+4 mm/day reference ET. Root-zone storage follows terrain capacity, with
+explicit values for supported cereals, vegetables, legumes, oil crops and
+berries. See the
+[FAO-56 meteorological equations](https://www.fao.org/4/X0490E/x0490e07.htm)
+and [root depth and water-stress tables](https://www.fao.org/4/X0490E/x0490e0e.htm).
+Water stress can slow establishment. Once established, crops accumulate
+thermal development and minimum growing days without repeatedly losing
+both counters to the same moisture deficit. A seasonal water deficit reduces
+manual, mechanical and camp harvests with an approximate yield-response
+coefficient of 1.1.
+
+The harvest multiplier uses accumulated demand already scaled by local daily
+ET, not annual precipitation totals. A cool northern site and a warmer site
+with the same annual rainfall therefore do not share a fixed demand budget.
+Terrain water capacity and infiltration apply to the root-zone store;
+excess rain drains above that plant-available capacity. The available store
+is no longer drained toward half capacity on every day. One millimetre of
+water is one litre per square metre. This remains a
+temperature-based ET estimate rather than a full radiation/humidity/wind model.
+
+Soybean seeds, raw soybeans and dried soybeans all produce mature soybean
+grain at the harvest stage. Green edamame can instead be picked during the
+last quarter of the preceding mature stage; this harvest ends the crop and
+cannot also yield mature grain. Automatic harvesting waits for grain.
+This models the green R6 harvest described by
+[SDSU Extension](https://extension.sdstate.edu/edamame-harvest-and-storage).
+The stage fraction is a model approximation rather than a separate R-stage simulator.
+
+Soybeans use 340 g of primary grain per square metre before water stress,
+approximately the 50.7 bu/acre soybean yield in the
+[USDA 2024 annual summary](https://www.nass.usda.gov/Newsroom/archive/2025/01-10-2025.php),
+using a 60 lb soybean bushel. The item mass determines the number of portions:
+16 g portions give about 21 mature soybean items, rather than 21 kilograms.
+Green pods retain the corresponding portion count and their existing 24 g
+item weight. Existing profiles without a mass yield retain native quantities.
+Manual, vehicle and camp harvests use the same count conversion and water
+multiplier. Harvestable crops retain a minimum primary portion instead of
+rounding a small positive yield down to only a withered byproduct; overgrown
+dead crops still yield no grain.
+
+The explicit root-zone capacities are model estimates, calculated as
+effective rooting depth times a reference 120 mm of plant-available water
+per metre of soil, rounded to 10 mm. FAO-56 gives this reference for silty
+clay in Example 36; the existing terrain capacity multiplier represents
+local differences in soil. These capacities describe the available store,
+not seasonal water demand or an irrigation allowance. Root depth is fixed
+in the current model rather than expanding with plant age.
+
+Representative depths within FAO-56 Table 22 supply the following profiles.
+Edible grain, dried grain and dedicated seed profiles of a crop use the
+same capacity; sweet corn and popcorn retain different effective depths.
+
+| Crop | Reference depth (m) | Root-zone water (mm) |
+| --- | --- | --- |
+| Spring wheat, barley, oats | 1.2 | 140 |
+| Winter wheat | 1.6 | 190 |
+| Sweet corn / popcorn | 1.0 / 1.3 | 120 / 160 |
+| Canola, sugar beet, soybean, tomato, eggplant | 1.0 | 120 |
+| Dry/snap beans, lentils | 0.7 | 80 |
+| Lettuce, radish, onion, garlic, spinach, celery | 0.4 | 50 |
+| Cabbage | 0.65 | 80 |
+| Broccoli, cauliflower, Brussels sprouts, potato | 0.5 | 60 |
+| Carrot, chilli and bell peppers, artichoke | 0.75 | 90 |
+| Cucumber, gherkin, hops | 1.0 | 120 |
+| Zucchini, peas | 0.8 | 100 |
+| Watermelon, melon, sunflower | 1.2 | 140 |
+| Pumpkin | 1.25 | 150 |
+| Cotton | 1.3 | 160 |
+| Asparagus, grapes | 1.5 | 180 |
+| Blackberry, raspberry | 0.8 | 100 |
+| Strawberry | 0.25 | 30 |
+
+Additional profiles use published crop-specific guidance:
+
+| Crop | Reference depth (m) | Root-zone water (mm) | Source |
+| --- | --- | --- | --- |
+| Tobacco | 0.7 | 80 | [FAO rooting-depth annex](https://www.fao.org/4/y5749e/y5749e0j.htm) |
+| Kale | 0.5 | 60 | [Colorado State irrigation guide](https://extension.colostate.edu/resource/determining-irrigation-run-times-with-drip-tape-on-specialty-crops/) |
+| Blueberry | 0.4 | 50 | [WSU small-fruit handbook](https://extension.wsu.edu/pnw-gardeners-handbook/chapter-9-berries-and-small-fruits/) |
+| Cranberry | 0.15 | 20 | [University of Maine cranberry guidance](https://extension.umaine.edu/gardening/2023/10/02/maine-home-garden-news-october-2023/) |
+| Rhubarb | 0.4 | 50 | [University of Maine rhubarb guidance](https://extension.umaine.edu/publications/2514e/) |
+| Buckwheat | 0.25 | 30 | [UC SAREP root observations](https://sarep.ucdavis.edu/covercrop/buckwheat) |
+| Mustard | 0.8 | 100 | [University of Saskatchewan effective water-extraction depths](https://harvest.usask.ca/items/69384034-910c-4c78-87a2-954613517687) |
+| Horseradish | 0.5 | 60 | [Utah State irrigation-depth guidance](https://extension.usu.edu/yardandgarden/research/horseradish-in-the-garden) |
+| Bottle gourd | 0.6 | 70 | [Field-trial active root zone](https://dspace.emu.ee/server/api/core/bitstreams/33d2da5f-3dd5-4201-83f4-542281a2f55d/content) |
+
+The buckwheat value represents the shallow zone with most observed root
+volume, not the maximum depth of its taproot. Wild plants without suitable
+root-depth data retain the existing default capacity. Mushrooms do not use
+these crop root-zone profiles.
 
 The profiles use crop base temperatures from the
 [Ontario vegetable guide](https://www.ontario.ca/files/2024-02/omafra-guide-to-vegetable-production-in-ontario-en-2024-02-15.pdf)
@@ -49,6 +144,38 @@ canopy and resumes normal development after the wheat is harvested or cleared.
 Newly generated, connected farm-field tiles in the same overmap special
 share a crop and sowing date. The crop lottery uses varieties that could
 already have been sown at the start of the Cataclysm.
+
+Canola retains the original `seed_canola` ID for ordinary spring canola.
+Its heat budget now uses a 0 °C base and 1,500 °C-days, consistent with the
+[AAFC Saskatchewan observations published by Montana State](https://extension-store.montana.edu/montguides/using-growing-degree-days-to-predict-plant-stages).
+The 440 mm reference water budget and 1 m effective root zone follow
+[Alberta's canola irrigation guidance](https://www1.agric.gov.ab.ca/$Department/deptdocs.nsf/all/agdex13575).
+
+Cold-tolerant spring canola is a separate, non-branded cultivar profile.
+It remains spring-sown and has no vernalization requirement. Its 1,450
+°C-day target represents an earlier selection within the published spring
+range; its -8 °C cold growth limit represents adapted, hardened plants.
+[Ontario's canola guide](https://www.ontario.ca/files/2022-10/omafra-agronomy-guide-for-field-crops-chapter-6-en-2022-10-13.pdf)
+describes frost tolerance after acclimation, while
+[Hawkins et al.](https://doi.org/10.1007/s00425-002-0850-1) demonstrate that
+spring habit and freezing tolerance are separable traits. The JSON profile
+does not simulate acclimation, frost mortality or deacclimation; a lower
+limit permits growth through colder nights, not growth at subzero means.
+Cool northern field mixtures favor this spring selection, rather than
+substituting an autumn crop or imposing a chilling requirement.
+
+Winter canola uses a separate autumn sowing date and explicit
+`planting_year_offset: -1`. It requires 42 equivalent chilling days before
+reproductive growth and uses the existing winter dormancy behavior.
+Its 2,200 °C-day and 135 active-day budgets are representative model
+estimates, not universal cultivar constants. Distribution and sowing
+windows follow [U.S. production regions](https://www.uscanola.com/crop-production/spring-and-winter-canola/),
+[Great Plains management](https://bookstore.ksre.ksu.edu/pubs/great-plains-canola-production-handbook_MF2734.pdf)
+and [Pacific Northwest guidance](https://extension.oregonstate.edu/catalog/em-8955-oilseed-crops-canola).
+The regional table represents states and provinces, not every growing belt
+within them. All variants preserve their identity through drying,
+threshing and winnowing, share the original oil/food/feed ingredient
+quantities, and reuse the original graphics through `looks_like`.
 
 Wild terrain may define `fruit_climate` with a `growth` profile, a
 `harvest` ID and a `bearing_days` window. Perennial ripening is derived
@@ -95,6 +222,13 @@ arterials can reserve an adjacent overmap tile for a 34-tile-wide,
 four-lane paved surface and two sidewalks. They taper ahead of junctions,
 on narrow waterfronts and at overmap edges. At a four-way junction, a
 yellow stop line spans the incoming lanes before each wide zebra crossing.
+
+Rural special entrances try nearby existing roads in order of distance,
+using the native terrain-aware pathfinder and excluding mapped controlled-access
+corridors as direct access points. Short extra links are allowed where an
+existing road route requires a substantial detour. Rural scenery uses the
+local ecology's trees and shrubs. Orchard blocks retain their cultivated
+trees.
 
 Every atlas settlement of at least 100,000 people gets a deterministic
 downtown, commercial, industrial and institutional center, with housing

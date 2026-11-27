@@ -171,7 +171,8 @@ std::optional<tripoint_bub_ms> getNearFilledGasTank( const tripoint_bub_ms &cent
 bool has_keg( const tripoint_bub_ms &pos );
 
 std::list<item> get_harvest_items( const itype &type, int plant_count,
-                                   int seed_count, bool byproducts );
+                                   int seed_count, bool byproducts,
+                                   const itype_id &fruit = itype_id::NULL_ID() );
 
 // Planting functions
 std::vector<seed_tuple> get_seed_entries( const std::vector<item_location> &seed_inv );
@@ -179,7 +180,9 @@ int query_seed( const std::vector<seed_tuple> &seed_entries );
 void plant_seed( Character &you, const tripoint_bub_ms &examp, const itype_id &seed_id );
 void clear_overgrown( Character &you, const tripoint_bub_ms &examp );
 void harvest_plant_ex( Character &you, const tripoint_bub_ms &examp );
-void harvest_plant( Character &you, const tripoint_bub_ms &examp, bool from_activity );
+void harvest_plant( Character &you, const tripoint_bub_ms &examp, bool from_activity,
+                    bool edamame = false );
+bool can_harvest_edamame( map &here, const tripoint_bub_ms &p );
 void fertilize_plant( Character &you, const tripoint_bub_ms &tile, const itype_id &fertilizer );
 itype_id choose_fertilizer( Character &you, const std::string &pname, bool ask_player );
 ret_val<void> can_fertilize( Character &you, const tripoint_bub_ms &tile,

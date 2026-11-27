@@ -38,8 +38,27 @@ bool is_avenue_flank( const oter_id &terrain );
 bool draw_mapped_road( mapgendata &dat );
 std::vector<unsigned char> wide_highway_footprint( point_abs_omt origin, int width, int height,
         bool mapped, bool arterials );
+
+struct wide_bridge_cell {
+    bool present = false;
+    bool approach = false;
+    bool vertical = false;
+    bool lower_end = false;
+};
+
+struct highway_service_site {
+    point_abs_omt position;
+    point facing;
+};
+
+std::vector<highway_service_site> highway_services( point_abs_omt origin, int width, int height,
+        bool city_streets );
+
+std::vector<wide_bridge_cell> wide_bridge_footprint( point_abs_omt origin, int width, int height,
+        bool mapped, bool arterials, const std::vector<unsigned char> &roads );
 oter_id wide_highway_flank( bool north_south );
 void place_wide_highway_surface( mapgendata &dat );
+void connect_wide_road_driveways( mapgendata &dat );
 
 } // namespace north_america
 

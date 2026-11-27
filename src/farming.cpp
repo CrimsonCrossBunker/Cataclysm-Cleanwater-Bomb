@@ -693,10 +693,12 @@ bool execute_farming_command( Character &who, const farming_command &command, bo
             }
             const tripoint_bub_ms current_tile = here.get_bub( position );
             if( command.action == farming_action::harvest ) {
-                if( !iexamine::is_plant_harvestable( here, current_tile ) ) {
+                const bool green = command.material == itype_id( "raw_edamame" );
+                if( green ? !iexamine::can_harvest_edamame( here, current_tile ) :
+                    !iexamine::is_plant_harvestable( here, current_tile ) ) {
                     return false;
                 }
-                iexamine::harvest_plant( who, current_tile, false );
+                iexamine::harvest_plant( who, current_tile, false, green );
             } else {
                 if( !iexamine::is_plant_overgrown( here, current_tile ) ) {
                     return false;

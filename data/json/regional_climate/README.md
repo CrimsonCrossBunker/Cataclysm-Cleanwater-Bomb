@@ -4,6 +4,19 @@
 
 The Canadian and Mexican stations in `canada_mexico_stations.json` use the official [1981–2010 WMO Regional Association IV archives](https://www.ncei.noaa.gov/data/normals-old/WMO/1981-2010/RA-IV/). Each `WMO-` identifier matches a workbook station number. Canadian wet days use the workbook’s 1 mm threshold. The Mexican workbook uses 0.1 mm. Manzanillo’s workbook longitude omits the hemisphere and is interpreted as west.
 
+The `ECCC-` entries add 1981–2010 airport normals for Calgary, Edmonton,
+Saskatoon and Winnipeg from [Environment and Climate Change Canada](https://climate.weather.gc.ca/climate_normals/index_e.html).
+Their identifiers are climate IDs. They include surveyed station elevations
+and count days with at least 0.2 mm precipitation. Monthly totals can differ
+slightly from published annual totals because of rounding.
+
+The expanded set has 69 U.S., 39 Canadian and 34 Mexican stations.
+Additional U.S. records cover the Corn Belt, Great Lakes, Southeast,
+California interior, Rocky Mountains and western Alaska. Additional WMO
+records fill Canadian interior and northern coverage, and Mexico's plateau,
+Gulf coast and Yucatán. Stations with incomplete monthly temperature,
+precipitation or wet-day values are omitted.
+
 The twelve rows run from January through December. Columns are the normal daily minimum and maximum in °C, the monthly precipitation in millimetres of water equivalent, the mean number of wet days (the U.S. threshold is 0.01 inches), and the prevailing precipitation system. Annual precipitation is the sum of the monthly values. To correct a station, keep its ID and edit the relevant row or coordinates.
 
 The precipitation system is an editable simulation choice. Frontal events last longer, monsoon and convective showers favour the afternoon, and trade-wind showers have intermediate durations. The mean water budget comes from the station totals and wet-day counts. Bedford/Hanscom is predominantly frontal in the model with summer convection. The Southwest has a summer monsoon. Hawaiʻi includes windward trade-wind stations. See the [Massachusetts climate summary](https://statesummaries.ncics.org/chapter/ma/), [NWS Southwest monsoon overview](https://www.weather.gov/twc/Monsooninfo), and [NWS Hawaiʻi climate summary](https://www.weather.gov/hfo/climate_summary).

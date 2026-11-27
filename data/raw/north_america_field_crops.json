@@ -11,16 +11,21 @@
     "https://nube.agricultura.gob.mx/calendario_agricola/",
     "https://nube.agricultura.gob.mx/panorama_dgsiap/2025.pdf",
     "https://extension.umn.edu/agriculture/crop-production/small-grains/plant-winter-hardy-adapted-varieties",
+    "https://www.uscanola.com/crop-production/spring-and-winter-canola/",
+    "https://extension.oregonstate.edu/catalog/em-8955-oilseed-crops-canola",
+    "https://extension.okstate.edu/fact-sheets/managing-winter-canola-in-oklahoma",
+    "https://bookstore.ksre.ksu.edu/pubs/great-plains-canola-production-handbook_MF2734.pdf",
     "https://data.nass.usda.gov/Statistics_by_State/Texas/Publications/Crop_Progress_%26_Condition/prevCW/2024/tx-cw-05-12-2024.pdf"
   ],
   "notes": [
     "Representative game crops, not official acreage shares. Shared windows approximate neighboring regions.",
-    "Each row is [seed, weight, planting MMDD, harvest end MMDD]. Planting dates open the usual planting window, with local temperatures and field-level variation able to delay sowing. Winter wheat rows specify planting_year_offset -1 to sow in the calendar year before harvest."
+    "Each row is [seed, weight, planting MMDD, harvest end MMDD]. Planting dates open the usual planting window, with local temperatures and field-level variation able to delay sowing. Winter crop rows specify planting_year_offset -1 to sow in the calendar year before harvest."
   ],
   "regions": {
     "CA-AB": [
       [ "seed_wheat", 40, 501, 921 ],
-      [ "seed_canola", 32, 505, 1010 ],
+      [ "seed_canola", 8, 505, 1010 ],
+      [ "seed_canola_hardy", 24, 505, 1010 ],
       [ "seed_barley", 20, 428, 914 ],
       [ "seed_potato_raw", 8, 506, 1011 ]
     ],
@@ -32,7 +37,8 @@
     ],
     "CA-MB": [
       [ "seed_wheat", 29, 427, 921 ],
-      [ "seed_canola", 28, 505, 1010 ],
+      [ "seed_canola", 10, 505, 1010 ],
+      [ "seed_canola_hardy", 18, 505, 1010 ],
       [ "soybean_seed", 14, 510, 1007 ],
       [ "seed_corn", 10, 507, 1015 ],
       [ "seed_oats", 9, 426, 919 ],
@@ -51,8 +57,9 @@
     "CA-ON": [
       [ "seed_corn", 50, 501, 1118 ],
       [ "soybean_seed", 34, 515, 1030 ],
-      [ "seed_red_winter_wheat", 12, 922, 804, { "planting_year_offset": -1 } ],
-      [ "seed_pea", 4, 422, 804 ]
+      [ "seed_red_winter_wheat", 9, 922, 804, { "planting_year_offset": -1 } ],
+      [ "seed_pea", 4, 422, 804 ],
+      [ "seed_canola_winter", 3, 825, 731, { "planting_year_offset": -1 } ]
     ],
     "CA-PE": [ [ "seed_potato_raw", 70, 510, 1017 ], [ "seed_barley", 18, 505, 918 ], [ "seed_oats", 12, 510, 921 ] ],
     "CA-QC": [
@@ -63,7 +70,8 @@
     ],
     "CA-SK": [
       [ "seed_wheat", 43, 428, 921 ],
-      [ "seed_canola", 35, 507, 1012 ],
+      [ "seed_canola", 9, 507, 1012 ],
+      [ "seed_canola_hardy", 26, 507, 1012 ],
       [ "seed_barley", 11, 427, 926 ],
       [ "seed_pea", 11, 430, 902 ]
     ],
@@ -171,13 +179,20 @@
     "US-IA": [ [ "seed_corn", 52, 425, 1115 ], [ "soybean_seed", 43, 505, 1105 ], [ "seed_red_winter_wheat", 5, 925, 725, { "planting_year_offset": -1 } ] ],
     "US-ID": [
       [ "seed_potato_raw", 35, 422, 1025 ],
-      [ "seed_red_winter_wheat", 35, 915, 827, { "planting_year_offset": -1 } ],
+      [ "seed_red_winter_wheat", 32, 915, 827, { "planting_year_offset": -1 } ],
       [ "seed_barley", 18, 416, 915 ],
-      [ "seed_wheat", 12, 417, 918 ]
+      [ "seed_wheat", 10, 417, 918 ],
+      [ "seed_canola_winter", 3, 815, 731, { "planting_year_offset": -1 } ],
+      [ "seed_canola_hardy", 2, 415, 915 ]
     ],
     "US-IL": [ [ "seed_corn", 52, 421, 1115 ], [ "soybean_seed", 43, 505, 1105 ], [ "seed_red_winter_wheat", 5, 925, 725, { "planting_year_offset": -1 } ] ],
     "US-IN": [ [ "seed_corn", 52, 501, 1115 ], [ "soybean_seed", 43, 505, 1105 ], [ "seed_red_winter_wheat", 5, 925, 725, { "planting_year_offset": -1 } ] ],
-    "US-KS": [ [ "seed_red_winter_wheat", 62, 925, 715, { "planting_year_offset": -1 } ], [ "seed_corn", 22, 415, 1025 ], [ "soybean_seed", 16, 515, 1105 ] ],
+    "US-KS": [
+      [ "seed_red_winter_wheat", 58, 925, 715, { "planting_year_offset": -1 } ],
+      [ "seed_corn", 22, 415, 1025 ],
+      [ "soybean_seed", 16, 515, 1105 ],
+      [ "seed_canola_winter", 4, 901, 630, { "planting_year_offset": -1 } ]
+    ],
     "US-KY": [ [ "soybean_seed", 52, 512, 1115 ], [ "seed_corn", 38, 420, 1104 ], [ "seed_red_winter_wheat", 10, 1006, 714, { "planting_year_offset": -1 } ] ],
     "US-LA": [
       [ "soybean_seed", 58, 423, 1031 ],
@@ -206,9 +221,10 @@
     ],
     "US-MN": [
       [ "seed_corn", 45, 426, 1110 ],
-      [ "soybean_seed", 40, 508, 1025 ],
+      [ "soybean_seed", 37, 508, 1025 ],
       [ "seed_wheat", 8, 502, 906 ],
-      [ "seed_oats", 7, 425, 907 ]
+      [ "seed_oats", 7, 425, 907 ],
+      [ "seed_canola_hardy", 3, 501, 920 ]
     ],
     "US-MO": [ [ "soybean_seed", 52, 512, 1115 ], [ "seed_corn", 38, 411, 1104 ], [ "seed_red_winter_wheat", 10, 1006, 714, { "planting_year_offset": -1 } ] ],
     "US-MS": [
@@ -218,10 +234,11 @@
       [ "seed_red_winter_wheat", 7, 1027, 614, { "planting_year_offset": -1 } ]
     ],
     "US-MT": [
-      [ "seed_wheat", 39, 424, 910 ],
+      [ "seed_wheat", 34, 424, 910 ],
       [ "seed_red_winter_wheat", 36, 912, 815, { "planting_year_offset": -1 } ],
       [ "seed_barley", 18, 424, 910 ],
-      [ "seed_pea", 7, 418, 825 ]
+      [ "seed_pea", 7, 418, 825 ],
+      [ "seed_canola_hardy", 5, 425, 920 ]
     ],
     "US-NC": [
       [ "seed_corn", 32, 403, 923 ],
@@ -233,7 +250,8 @@
       [ "seed_wheat", 39, 425, 912 ],
       [ "soybean_seed", 24, 515, 1020 ],
       [ "seed_corn", 19, 505, 1120 ],
-      [ "seed_canola", 12, 501, 914 ],
+      [ "seed_canola", 4, 501, 914 ],
+      [ "seed_canola_hardy", 8, 501, 914 ],
       [ "seed_sunflower", 6, 520, 1101 ]
     ],
     "US-NE": [
@@ -262,12 +280,19 @@
       [ "seed_potato_raw", 10, 424, 1028 ]
     ],
     "US-OH": [ [ "seed_corn", 52, 424, 1115 ], [ "soybean_seed", 43, 505, 1105 ], [ "seed_red_winter_wheat", 5, 925, 725, { "planting_year_offset": -1 } ] ],
-    "US-OK": [ [ "seed_red_winter_wheat", 62, 925, 715, { "planting_year_offset": -1 } ], [ "seed_corn", 22, 415, 1025 ], [ "soybean_seed", 16, 515, 1105 ] ],
+    "US-OK": [
+      [ "seed_red_winter_wheat", 56, 925, 715, { "planting_year_offset": -1 } ],
+      [ "seed_corn", 22, 415, 1025 ],
+      [ "soybean_seed", 16, 515, 1105 ],
+      [ "seed_canola_winter", 6, 910, 630, { "planting_year_offset": -1 } ]
+    ],
     "US-OR": [
-      [ "seed_red_winter_wheat", 58, 920, 901, { "planting_year_offset": -1 } ],
-      [ "seed_wheat", 20, 418, 916 ],
+      [ "seed_red_winter_wheat", 54, 920, 901, { "planting_year_offset": -1 } ],
+      [ "seed_wheat", 18, 418, 916 ],
       [ "seed_potato_raw", 16, 420, 1028 ],
-      [ "seed_pea", 6, 419, 912 ]
+      [ "seed_pea", 6, 419, 912 ],
+      [ "seed_canola_winter", 4, 815, 731, { "planting_year_offset": -1 } ],
+      [ "seed_canola", 2, 401, 915 ]
     ],
     "US-PA": [
       [ "seed_corn", 43, 430, 1117 ],
@@ -291,9 +316,10 @@
     "US-TN": [ [ "soybean_seed", 52, 512, 1115 ], [ "seed_corn", 38, 420, 1104 ], [ "seed_red_winter_wheat", 10, 1006, 714, { "planting_year_offset": -1 } ] ],
     "US-TX": [
       [ "seed_cotton_boll", 42, 420, 1214 ],
-      [ "seed_red_winter_wheat", 37, 1001, 710, { "planting_year_offset": -1 } ],
+      [ "seed_red_winter_wheat", 35, 1001, 710, { "planting_year_offset": -1 } ],
       [ "seed_corn", 16, 315, 1010 ],
-      [ "soybean_seed", 5, 425, 1015 ]
+      [ "soybean_seed", 5, 425, 1015 ],
+      [ "seed_canola_winter", 2, 915, 630, { "planting_year_offset": -1 } ]
     ],
     "US-UT": [
       [ "seed_red_winter_wheat", 47, 915, 825, { "planting_year_offset": -1 } ],
@@ -309,10 +335,12 @@
     ],
     "US-VT": [ [ "seed_corn", 65, 512, 1026 ], [ "seed_oats", 20, 510, 1004 ], [ "seed_potato_raw", 15, 510, 1015 ] ],
     "US-WA": [
-      [ "seed_red_winter_wheat", 58, 920, 901, { "planting_year_offset": -1 } ],
-      [ "seed_wheat", 20, 418, 916 ],
+      [ "seed_red_winter_wheat", 53, 920, 901, { "planting_year_offset": -1 } ],
+      [ "seed_wheat", 17, 418, 916 ],
       [ "seed_potato_raw", 16, 420, 1028 ],
-      [ "seed_pea", 6, 419, 912 ]
+      [ "seed_pea", 6, 419, 912 ],
+      [ "seed_canola_winter", 5, 815, 731, { "planting_year_offset": -1 } ],
+      [ "seed_canola", 3, 401, 915 ]
     ],
     "US-WI": [
       [ "seed_corn", 50, 501, 1115 ],

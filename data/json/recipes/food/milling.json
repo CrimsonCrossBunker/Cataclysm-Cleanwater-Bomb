@@ -954,7 +954,7 @@
     "autolearn": false,
     "flags": [ "SECRET" ],
     "tools": [  ],
-    "components": [ [ [ "seed_canola", 1 ] ] ]
+    "components": [ [ [ "seed_canola", 1 ], [ "seed_canola_hardy", 1 ], [ "seed_canola_winter", 1 ] ] ]
   },
   {
     "//": "For use by mills, so the only entries used are the charges and components.",
@@ -1001,7 +1001,7 @@
         [ "seed_cotton_boll", 8 ],
         [ "seed_pumpkin", 8 ],
         [ "seed_sunflower", 8 ],
-        [ "seed_canola", 1 ],
+        [ "seed_canola", 1 ], [ "seed_canola_hardy", 1 ], [ "seed_canola_winter", 1 ],
         [ "seed_grapes", 8 ],
         [ "seed_poppy_bud", 8 ],
         [ "seed_weed", 8 ]

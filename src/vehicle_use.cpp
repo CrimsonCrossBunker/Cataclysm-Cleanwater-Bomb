@@ -77,6 +77,7 @@
 #include "output.h"
 #include "overmapbuffer.h"
 #include "player_activity.h"
+#include "plant_climate.h"
 #include "pocket_type.h"
 #include "ret_val.h"
 #include "rng.h"
@@ -884,6 +885,7 @@ void vehicle::operate_reaper( map &here )
             continue;
         }
         const item seed_snapshot = *seed;
+        plant_count = crop_harvest_count( seed_snapshot, plant_count );
         const ter_id terrain = here.ter( position );
         const furn_str_id furniture = here.furn( position ).id();
         const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, position );

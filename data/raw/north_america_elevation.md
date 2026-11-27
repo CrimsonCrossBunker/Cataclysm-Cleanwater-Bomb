@@ -19,6 +19,107 @@ profile fitted to their centreline, with the bank and water positions still
 set by the existing atlas. This is a profile for each mapped reach, without
 a hydraulic network simulation of flow or confluence heights.
 
+Shoreline vertices now use one shared height for neighboring land and water
+cells. Land away from water retains bilinear DEM interpolation. River
+samples are capped below the DEM on both sides of the mapped channel;
+the 0.25 m freeboard is a model allowance, not a measured flood level.
+Lakes use the lowest available shoreline sample as their outlet constraint
+rather than a shoreline median that could put water above a low bank.
+
+Mapped wide road crossings reserve their full carriageway on the water
+and both banks. Decks and bridgeheads use the mapped road alignment and
+width. The water remains on its navigable structural level beneath the
+deck. Stored surface grades place the deck at the higher of the interpolated
+bank elevation and the waterline plus five metres. This allows four metres
+for small craft and one metre for bridge structure, as a gameplay design
+allowance. Low banks require approach grades. High banks can join a nearly
+level deck even though the deck and river use separate structural layers.
+
+City arterials use the same wide-road geometry as mapped highways on bridges,
+including bends and diagonal segments. Connected water-crossing corridors
+share approach planes across the whole carriageway. Guardrails follow the
+outer union of the carriageways, avoiding rails between adjoining pieces.
+Bridge planning uses a bounded, cached neighborhood of the source road and
+water geometry; incomplete crossings at the query boundary keep the existing
+fallback. Complete crossings can span neighboring overmaps independently of
+their generation order.
+
+Both sides of a structural ramp store the same physical elevation, with the
+four-metre structural offset removed once on the upper level. Ramp bands
+account for diagonal steps. Longitudinal approach length grows with the required rise,
+using an 8% design target, and joining road strokes blend their surface
+grades instead of abruptly switching between projected centerlines. The
+regional DEM remains approximate and does not encode engineering surveys.
+
+City crossings follow each approach's actual centerline and tangent. Zebra
+bars align with approaching traffic, stay within the pavement, and sit
+outside the intersecting carriageways. The requested yellow waiting line
+occupies only the incoming side, behind the crossing. Geometric placement
+references [FHWA crosswalk guidance](https://mutcd.fhwa.dot.gov/pdfs/11th_Editionr1/part3r1.pdf);
+the in-game tile scale and requested yellow line are retained.
+
+Intersection marking removal includes the approaches through the waiting
+stripe, so centerlines cannot curl across a crossing or continue into the
+junction. Crossings sample both actual curbs and use an averaged approach
+tangent through short bends. Their four-metre bands and two-metre bars
+avoid isolated single-tile diagonal specks. White lane paint reuses the
+native `t_zebra` visual through `looks_like`, including on elevated decks.
+
+Controlled-access wide roads have a central barrier and separated opposing
+carriageways. Through crossings use one raised route with five metres of
+physical clearance and approach grades, leaving the other road below.
+Overpass approaches grow toward a 6% grade using the elevations at both
+ends. Their structural transitions run across the road at the two ends;
+the sides of a freeway overpass do not create additional up/down ramps.
+Bridge rendering assigns each road square to its applicable spans and
+structural level instead of choosing one nearby span for an entire tile.
+Overlapping profiles use their upper envelope, and land approaches and
+bridge decks use the same height function. Structural transition squares
+use the carried road's deck height on both levels, without averaging it
+with a road below. Nearby narrow streets remain present beneath the deck.
+
+Freeway and access-ramp edges use paved shoulders and outer guardrails,
+without sidewalks. At merges, connecting pavement takes precedence over
+shoulders and the guardrail follows the combined same-level corridor,
+leaving the ramp entrance open. Local-road connectors extend beyond both
+ramp junctions, and the two ends use their respective approach lengths.
+Local crossings, including side roads ending at the highway, have narrow
+connecting roads and curved one-way ramp
+footprints. Access is grouped into 1.536 km urban and 3.072 km rural spatial
+cells, selecting a nearby crossing within each road corridor; these are
+game-generation densities, not literal minimum interchange distances.
+Terrain and source-road geometry can prevent a connection.
+These are procedural layouts, not reconstructions of surveyed interchanges.
+The access arrangement references
+[FHWA's Interstate access guide](https://www.fhwa.dot.gov/design/interstate/pubs/access/access.pdf).
+
+Rural service connections use a deterministic 76.8 km station lattice with
+jitter, giving approximately 38--115 km along a straight dominant axis,
+and longer distances on diagonals or when a site cannot be placed. Paired
+native gas stations sit outside the main carriageway, reached by ramps,
+a crossing road and short access spurs. They do not open a gap in the median.
+This follows the off-highway service arrangement described in the
+[FHWA Interstate FAQ](https://www.fhwa.dot.gov/interstate/faq.htm).
+
+Existing paved parking and drive-through approaches can extend across up to
+six metres of clear frontage to an adjoining wide city road. Connections
+are three to six metres wide, preserve building walls and furniture, and
+blend the driveway height into the street approach.
+
+Generation changes apply to new areas. Existing saved bridge layouts and
+stored surface grades are not rewritten.
+
+Road generation indexes nearby route strokes for intersection and continuity
+queries instead of scanning every street in the planning neighborhood for
+each candidate. Streets far from controlled-access corridors are excluded
+from that planner. Long source rasters skip directly to the requested tile
+interval while preserving the native t=0 Bresenham phase and edge links.
+Bridge and interchange plans use bounded LRU caches with shared ownership,
+so eviction retains other warm entries and cannot invalidate active queries.
+Road grades select nearby plans once per generated map tile. Crosswalk
+layouts are cached by the exact approach paths and widths, allowing adjacent
+tiles to reuse curb fitting while changed geometry gets a different key.
+
 The portable data asset uses a light continental elevation grid, with
 interpolation between samples. It models the broad slope and altitude of
 terrain and cannot reconstruct individual cuts, embankments or cliffs.

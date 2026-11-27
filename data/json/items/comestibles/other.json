@@ -546,7 +546,8 @@
       "degree_days": 480,
       "water_mm": 350,
       "growing_days": 63,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 80
     }
   },
   {
@@ -663,7 +664,7 @@
     "plant_name": "soybean",
     "fruit": "soybean",
     "seeds": false,
-    "byproducts": [ "withered", "raw_edamame" ],
+    "byproducts": [ "withered" ],
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
       { "GROWTH_SEEDLING": "23 days" },
@@ -682,7 +683,9 @@
       "degree_days": 1140,
       "water_mm": 560,
       "growing_days": 126,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 120,
+      "harvest_yield_g_per_m2": 340
     }
   },
   {
@@ -710,7 +713,7 @@
     "plant_name": "soybean",
     "fruit": "soybean",
     "seeds": false,
-    "byproducts": [ "withered", "raw_edamame" ],
+    "byproducts": [ "withered" ],
     "growth_stages": [
       { "GROWTH_SEED": "23 days" },
       { "GROWTH_SEEDLING": "23 days" },
@@ -729,7 +732,9 @@
       "degree_days": 1140,
       "water_mm": 560,
       "growing_days": 126,
-      "water_peak": 0.68
+      "water_peak": 0.68,
+      "root_zone_water_mm": 120,
+      "harvest_yield_g_per_m2": 340
     }
   },
   {

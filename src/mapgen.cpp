@@ -7271,6 +7271,7 @@ void map::draw_map( mapgendata &dat )
     north_america::place_native_vegetation( dat );
     north_america::place_native_soil( dat );
     north_america::grade_generated_surface( dat );
+    north_america::connect_wide_road_driveways( dat );
     place_atlas_hvac( dat, function_key );
     // End of draw_map
 }

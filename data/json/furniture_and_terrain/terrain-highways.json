@@ -1,6 +1,17 @@
 [
   {
     "type": "terrain",
+    "id": "t_atlas_bridge_white",
+    "copy-from": "t_pavement_hw_air",
+    "name": "bridge lane marking",
+    "description": "White paint marking a lane on a concrete bridge deck.",
+    "looks_like": "t_atlas_pavement_white",
+    "connect_groups": [ "PAVEMENT", "PAVEMENT_ZEBRA" ],
+    "connects_to": "PAVEMENT_ZEBRA",
+    "color": "white"
+  },
+  {
+    "type": "terrain",
     "id": "t_pavement_hw_air",
     "name": "bridge pavement",
     "connect_groups": "PAVEMENT",

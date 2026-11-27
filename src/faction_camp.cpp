@@ -90,6 +90,7 @@
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
+#include "plant_climate.h"
 #include "point.h"
 #include "recipe.h"
 #include "recipe_groups.h"
@@ -3600,6 +3601,7 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                                 plant_count *= farm_map.furn( pos )->plant->harvest_multiplier *
                                                ::get_option<float>( "CROP_HARVEST_MULTIPLIER" );
                                 plant_count = std::max( plant_count, 1 );
+                                plant_count = crop_harvest_count( *seed, plant_count );
                                 int seed_cnt = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
 
                                 // Secure the seed type before EOCs or i_clear destroy the item.

@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 #include <zconf.h>
@@ -228,10 +229,70 @@ bool elevation_active()
     return active() && !grid().bytes.empty();
 }
 
+static terrain water_terrain_at( point_abs_omt tile )
+{
+    constexpr int width = 32;
+    static thread_local std::unordered_map<point, std::vector<terrain>> cache;
+    const point bucket = divide_xy_round_to_minus_infinity( tile.raw(), width ) * width;
+    auto found = cache.find( bucket );
+    if( found == cache.end() ) {
+        if( cache.size() >= 32 ) {
+            cache.clear();
+        }
+        found = cache.emplace( bucket, raster( point_abs_omt( bucket ), width, width ) ).first;
+    }
+    const point offset = tile.raw() - bucket;
+    return found->second[offset.y * width + offset.x];
+}
+
+static double surface_corner( point_abs_omt corner )
+{
+    struct corner_sample {
+        point_abs_omt key;
+        double height = 0;
+        bool initialized = false;
+    };
+    static thread_local std::array<corner_sample, 8192> cache;
+    corner_sample &sample = cache[std::hash<point_abs_omt> {}( corner ) % cache.size()];
+    if( sample.initialized && sample.key == corner ) {
+        return sample.height;
+    }
+    const point_abs_ms position = project_to<coords::ms>( corner );
+    std::optional<water_level> water;
+    std::optional<water_level> river;
+    bool sampled_river = false;
+    for( int y = -1; y <= 0; ++y ) {
+        for( int x = -1; x <= 0; ++x ) {
+            const point_abs_omt adjacent = corner + point( x, y );
+            const terrain kind = water_terrain_at( adjacent );
+            if( kind == terrain::land ) {
+                continue;
+            }
+            const point_abs_ms center = project_to<coords::ms>( adjacent ) + point( SEEX, SEEY );
+            std::optional<water_level> level;
+            if( kind == terrain::ocean ) {
+                level = water_level{ 0.0, true };
+            } else if( kind == terrain::river ) {
+                if( !sampled_river ) {
+                    river = water_surface_elevation( position );
+                    sampled_river = true;
+                }
+                level = river ? river : water_surface_elevation( center );
+            } else {
+                level = water_surface_elevation( center );
+            }
+            if( level && ( !water || level->metres < water->metres ) ) {
+                water = level;
+            }
+        }
+    }
+    sample = { corner, water ? water->metres : dem_elevation( position ).value_or( 0.0 ), true };
+    return sample.height;
+}
+
 double surface_elevation( point_abs_ms position )
 {
-    // Cache the water surface and four DEM corners per overmap tile. Land
-    // elevations remain continuous across tile boundaries and between samples.
+    // A shoreline vertex has one height shared by the land and water cells.
     constexpr int span = SEEX * 2;
     struct terrain_cell {
         point_abs_omt key;
@@ -245,31 +306,11 @@ double surface_elevation( point_abs_ms position )
     if( !entry.initialized || entry.key != tile ) {
         entry.key = tile;
         entry.initialized = true;
-        if( const auto water = water_surface_elevation( start + point( span / 2, span / 2 ) ) ) {
-            if( water->flat ) {
-                entry.heights.fill( water->metres );
-            } else {
-                // Lakes have a constant waterline. River samples follow their
-                // centerline profile within each cell as well as across cells.
-                const auto height = [&]( point offset ) {
-                    return water_surface_elevation( start + offset ).value_or( *water ).metres;
-                };
-                entry.heights = {{
-                        height( point::zero ), height( { span, 0 } ),
-                        height( { 0, span } ), height( { span, span } )
-                    }
-                };
-
+        entry.heights = {{
+                surface_corner( tile ), surface_corner( tile + point::east ),
+                surface_corner( tile + point::south ), surface_corner( tile + point::south_east )
             }
-        } else {
-            entry.heights = {{
-                    dem_elevation( start ).value_or( 0.0 ),
-                    dem_elevation( start + point( span, 0 ) ).value_or( 0.0 ),
-                    dem_elevation( start + point( 0, span ) ).value_or( 0.0 ),
-                    dem_elevation( start + point( span, span ) ).value_or( 0.0 )
-                }
-            };
-        }
+        };
     }
     const point offset = position.raw() - start.raw();
     const double x = static_cast<double>( offset.x ) / span;

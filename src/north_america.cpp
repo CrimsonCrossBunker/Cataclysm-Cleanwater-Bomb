@@ -670,17 +670,15 @@ std::optional<water_level> water_surface_elevation( point_abs_ms position )
                     }
                 }
                 if( !samples.empty() ) {
-                    auto median = samples.begin() + samples.size() / 2;
-                    std::nth_element( samples.begin(), median, samples.end() );
-                    level->second = *median;
+                    level->second = *std::min_element( samples.begin(), samples.end() );
                 }
             }
             return water_level{ level->second, true };
         }
     }
 
-    // Fit a downhill profile along each source river line and index only the
-    // segments near the query. A noisy DEM sample cannot make water run uphill.
+    // Fit a downhill centreline profile and index the nearby segments. Local
+    // bank caps below keep the fitted waterline within the surrounding terrain.
     static const auto rivers = [&data] {
         std::unordered_map<point, std::vector<river_segment>> result;
         for( const feature &river : data.rivers )
@@ -748,7 +746,21 @@ std::optional<water_level> water_surface_elevation( point_abs_ms position )
             const double distance = x * x + y * y;
             if( distance < nearest ) {
                 nearest = distance;
-                level = segment.upstream + t * ( segment.downstream - segment.upstream );
+                double height = segment.upstream + t * ( segment.downstream - segment.upstream );
+                const double length = std::sqrt( length_squared );
+                const point center( std::lround( segment.from.x + t * dx ),
+                                    std::lround( segment.from.y + t * dy ) );
+                // Coarse DEM fits must not put a non-flooded river above either bank.
+                for( const int side : {
+                         -1, 1
+                         } ) {
+                    const point bank = center + point( std::lround( -dy / length * 2 * river_radius * side ),
+                                                       std::lround( dx / length * 2 * river_radius * side ) );
+                    if( const auto elevation = dem_elevation( point_abs_ms( bank ) ) ) {
+                        height = std::min( height, *elevation - 0.25 );
+                    }
+                }
+                level = height;
             }
         }
         if( level ) {

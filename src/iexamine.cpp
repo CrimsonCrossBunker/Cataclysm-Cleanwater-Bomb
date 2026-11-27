@@ -2827,7 +2827,7 @@ void iexamine::dirtmound( Character &you, const tripoint_bub_ms &examp )
  * @ref islot_seed::byproducts) are included.
  */
 std::list<item> iexamine::get_harvest_items( const itype &type, const int plant_count,
-        const int seed_count, const bool byproducts )
+        const int seed_count, const bool byproducts, const itype_id &fruit )
 {
     std::list<item> result;
     if( !type.seed ) {
@@ -2849,7 +2849,7 @@ std::list<item> iexamine::get_harvest_items( const itype &type, const int plant_
         add( seed_type, seed_count );
     }
 
-    add( seed_data.fruit_id, plant_count );
+    add( fruit.is_null() ? seed_data.fruit_id : fruit, plant_count );
 
     if( byproducts ) {
         for( const itype_id &b : seed_data.byproducts ) {
@@ -2947,10 +2947,12 @@ void iexamine::harvest_plant_ex( Character &you, const tripoint_bub_ms &examp )
     }
 }
 
-void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool from_activity )
+void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool from_activity,
+                              bool edamame )
 {
     map &here = get_map();
-    if( !reachable_crop( you, here, examp ) || !here.furn( examp )->plant ) {
+    if( !reachable_crop( you, here, examp ) || !here.furn( examp )->plant ||
+        ( edamame && !can_harvest_edamame( here, examp ) ) ) {
         return;
     }
     item *seed = get_seed_at( here, examp );
@@ -3015,6 +3017,7 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
     const auto &fp = here.furn( examp )->plant;
     plant_count *= fp->harvest_multiplier * ::get_option<float>( "CROP_HARVEST_MULTIPLIER" );
     plant_count = std::max( plant_count, 1 );
+    plant_count = crop_harvest_count( seed_snapshot, plant_count );
     const int seed_count = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
     const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
     const std::string stage = stage_idx >= 0 ?
@@ -3025,7 +3028,8 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
     // Materialize the entire native yield before any callback. A callback that
     // removes the farmer or changes their activity cannot lose the remaining yield.
     std::vector<item_location> products;
-    for( item &value : get_harvest_items( seed_type.obj(), plant_count, seed_count, true ) ) {
+    const itype_id fruit = edamame ? itype_id( "raw_edamame" ) : itype_id::NULL_ID();
+    for( item &value : get_harvest_items( seed_type.obj(), plant_count, seed_count, true, fruit ) ) {
         if( from_activity ) {
             activity_handlers::mark_activity_item( value, you );
         }
@@ -3155,6 +3159,7 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
     }
     const std::string pname = seed->get_plant_name();
     const bool can_harvest = is_plant_harvestable( here, examp );
+    const bool can_pick_green = can_harvest_edamame( here, examp );
     const bool can_fertilize = !is_plant_mature( here, examp ) &&
                                !is_plant_harvestable( here, examp ) &&
                                !is_plant_overgrown( here, examp ) && !is_plant_fertilized( *seed );
@@ -3166,6 +3171,9 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
     menu.text = string_format( _( "What to do with the %s?" ), pname );
     if( can_harvest ) {
         menu.addentry( 0, true, 'h', _( "Harvest" ) );
+    }
+    if( can_pick_green ) {
+        menu.addentry( 5, true, 'e', _( "Harvest green edamame (ends this crop)" ) );
     }
     if( can_fertilize ) {
         menu.addentry( 1, true, 'f', _( "Fertilize" ) );
@@ -3183,6 +3191,9 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
     }
     if( menu.ret == 0 && can_harvest ) {
         choice.action = farming_action::harvest;
+    } else if( menu.ret == 5 && can_pick_green ) {
+        choice.action = farming_action::harvest;
+        choice.material = itype_id( "raw_edamame" );
     } else if( menu.ret == 1 && can_fertilize ) {
         choice.action = farming_action::fertilize;
         choice.material = choose_fertilizer( you, pname, true );
@@ -3642,6 +3653,28 @@ int iexamine::get_plant_current_stage_idx_from_effective( map &here, const tripo
     const time_duration effective_time = get_plant_effective_growth_time( *seed,
                                          furn.plant->growth_multiplier );
     return get_plant_stage_idx_from_effective_time( *seed->type->seed, effective_time );
+}
+
+bool iexamine::can_harvest_edamame( map &here, const tripoint_bub_ms &p )
+{
+    const item *seed = get_seed_at( here, p );
+    if( !seed || !seed->type->seed || !here.furn( p )->plant ||
+        ( seed->typeId() != itype_id( "soybean_seed" ) && seed->typeId() != itype_id( "soybean" ) &&
+          seed->typeId() != itype_id( "dry_soybean" ) ) ) {
+        return false;
+    }
+    const islot_seed &slot = *seed->type->seed;
+    const int mature = slot.get_mature_stage_idx();
+    const int harvest = slot.get_harvest_stage_idx();
+    if( mature <= 0 || harvest <= mature ) {
+        return false;
+    }
+    const auto &thresholds = slot.get_cumulative_stage_thresholds();
+    const time_duration start = thresholds[mature - 1];
+    const time_duration end = thresholds[harvest - 1];
+    const time_duration effective = get_plant_effective_growth_time( *seed,
+                                    here.furn( p )->plant->growth_multiplier );
+    return effective >= start + ( end - start ) * 0.75 && effective < end;
 }
 
 bool iexamine::is_plant_harvestable( map &here, const tripoint_bub_ms &p )

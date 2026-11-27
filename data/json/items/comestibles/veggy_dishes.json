@@ -1337,7 +1337,8 @@
       "degree_days": 860,
       "water_mm": 520,
       "growing_days": 87,
-      "water_peak": 0.62
+      "water_peak": 0.62,
+      "root_zone_water_mm": 120
     }
   },
   {

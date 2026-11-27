@@ -24,6 +24,7 @@ struct crop_climate_profile {
     double water_peak;
     int vernalization_days;
     double root_zone_water_mm;
+    double harvest_yield_g_per_m2 = 0;
 
     static crop_climate_profile load( const JsonObject &jo );
     double heat_units( double low, double high ) const;
@@ -69,6 +70,8 @@ struct crop_water_status {
 
 crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms &p,
         const item &seed );
+double crop_harvest_multiplier( const item &seed );
+int crop_harvest_count( const item &seed, int count );
 
 time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, item &seed,
                                    const furn_t &furniture, float growth_speed, float water_use,
