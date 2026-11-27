@@ -3034,16 +3034,13 @@ class jmapgen_vehicle : public jmapgen_piece_with_has_vehicle_collision
                     for( const vproto_id &vp_id : vg_id->all_possible_results() ) {
                         point worst_min( INT_MAX, INT_MAX );
                         point worst_max( INT_MIN, INT_MIN );
-                        tileray tdir( rot );
                         for( const vehicle_prototype::part_def &part : vp_id->parts ) {
-                            tdir.clear_advance();
-                            tdir.advance( part.pos.x() );
-                            point d( tdir.dx() + tdir.ortho_dx( part.pos.y() ),
-                                     tdir.dy() + tdir.ortho_dy( part.pos.y() ) );
-                            worst_min.x = std::min( worst_min.x, d.x );
-                            worst_max.x = std::max( worst_max.x, d.x );
-                            worst_min.y = std::min( worst_min.y, d.y );
-                            worst_max.y = std::max( worst_max.y, d.y );
+                            const point_rel_ms d = vehicle::rotate_mount_to_tile(
+                                                       vp_id->grid_scale, rot, point_rel_ms::zero, part.pos );
+                            worst_min.x = std::min( worst_min.x, d.x() );
+                            worst_max.x = std::max( worst_max.x, d.x() );
+                            worst_min.y = std::min( worst_min.y, d.y() );
+                            worst_max.y = std::max( worst_max.y, d.y() );
                         }
                         point new_min = worst_min + point( x.val, y.val );
                         point new_max = worst_max + point( x.valmax, y.valmax );
@@ -7066,7 +7063,7 @@ std::optional<tripoint_bub_ms> install_atlas_hvac( mapgendata &dat, double econo
     }
 
     map &here = dat.m;
-    const auto clear = [&]( const tripoint_bub_ms &p ) {
+    const auto clear = [&]( const tripoint_bub_ms & p ) {
         return here.passable( p ) && !here.is_open_air( p ) &&
                !here.has_furn( p ) && !here.veh_at( p ) && here.i_at( p ).empty() &&
                !here.has_flag_ter( ter_furn_flag::TFLAG_SWIMMABLE, p ) &&
@@ -7083,7 +7080,9 @@ std::optional<tripoint_bub_ms> install_atlas_hvac( mapgendata &dat, double econo
             if( !is_hvac_indoors( here, in ) || !clear( in ) ) {
                 continue;
             }
-            for( const point &step : { point::north, point::east, point::south, point::west } ) {
+            for( const point &step : {
+                     point::north, point::east, point::south, point::west
+                 } ) {
                 const tripoint_bub_ms wall = in + step;
                 const tripoint_bub_ms out = wall + step;
                 if( ( !here.has_flag_ter( ter_furn_flag::TFLAG_WALL, wall ) &&

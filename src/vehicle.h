@@ -1540,11 +1540,16 @@ class vehicle
         // into world tile offsets (meters) relative to pivot, avoiding tileray staircase warping.
         rl_vec2d coord_translate_exact( const units::angle &dir, const point_rel_ms &pivot,
                                         const point_rel_ms &p ) const;
+        static point_rel_ms rotate_mount_to_tile( int grid_scale, const units::angle &dir,
+                const point_rel_ms &pivot, const point_rel_ms &p );
 
         // Sub-tile (0.125-tile) geometry, aerodynamics, hardness, and interior navigation helpers
         bool is_subtile() const {
             return grid_scale > 1;
         }
+        point effective_sub_size( const point_rel_ms &mount, const vpart_info &vpi,
+                                  const std::string &variant ) const;
+        point effective_sub_size( const vehicle_part &vp ) const;
         double metric_length() const;
         double metric_width() const;
         double aerodynamic_cd() const;

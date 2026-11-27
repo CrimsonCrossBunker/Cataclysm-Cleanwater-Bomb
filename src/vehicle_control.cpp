@@ -630,7 +630,7 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     if( action == "horn" ) {
         return !remote_source && position.z() == who.pos_abs().z() &&
                rl_dist( who.pos_abs(), position ) <= 1 &&
-               target.avail_part_with_feature( at->mount_pos(), "CONTROLS" ) >= 0 &&
+               at->avail_part_with_feature( "CONTROLS" ).has_value() &&
                target.has_part( "HORN" );
     }
     const bool releasing = action == "release";
@@ -674,20 +674,20 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     }
     if( harness ) {
         return position.z() == who.pos_abs().z() && rl_dist( who.pos_abs(), position ) <= 1 &&
-               target.avail_part_with_feature( at->mount_pos3(), "ANIMAL_CTRL" ) >= 0;
+               at->avail_part_with_feature( "ANIMAL_CTRL" ).has_value();
     }
     if( direct_turret ) {
         // The native direct-fire action operates the gun on the player's tile,
         // without acquiring driving control or unlocking the vehicle.
         return position == who.pos_abs() &&
-               target.avail_part_with_feature( at->mount_pos3(), "TURRET" ) >= 0;
+               at->avail_part_with_feature( "TURRET" ).has_value();
     }
     if( turret ) {
         // A gunner can operate a console while another player drives.
         return !target.is_locked && target.has_part( "TURRET" ) &&
                ( remote_source || resolve_remote_vehicle( who, here ) == &target ||
                  ( position.z() == who.pos_abs().z() && rl_dist( who.pos_abs(), position ) <= 1 &&
-                   target.avail_part_with_feature( at->mount_pos3(), "CONTROLS" ) >= 0 ) );
+                   at->avail_part_with_feature( "CONTROLS" ).has_value() ) );
     }
     if( tool_use ) {
         return who.pos_abs().z() == position.z() && rl_dist( who.pos_abs(), position ) <= 1 &&
@@ -732,17 +732,17 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
             ( taking && who.pos_abs() != position ) ) {
             return false;
         }
-        const bool controls = target.avail_part_with_feature( at->mount_pos3(), "CONTROLS" ) >= 0;
-        const bool reins = target.avail_part_with_feature( at->mount_pos3(), "CONTROL_ANIMAL" ) >= 0 &&
+        const bool controls = at->avail_part_with_feature( "CONTROLS" ).has_value();
+        const bool reins = at->avail_part_with_feature( "CONTROL_ANIMAL" ).has_value() &&
                            target.has_engine_type( itype_id( "animal" ), false ) && target.get_harnessed_animal( here );
         if( electronics ? ( !target.is_appliance() &&
-                            target.avail_part_with_feature( at->mount_pos3(), "CTRL_ELECTRONIC" ) < 0 &&
-                            target.avail_part_with_feature( at->mount_pos3(), "REMOTE_CONTROLS" ) < 0 ) :
+                            !at->avail_part_with_feature( "CTRL_ELECTRONIC" ).has_value() &&
+                            !at->avail_part_with_feature( "REMOTE_CONTROLS" ).has_value() ) :
             ( !controls && ( security || !reins ) ) ) {
             return false;
         }
         if( autopilot_action( action ) && action != "autopilot_stop" &&
-            target.avail_part_with_feature( at->mount_pos3(), "CTRL_ELECTRONIC" ) < 0 ) {
+            !at->avail_part_with_feature( "CTRL_ELECTRONIC" ).has_value() ) {
             return false;
         }
     }
@@ -1314,8 +1314,20 @@ bool execute_vehicle_control( Character &who, map &here,
     if( taking ) {
         if( resolve_remote_vehicle( who, here ) != target ) {
             const optional_vpart_position seat = here.veh_at( who.pos_bub() );
-            if( seat && seat->part_with_feature( VPFLAG_BOARDABLE, false ) ) {
-                here.board_vehicle( who.pos_bub(), &who );
+            if( seat ) {
+                if( seat->vehicle().is_subtile() ) {
+                    const std::optional<vpart_reference> ctrl = seat->avail_part_with_feature( "CONTROLS" );
+                    const int board_part = ctrl
+                                           ? seat->vehicle().part_with_feature( ctrl->mount_pos3(), VPFLAG_BOARDABLE, true )
+                                           : -1;
+                    if( board_part >= 0 ) {
+                        here.board_vehicle_part( seat->vehicle(), board_part, &who );
+                    } else if( seat->part_with_feature( VPFLAG_BOARDABLE, true ) ) {
+                        here.board_vehicle( who.pos_bub(), &who );
+                    }
+                } else if( seat->part_with_feature( VPFLAG_BOARDABLE, true ) ) {
+                    here.board_vehicle( who.pos_bub(), &who );
+                }
             }
         }
         if( target->engine_on ) {

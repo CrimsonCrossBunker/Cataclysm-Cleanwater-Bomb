@@ -1,10 +1,9 @@
 [
   {
     "id": "dwarf_supercompact_car",
-    "copy-from": "scompact_abstract",
     "type": "vehicle",
     "name": "Dwarven Supercompact Car",
-    "curb_mass": "604 kg",
+    "copy-from": "scompact_abstract",
     "parts": [
       { "x": 5, "y": 0, "parts": [ { "part": "engine_vtwin" }, { "part": "alternator_motorbike" } ] },
       { "x": 0, "y": 0, "parts": [ { "part": "pedal_extenders" } ] },

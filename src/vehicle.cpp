@@ -3163,12 +3163,18 @@ std::optional<vpart_reference> vpart_position::obstacle_at_part() const
             if( vp.removed || vp.is_broken() || !vp.info().has_flag( VPFLAG_OBSTACLE ) ) {
                 continue;
             }
-            if( vp.info().has_flag( VPFLAG_OPENABLE ) && vp.open ) {
-                continue;
+            if( vp.info().has_flag( VPFLAG_OPENABLE ) ) {
+                if( vp.open ) {
+                    continue;
+                }
+                if( !vp.info().has_flag( "CABIN_WINDOW" ) ) {
+                    fallback_obstacle = idx;
+                    break;
+                }
             }
-            const bool thin_edge = vp.info().sub_size.x <= 2 || vp.info().sub_size.y <= 2;
-            if( has_boardable && ( thin_edge || vp.info().has_flag( VPFLAG_OPENABLE ) ||
-                                   vp.info().has_flag( VPFLAG_SHELL ) ) ) {
+            const point esz = veh.effective_sub_size( vp );
+            const bool thin_edge = esz.x <= 2 || esz.y <= 2;
+            if( has_boardable && ( thin_edge || vp.info().has_flag( VPFLAG_SHELL ) ) ) {
                 continue;
             }
             fallback_obstacle = idx;
@@ -3357,17 +3363,43 @@ std::optional<vpart_reference> vpart_position::part_with_feature( const vpart_bi
     return vpart_reference( vehicle(), i );
 }
 
+template<typename Flag>
+static std::optional<vpart_reference> find_avail_world_part(
+    const vpart_position &pos, const Flag &f )
+{
+    vehicle &veh = pos.vehicle();
+    if( !veh.is_subtile() ) {
+        return std::nullopt;
+    }
+    for( const int idx : veh.parts_at_world_tile( veh.part( pos.part_index() ).precalc[0] ) ) {
+        const vehicle_part &vp = veh.part( idx );
+        if( vp.removed || vp.is_fake || vp.is_broken() ) {
+            continue;
+        }
+        if( vp.info().has_flag( f ) && vp.is_available() ) {
+            return vpart_reference( veh, idx );
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<vpart_reference> vpart_position::avail_part_with_feature(
     const std::string &f ) const
 {
     const std::optional<vpart_reference> found = part_with_feature( f, true, false );
-    return ( found && found->part().is_available() ) ? found : std::nullopt;
+    if( found && found->part().is_available() ) {
+        return found;
+    }
+    return find_avail_world_part( *this, f );
 }
 
 std::optional<vpart_reference> vpart_position::avail_part_with_feature( vpart_bitflags f ) const
 {
     const std::optional<vpart_reference> found = part_with_feature( f, true, false );
-    return ( found && found->part().is_available() ) ? found : std::nullopt;
+    if( found && found->part().is_available() ) {
+        return found;
+    }
+    return find_avail_world_part( *this, f );
 }
 
 std::optional<vpart_reference> optional_vpart_position::part_with_feature( const std::string &f,
@@ -4055,6 +4087,66 @@ std::pair<double, double> world_dir_to_local( const units::angle &dir,
 }
 } // namespace
 
+point_rel_ms vehicle::rotate_mount_to_tile( const int grid_scale, const units::angle &dir,
+        const point_rel_ms &pivot, const point_rel_ms &p )
+{
+    const auto [wx, wy] = rotate_mount_exact_m( grid_scale, dir, pivot, p );
+    return point_rel_ms( round_tile_coord( wx ), round_tile_coord( wy ) );
+}
+
+point vehicle::effective_sub_size( const point_rel_ms &mount, const vpart_info &vpi,
+                                   const std::string &variant ) const
+{
+    point sz = vpi.sub_size;
+    if( !is_subtile() || sz.x == sz.y || vpi.has_flag( "PROTRUSION" ) ) {
+        return sz;
+    }
+    const bool has_vert_var =
+        string_starts_with( variant, "vertical" ) ||
+        variant == "left" || variant == "right" ||
+        variant == "wheel_left" || variant == "wheel_right" ||
+        variant == "nw_edge" || variant == "ne_edge" ||
+        variant == "sw_edge" || variant == "se_edge";
+    const bool has_horiz_var =
+        variant == "front" || variant == "rear" ||
+        variant == "cover_left" || variant == "cover_right" ||
+        string_starts_with( variant, "horizontal" );
+    if( sz.x < sz.y ) {
+        if( has_vert_var ||
+            ( !has_horiz_var && std::abs( mount.y() ) > std::abs( mount.x() ) &&
+              std::abs( mount.y() ) >= 6 ) ) {
+            std::swap( sz.x, sz.y );
+        }
+    } else if( sz.x > sz.y && has_horiz_var ) {
+        std::swap( sz.x, sz.y );
+    }
+    if( vpi.location != vpart_location_structure && vpi.has_flag( VPFLAG_OBSTACLE ) &&
+        !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
+        for( const vehicle_part &svp : parts ) {
+            if( svp.removed || svp.is_fake || svp.mount != mount ||
+                svp.info().location != vpart_location_structure ) {
+                continue;
+            }
+            const point ssz = svp.info().sub_size;
+            if( ( ssz.x == 6 && ssz.y == 1 ) || ( ssz.x == 1 && ssz.y == 6 ) ) {
+                const point esz = effective_sub_size( svp.mount, svp.info(), svp.variant );
+                if( esz.x > 2 && esz.y <= 2 ) {
+                    sz.y = std::min( sz.y, 2 );
+                } else if( esz.y > 2 && esz.x <= 2 ) {
+                    sz.x = std::min( sz.x, 2 );
+                }
+                break;
+            }
+        }
+    }
+    return sz;
+}
+
+point vehicle::effective_sub_size( const vehicle_part &vp ) const
+{
+    return effective_sub_size( vp.mount, vp.info(), vp.variant );
+}
+
 point_rel_ms vehicle::coord_translate( const point_rel_ms &p ) const
 {
     tripoint_rel_ms q;
@@ -4563,13 +4655,16 @@ bool vehicle::sub_footprints_touch( const vehicle_part &a, const vehicle_part &b
                std::abs( a.mount.y() - b.mount.y() ) +
                std::abs( a.mount_level - b.mount_level ) <= 1;
     }
-    return subtile_boxes_touch_2x( a.mount, a.info().sub_size, a.mount_level,
-                                   b.mount, b.info().sub_size, b.mount_level );
+    return subtile_boxes_touch_2x( a.mount, effective_sub_size( a ), a.mount_level,
+                                   b.mount, effective_sub_size( b ), b.mount_level );
 }
 
 bool vehicle::has_adjacent_structure( const tripoint_rel_ms &dp, const vpart_info &vpi ) const
 {
     if( !is_subtile() ) {
+        if( has_structural_part( dp ) ) {
+            return true;
+        }
         for( const tripoint &offset : vehicle_structure_neighbors ) {
             if( has_structural_part( dp + offset ) ) {
                 return true;
@@ -4577,6 +4672,7 @@ bool vehicle::has_adjacent_structure( const tripoint_rel_ms &dp, const vpart_inf
         }
         return false;
     }
+    const point target_sz = effective_sub_size( dp.xy(), vpi, std::string{} );
     for( const vehicle_part &vp : parts ) {
         if( vp.removed || vp.is_fake ) {
             continue;
@@ -4586,8 +4682,8 @@ bool vehicle::has_adjacent_structure( const tripoint_rel_ms &dp, const vpart_inf
             vp.info().has_flag( "PROTRUSION" ) ) {
             continue;
         }
-        if( subtile_boxes_touch_2x( dp.xy(), vpi.sub_size, dp.z(),
-                                    vp.mount, vp.info().sub_size, vp.mount_level ) ) {
+        if( subtile_boxes_touch_2x( dp.xy(), target_sz, dp.z(),
+                                    vp.mount, effective_sub_size( vp ), vp.mount_level ) ) {
             return true;
         }
     }
@@ -4600,6 +4696,7 @@ int vehicle::shell_covering_part( int part_idx ) const
         return -1;
     }
     const vehicle_part &target = parts[part_idx];
+    const point target_sz = effective_sub_size( target );
     int best_idx = -1;
     int best_score = -1;
     for( const int s_idx : shells ) {
@@ -4611,8 +4708,8 @@ int vehicle::shell_covering_part( int part_idx ) const
             continue;
         }
         if( sp.mount == target.mount ||
-            ( is_subtile() && subtile_boxes_touch_2x( sp.mount, sp.info().sub_size, sp.mount_level,
-                    target.mount, target.info().sub_size, target.mount_level ) ) ) {
+            ( is_subtile() && subtile_boxes_touch_2x( sp.mount, effective_sub_size( sp ), sp.mount_level,
+                    target.mount, target_sz, target.mount_level ) ) ) {
             const int h = sp.info().shell_info
                           ? sp.info().shell_info->hardness
                           : sp.info().hardness;
@@ -4710,8 +4807,9 @@ bool vehicle::subtile_overlaps_point( const tripoint_abs_ms &world_tile,
         static_cast<float>( pos_abs().y() + dp_this.y() ) + vp.world_offset[1].y );
     const rl_vec2d tile_center( static_cast<float>( world_tile.x() ),
                                 static_cast<float>( world_tile.y() ) );
-    const double hx = std::max( 0.0625, static_cast<double>( vp.info().sub_size.x ) / 16.0 );
-    const double hy = std::max( 0.0625, static_cast<double>( vp.info().sub_size.y ) / 16.0 );
+    const point eff_sz = effective_sub_size( vp );
+    const double hx = std::max( 0.0625, static_cast<double>( eff_sz.x ) / 16.0 );
+    const double hy = std::max( 0.0625, static_cast<double>( eff_sz.y ) / 16.0 );
     return obb_overlaps_obb( center, units::cos( pivot_rotation[1] ), units::sin( pivot_rotation[1] ),
                              hx, hy, tile_center, 1.0, 0.0, 0.48, 0.48 );
 }
@@ -4739,8 +4837,9 @@ bool vehicle::subtile_overlaps_vehicle( const vehicle &other, const tripoint_rel
         if( va_info.location != vpart_location_structure && !va_info.has_flag( VPFLAG_ROTOR ) ) {
             continue;
         }
-        const double hxa = is_subtile() ? std::max( 0.0625, va_info.sub_size.x / 16.0 ) : 0.49;
-        const double hya = is_subtile() ? std::max( 0.0625, va_info.sub_size.y / 16.0 ) : 0.49;
+        const point eff_a = effective_sub_size( va );
+        const double hxa = is_subtile() ? std::max( 0.0625, eff_a.x / 16.0 ) : 0.49;
+        const double hya = is_subtile() ? std::max( 0.0625, eff_a.y / 16.0 ) : 0.49;
         const rl_vec2d ca( static_cast<float>( base_ax + va.world_offset[1].x ),
                            static_cast<float>( base_ay + va.world_offset[1].y ) );
         const int za = pos_abs().z() + dp_this.z() + va.precalc[1].z();
@@ -4755,8 +4854,9 @@ bool vehicle::subtile_overlaps_vehicle( const vehicle &other, const tripoint_rel
             if( other.pos_abs().z() + vb.precalc[0].z() != za ) {
                 continue;
             }
-            const double hxb = other.is_subtile() ? std::max( 0.0625, vb_info.sub_size.x / 16.0 ) : 0.49;
-            const double hyb = other.is_subtile() ? std::max( 0.0625, vb_info.sub_size.y / 16.0 ) : 0.49;
+            const point eff_b = other.effective_sub_size( vb );
+            const double hxb = other.is_subtile() ? std::max( 0.0625, eff_b.x / 16.0 ) : 0.49;
+            const double hyb = other.is_subtile() ? std::max( 0.0625, eff_b.y / 16.0 ) : 0.49;
             const rl_vec2d cb( static_cast<float>( base_bx + vb.world_offset[0].x ),
                                static_cast<float>( base_by + vb.world_offset[0].y ) );
             if( std::abs( ca.x - cb.x ) > 1.5 || std::abs( ca.y - cb.y ) > 1.5 ) {
@@ -4883,7 +4983,7 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
         const double dx = cx - fx;
         const double dy = cy - fy;
         const double dist = std::hypot( dx, dy );
-        if( dist < 0.08 || dist > 1.45 ) {
+        if( dist < 0.08 || dist > 1.65 ) {
             continue;
         }
         const double dot = ( dx * ulx + dy * uly ) / dist;
@@ -4913,8 +5013,9 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
             }
             const double ox = static_cast<double>( ovp.mount.x() ) / scale;
             const double oy = static_cast<double>( ovp.mount.y() ) / scale;
-            const double ohx = is_subtile() ? std::max( 0.04, ovpi.sub_size.x / 16.0 ) : 0.45;
-            const double ohy = is_subtile() ? std::max( 0.04, ovpi.sub_size.y / 16.0 ) : 0.45;
+            const point osz = effective_sub_size( ovp );
+            const double ohx = is_subtile() ? std::max( 0.04, osz.x / 16.0 ) : 0.45;
+            const double ohy = is_subtile() ? std::max( 0.04, osz.y / 16.0 ) : 0.45;
             double t_hit = 0.0;
             if( segment_hits_subtile_box( fx, fy, cx, cy, ox, oy, ohx, ohy, t_hit ) ) {
                 if( ovpi.has_flag( VPFLAG_OPENABLE ) && !ovpi.has_flag( "CABIN_WINDOW" ) ) {
@@ -4928,7 +5029,7 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
                 }
             }
         }
-        double score = dot - 0.18 * dist;
+        double score = dot - 0.35 * dist;
         if( cand.has_flag( vp_flag::passenger_flag ) ) {
             score -= 0.12;
         }
@@ -5002,8 +5103,9 @@ int vehicle::find_exit_door_or_blocker( int from_part, const point_rel_ms &world
         if( along <= 0.05 ) {
             continue;
         }
-        const double ohx = ( is_subtile() ? std::max( 0.06, vpi.sub_size.x / 16.0 ) : 0.45 ) + 0.08;
-        const double ohy = ( is_subtile() ? std::max( 0.06, vpi.sub_size.y / 16.0 ) : 0.45 ) + 0.08;
+        const point eff_sz = effective_sub_size( vp );
+        const double ohx = ( is_subtile() ? std::max( 0.06, eff_sz.x / 16.0 ) : 0.45 ) + 0.08;
+        const double ohy = ( is_subtile() ? std::max( 0.06, eff_sz.y / 16.0 ) : 0.45 ) + 0.08;
         double t_hit = 0.0;
         if( segment_hits_subtile_box( fx, fy, tx, ty, ox, oy, ohx, ohy, t_hit ) ) {
             if( is_door ) {
@@ -5096,8 +5198,9 @@ int vehicle::find_entry_seat_and_door( const tripoint_bub_ms &from_outside, cons
             }
             const double ox = static_cast<double>( ovp.mount.x() ) / scale;
             const double oy = static_cast<double>( ovp.mount.y() ) / scale;
-            const double ohx = ( is_subtile() ? std::max( 0.06, ovpi.sub_size.x / 16.0 ) : 0.45 ) + 0.08;
-            const double ohy = ( is_subtile() ? std::max( 0.06, ovpi.sub_size.y / 16.0 ) : 0.45 ) + 0.08;
+            const point oeff_sz = effective_sub_size( ovp );
+            const double ohx = ( is_subtile() ? std::max( 0.06, oeff_sz.x / 16.0 ) : 0.45 ) + 0.08;
+            const double ohy = ( is_subtile() ? std::max( 0.06, oeff_sz.y / 16.0 ) : 0.45 ) + 0.08;
             double t_hit = 0.0;
             if( segment_hits_subtile_box( from_lx, from_ly, sx, sy, ox, oy, ohx, ohy, t_hit ) ) {
                 if( is_door ) {

@@ -36,15 +36,25 @@
       { "x": 12, "y": 4, "parts": [ "frame#horizontal", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
       { "x": 17, "y": -6, "parts": [ "ram_steel#front" ] },
+      { "x": 17, "y": -4, "parts": [ "ram_steel#front" ] },
+      { "x": 17, "y": 4, "parts": [ "ram_steel#front" ] },
       { "x": 17, "y": 6, "parts": [ "ram_steel#front" ] },
-      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       { "x": -6, "y": -4, "parts": [ "frame#vertical", "trunk", "roof" ] },
       { "x": -6, "y": 4, "parts": [ "frame#vertical", "trunk", "roof" ] },
-      { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel_wide_or" ] },
+      { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel_wide_or" ]
+      },
       { "x": -12, "y": -4, "parts": [ "frame#vertical", "trunk", "roof" ] },
       { "x": -12, "y": 4, "parts": [ "frame#vertical", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel_wide_or" ] },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel_wide_or" ]
+      },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk", "roof" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk", "roof", "muffler" ] },
@@ -54,11 +64,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_suv" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 18, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 18, "y": -4, "parts": [ "ram_steel#front" ] },
-      { "x": 18, "y": 4, "parts": [ "ram_steel#front" ] },
-      { "x": -24, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 16, "items": [ "cig" ] },
@@ -81,8 +87,8 @@
     "type": "vehicle",
     "curb_mass": "1980 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v6", "alternator_car" ] },
-      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] }
+      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v6", "alternator_car" ] }
     ]
   },
   {
@@ -92,8 +98,8 @@
     "type": "vehicle",
     "curb_mass": "2050 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "diesel_engine_v6", "alternator_car" ] },
-      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "diesel" } ] }
+      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "diesel" } ] },
+      { "x": 12, "y": 0, "parts": [ "diesel_engine_v6", "alternator_car" ] }
     ]
   },
   {
@@ -129,10 +135,10 @@
       { "x": 5, "y": -3, "parts": [ "frame#horizontal", "windshield#cover_left" ] },
       { "x": 5, "y": 3, "parts": [ "frame#horizontal", "windshield#cover_right" ] },
       { "x": 5, "y": 5, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 10, "y": -5, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": 10, "y": -5, "parts": [ "frame_narrow#vertical", "halfboard#nw", "headlight" ] },
       { "x": 10, "y": -3, "parts": [ "frame#horizontal_front", "trunk_sedan" ] },
       { "x": 10, "y": 3, "parts": [ "frame#horizontal_front", "trunk_sedan", { "part": "tank", "fuel": "gasoline" } ] },
-      { "x": 10, "y": 5, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": 10, "y": 5, "parts": [ "frame_narrow#vertical", "halfboard#ne", "headlight" ] },
       { "x": -5, "y": -5, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
       {
         "x": -5,
@@ -197,10 +203,14 @@
       { "x": -6, "y": -4, "parts": [ "frame#vertical_2", "seat_back#left", "seatbelt", "roof" ] },
       { "x": -6, "y": 4, "parts": [ "frame#vertical_2", "seat_back#right", "seatbelt", "roof" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium" ] },
+      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium" ] },
       { "x": -12, "y": -4, "parts": [ "frame#vertical", "trunk", "muffler", "roof" ] },
       { "x": -12, "y": 4, "parts": [ "frame#vertical", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -209,7 +219,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
     ]
   },
   {
@@ -233,8 +243,8 @@
     "type": "vehicle",
     "curb_mass": "1580 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_inline4", "alternator_car" ] },
-      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] }
+      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
+      { "x": 12, "y": 0, "parts": [ "engine_inline4", "alternator_car" ] }
     ]
   },
   {
@@ -244,8 +254,8 @@
     "type": "vehicle",
     "curb_mass": "1560 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_inline4", "alternator_car" ] },
-      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] }
+      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
+      { "x": 12, "y": 0, "parts": [ "engine_inline4", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -261,8 +271,8 @@
     "type": "vehicle",
     "curb_mass": "1640 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "diesel_engine_inline4", "alternator_car" ] },
-      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "diesel" } ] }
+      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "diesel" } ] },
+      { "x": 12, "y": 0, "parts": [ "diesel_engine_inline4", "alternator_car" ] }
     ]
   },
   {
@@ -317,24 +327,18 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v6",
-          "alternator_car",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
       { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
       { "x": -6, "y": -4, "parts": [ "frame#vertical_2", "seat_back_leather#left", "seatbelt", "roof" ] },
       { "x": -6, "y": 4, "parts": [ "frame#vertical_2", "seat_back_leather#right", "seatbelt", "roof" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
       {
         "x": -12,
         "y": -4,
@@ -347,7 +351,11 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#vertical", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -356,7 +364,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_aerodynamic" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -401,17 +409,7 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_inline4",
-          "alternator_car",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
       { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
@@ -435,7 +433,11 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#vertical", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -444,7 +446,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_inline4", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -515,60 +517,78 @@
     "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Hybrid Car",
+    "grid_scale": 8,
+    "curb_mass": "1620 kg",
     "blueprint": [ [ "-o++o-" ], [ "+=##'|" ], [ "+=##'|" ], [ "-o++o-" ] ],
     "parts": [
+      { "x": 0, "y": 0, "parts": [ "frame_narrow#vertical", "shifter_console" ] },
       {
         "x": 0,
-        "y": 0,
+        "y": -4,
         "parts": [
           "frame#cross",
           "reclining_seat#windshield_front",
-          "seatbelt",
           "controls",
+          "seatbelt",
           "atlas_cabin_hvac",
-          "integrated_cooler"
+          "integrated_cooler",
+          "dashboard",
+          "smart_engine_controller",
+          "stereo",
+          "horn_car",
+          "vehicle_alarm",
+          "roof"
         ]
       },
-      { "x": 0, "y": 0, "parts": [ "dashboard", "smart_engine_controller" ] },
-      { "x": 0, "y": 0, "parts": [ "stereo", "horn_car", "vehicle_alarm", "roof" ] },
-      { "x": 0, "y": -1, "parts": [ "frame#vertical_left", "door#nw", "atlas_roll_down_window" ] },
-      { "x": 0, "y": 1, "parts": [ "frame#cross", "reclining_seat#windshield_front", "seatbelt", "roof" ] },
-      { "x": 0, "y": 2, "parts": [ "frame#vertical_right", "door#ne", "atlas_roll_down_window" ] },
-      { "x": 1, "y": -1, "parts": [ "frame#vertical_T_left", "windshield#wheel_left" ] },
-      { "x": 1, "y": -1, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#horizontal_2", "windshield#cover_left" ] },
-      { "x": 1, "y": 1, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
-      { "x": 1, "y": 2, "parts": [ "frame#vertical_T_right", "windshield#wheel_right" ] },
-      { "x": 1, "y": 2, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 2, "y": -1, "parts": [ "frame#nw", "halfboard#nw", "headlight" ] },
-      { "x": 2, "y": 0, "parts": [ "frame#horizontal_front", "halfboard#cover_left" ] },
-      { "x": 2, "y": 0, "parts": [ "engine_inline4", "alternator_truck" ] },
-      { "x": 2, "y": 1, "parts": [ "frame#horizontal_front", "engine_electric" ] },
-      { "x": 2, "y": 1, "parts": [ "halfboard#cover_right" ] },
-      { "x": 2, "y": 2, "parts": [ "frame#ne", "halfboard#ne", "headlight" ] },
-      { "x": -1, "y": -1, "parts": [ "frame#vertical_left", "door#sw", "atlas_roll_down_window" ] },
-      { "x": -1, "y": 0, "parts": [ "frame#cross", "seat_back#left", "seatbelt", "roof" ] },
-      { "x": -1, "y": 1, "parts": [ "frame#cross", "seat_back#right", "seatbelt", "roof" ] },
-      { "x": -1, "y": 2, "parts": [ "frame#vertical_right", "door#se", "atlas_roll_down_window" ] },
-      { "x": -2, "y": -1, "parts": [ "frame#vertical_left", "halfboard#wheel_left" ] },
-      { "x": -2, "y": -1, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
-      { "x": -2, "y": -1, "parts": [ "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 0, "parts": [ "frame#cross", "medium_storage_battery", "trunk" ] },
-      { "x": -2, "y": 0, "parts": [ "muffler", "roof" ] },
-      { "x": -2, "y": 1, "parts": [ "frame#cross", "medium_storage_battery", "trunk", "roof" ] },
-      { "x": -2, "y": 2, "parts": [ "frame#vertical_right", "halfboard#wheel_right" ] },
-      { "x": -2, "y": 2, "parts": [ "wheel_mount_medium", "wheel" ] },
-      { "x": -3, "y": -1, "parts": [ "frame#sw", "halfboard#sw" ] },
-      { "x": -3, "y": 0, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
-      { "x": -3, "y": 1, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
-      { "x": -3, "y": 2, "parts": [ "frame#se", "halfboard#se" ] }
+      { "x": 0, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#nw", "atlas_roll_down_window" ] },
+      { "x": 0, "y": 4, "parts": [ "frame#cross", "reclining_seat#windshield_front", "seatbelt", "roof" ] },
+      { "x": 0, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#ne", "atlas_roll_down_window" ] },
+      { "x": 6, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": 6, "y": -4, "parts": [ "frame#horizontal_2", "windshield#cover_left" ] },
+      { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
+      { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left" ] },
+      { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "engine_electric", "halfboard#cover_right" ] },
+      { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
+      { "x": -6, "y": -4, "parts": [ "frame#cross", "seat_back#left", "seatbelt", "roof" ] },
+      { "x": -6, "y": 4, "parts": [ "frame#cross", "seat_back#right", "seatbelt", "roof" ] },
+      { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [
+          "frame_narrow#vertical",
+          "halfboard#wheel_left",
+          { "part": "tank", "fuel": "gasoline" },
+          "wheel_mount_medium",
+          "wheel"
+        ]
+      },
+      { "x": -12, "y": -4, "parts": [ "frame#cross", "medium_storage_battery", "trunk", "muffler", "roof" ] },
+      { "x": -12, "y": 4, "parts": [ "frame#cross", "medium_storage_battery", "trunk", "roof" ] },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
+      { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
+      { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
+      { "x": -18, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -18, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
+      { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_inline4", "alternator_truck" ] }
     ],
     "items": [
-      { "x": 0, "y": 0, "chance": 90, "item_groups": [ "car_misc" ] },
-      { "x": 0, "y": 0, "chance": 5, "item_groups": [ "snacks" ] },
-      { "x": 0, "y": 1, "chance": 2, "item_groups": [ "fast_food" ] },
-      { "x": -2, "y": 1, "chance": 90, "item_groups": [ "car_kit" ] },
-      { "x": -2, "y": 1, "chance": 25, "item_groups": [ "spare_tire_kit_small_jack" ] }
+      { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
+      { "x": 0, "y": -4, "chance": 5, "item_groups": [ "snacks" ] },
+      { "x": 0, "y": 4, "chance": 2, "item_groups": [ "fast_food" ] },
+      { "x": -12, "y": 4, "chance": 90, "item_groups": [ "car_kit" ] },
+      { "x": -12, "y": 4, "chance": 25, "item_groups": [ "spare_tire_kit_small_jack" ] }
     ]
   },
   {
@@ -605,17 +625,7 @@
       { "x": 5, "y": 3, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 5, "y": 5, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 10, "y": -5, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 10,
-        "y": -3,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_inline4",
-          "alternator_car",
-          "battery_car"
-        ]
-      },
+      { "x": 10, "y": -3, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 10, "y": 3, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 10, "y": 5, "parts": [ "frame_narrow#vertical", "headlight" ] },
       {
@@ -651,7 +661,7 @@
       },
       { "x": -5, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 5, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 10, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 10, "y": 0, "parts": [ "frame#horizontal_front", "engine_inline4", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -3, "chance": 50, "item_groups": [ "car_misc" ] },
@@ -703,7 +713,7 @@
         "parts": [ "frame_narrow#vertical", "halfboard#hatch_wheel_right", "wheel_mount_medium", "wheel" ]
       },
       { "x": -5, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 5, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 5, "y": 0, "parts": [ "frame#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -3, "chance": 50, "item_groups": [ "car_misc" ] },
@@ -717,35 +727,37 @@
     "type": "vehicle",
     "curb_mass": "1020 kg",
     "parts": [
-      { "x": 5, "y": -3, "parts": [ "engine_inline4", "alternator_car", "battery_car" ] },
-      { "x": -5, "y": -3, "parts": [ { "part": "tank_medium", "fuel": "gasoline" }, "muffler" ] }
+      { "x": 5, "y": -3, "parts": [ "battery_car" ] },
+      { "x": -5, "y": -3, "parts": [ { "part": "tank_medium", "fuel": "gasoline" }, "muffler" ] },
+      { "x": 5, "y": 0, "parts": [ "engine_inline4", "alternator_car" ] }
     ]
   },
   {
     "id": "car_micro_hybrid",
+    "copy-from": "car_micro_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_micro_abstract",
     "name": "Hybrid Microcar",
+    "curb_mass": "1090 kg",
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "smart_engine_controller" ] },
-      { "x": 1, "y": 0, "parts": [ "engine_vtwin", "alternator_truck" ] },
-      { "x": 1, "y": 1, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ { "part": "tank_medium", "fuel": "gasoline" } ] },
-      { "x": -1, "y": 2, "parts": [ "medium_storage_battery" ] },
-      { "x": -1, "y": 0, "parts": [ "muffler" ] }
+      { "x": 0, "y": -3, "parts": [ "smart_engine_controller" ] },
+      { "x": 5, "y": 3, "parts": [ "engine_electric" ] },
+      { "x": -5, "y": -3, "parts": [ { "part": "tank_medium", "fuel": "gasoline" }, "muffler" ] },
+      { "x": -5, "y": 3, "parts": [ "medium_storage_battery" ] },
+      { "x": 5, "y": 0, "parts": [ "engine_vtwin", "alternator_truck" ] }
     ]
   },
   {
     "id": "car_micro_electric",
+    "copy-from": "car_micro_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_micro_abstract",
     "name": "Electric Microcar",
+    "curb_mass": "1180 kg",
     "parts": [
-      { "x": 1, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 2, "parts": [ "storage_battery" ] }
+      { "x": -5, "y": -3, "parts": [ "storage_battery" ] },
+      { "x": -5, "y": 3, "parts": [ "storage_battery" ] },
+      { "x": 5, "y": 0, "parts": [ "engine_electric" ] }
     ]
   },
   {
@@ -829,29 +841,30 @@
   },
   {
     "id": "scompact_hybrid",
+    "copy-from": "scompact_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "scompact_abstract",
     "name": "Hybrid Supercompact Car",
+    "curb_mass": "960 kg",
     "parts": [
       { "x": 0, "y": 0, "parts": [ "smart_engine_controller" ] },
-      { "x": 1, "y": 0, "parts": [ "engine_vtwin", "alternator_truck" ] },
-      { "x": -1, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ { "part": "tank_medium", "fuel": "gasoline" } ] },
-      { "x": -1, "y": 0, "parts": [ "muffler" ] },
-      { "x": -1, "y": 1, "parts": [ "medium_storage_battery" ] }
+      { "x": 5, "y": 0, "parts": [ "engine_vtwin", "alternator_truck" ] },
+      { "x": -5, "y": 0, "parts": [ "engine_electric", "muffler" ] },
+      { "x": -5, "y": -4, "parts": [ { "part": "tank_medium", "fuel": "gasoline" } ] },
+      { "x": -5, "y": 4, "parts": [ "medium_storage_battery" ] }
     ]
   },
   {
     "id": "scompact_electric",
+    "copy-from": "scompact_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "scompact_abstract",
     "name": "Electric Supercompact Car",
+    "curb_mass": "1020 kg",
     "parts": [
-      { "x": 1, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] }
+      { "x": 5, "y": 0, "parts": [ "engine_electric" ] },
+      { "x": -5, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -5, "y": 4, "parts": [ "storage_battery" ] }
     ]
   },
   {
@@ -930,36 +943,38 @@
   },
   {
     "id": "scompact_tandem_electric_stow",
+    "copy-from": "scompact_tandem_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "scompact_tandem_abstract",
     "name": "Electric Supercompact Tandem Car",
+    "curb_mass": "710 kg",
     "parts": [
-      { "x": 1, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": -1, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 1, "y": 1, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": -2, "y": -1, "parts": [ "halfboard#wheel_left", "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 1, "parts": [ "halfboard#wheel_right", "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 0, "parts": [ "stowboard#horizontal_rear" ] }
+      { "x": 5, "y": 0, "parts": [ "engine_electric" ] },
+      { "x": -5, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -5, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": 5, "y": -4, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": 5, "y": 4, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": -10, "y": -4, "parts": [ "halfboard#wheel_left", "wheel_mount_medium", "wheel" ] },
+      { "x": -10, "y": 4, "parts": [ "halfboard#wheel_right", "wheel_mount_medium", "wheel" ] },
+      { "x": -10, "y": 0, "parts": [ "stowboard#horizontal_rear" ] }
     ]
   },
   {
     "id": "scompact_tandem_electric_hboard",
+    "copy-from": "scompact_tandem_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "scompact_tandem_abstract",
     "name": "Electric Supercompact Tandem Car",
+    "curb_mass": "710 kg",
     "parts": [
-      { "x": 1, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": -1, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 1, "y": 1, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": -2, "y": -1, "parts": [ "halfboard#wheel_left", "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 1, "parts": [ "halfboard#wheel_right", "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 0, "parts": [ "halfboard#horizontal" ] }
+      { "x": 5, "y": 0, "parts": [ "engine_electric" ] },
+      { "x": -5, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -5, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": 5, "y": -4, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": 5, "y": 4, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": -10, "y": -4, "parts": [ "halfboard#wheel_left", "wheel_mount_medium", "wheel" ] },
+      { "x": -10, "y": 4, "parts": [ "halfboard#wheel_right", "wheel_mount_medium", "wheel" ] },
+      { "x": -10, "y": 0, "parts": [ "halfboard#horizontal" ] }
     ]
   },
   {
@@ -1004,36 +1019,42 @@
   },
   {
     "id": "scompact_tandem_electric_2wheel_stow",
+    "copy-from": "scompact_tandem_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "scompact_tandem_abstract",
     "name": "Electric Tandem Cabin Motorcycle",
+    "curb_mass": "666 kg",
     "parts": [
-      { "x": -2, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_mount_light_steerable", "wheel_motorbike" ] },
-      { "x": -2, "y": 0, "parts": [ "wheel_mount_light", "wheel_motorbike" ] },
-      { "x": -2, "y": -1, "parts": [ "halfboard#sw" ] },
-      { "x": -2, "y": 1, "parts": [ "halfboard#se" ] },
-      { "x": -2, "y": 0, "parts": [ "stowboard#horizontal_rear" ] }
+      {
+        "x": -10,
+        "y": 0,
+        "parts": [ "engine_electric", "wheel_mount_light", "wheel_motorbike", "stowboard#horizontal_rear" ]
+      },
+      { "x": -5, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -5, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": 5, "y": 0, "parts": [ "wheel_mount_light_steerable", "wheel_motorbike" ] },
+      { "x": -10, "y": -4, "parts": [ "halfboard#sw" ] },
+      { "x": -10, "y": 4, "parts": [ "halfboard#se" ] }
     ]
   },
   {
     "id": "scompact_tandem_electric_2wheel_hboard",
+    "copy-from": "scompact_tandem_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "scompact_tandem_abstract",
     "name": "Electric Tandem Cabin Motorcycle",
+    "curb_mass": "666 kg",
     "parts": [
-      { "x": -2, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_mount_light_steerable", "wheel_motorbike" ] },
-      { "x": -2, "y": 0, "parts": [ "wheel_mount_light", "wheel_motorbike" ] },
-      { "x": -2, "y": -1, "parts": [ "halfboard#sw" ] },
-      { "x": -2, "y": 1, "parts": [ "halfboard#se" ] },
-      { "x": -2, "y": 0, "parts": [ "halfboard#horizontal" ] }
+      {
+        "x": -10,
+        "y": 0,
+        "parts": [ "engine_electric", "wheel_mount_light", "wheel_motorbike", "halfboard#horizontal" ]
+      },
+      { "x": -5, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -5, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": 5, "y": 0, "parts": [ "wheel_mount_light_steerable", "wheel_motorbike" ] },
+      { "x": -10, "y": -4, "parts": [ "halfboard#sw" ] },
+      { "x": -10, "y": 4, "parts": [ "halfboard#se" ] }
     ]
   },
   {
@@ -1076,34 +1097,34 @@
   },
   {
     "id": "scompact_tandem_electric_3wheel_stow",
+    "copy-from": "scompact_tandem_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "scompact_tandem_abstract",
     "name": "Electric Tandem Three-Wheeled Supercompact Car",
+    "curb_mass": "688 kg",
     "parts": [
-      { "x": -2, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_mount_light_steerable", "wheel_motorbike" ] },
-      { "x": -2, "y": -1, "parts": [ "halfboard#hatch_wheel_left", "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 1, "parts": [ "halfboard#hatch_wheel_right", "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 0, "parts": [ "stowboard#horizontal_rear" ] }
+      { "x": -10, "y": 0, "parts": [ "engine_electric", "stowboard#horizontal_rear" ] },
+      { "x": -5, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -5, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": 5, "y": 0, "parts": [ "wheel_mount_light_steerable", "wheel_motorbike" ] },
+      { "x": -10, "y": -4, "parts": [ "halfboard#hatch_wheel_left", "wheel_mount_medium", "wheel" ] },
+      { "x": -10, "y": 4, "parts": [ "halfboard#hatch_wheel_right", "wheel_mount_medium", "wheel" ] }
     ]
   },
   {
     "id": "scompact_tandem_electric_3wheel_hboard",
+    "copy-from": "scompact_tandem_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "scompact_tandem_abstract",
     "name": "Electric Tandem Three-Wheeled Supercompact Car",
+    "curb_mass": "688 kg",
     "parts": [
-      { "x": -2, "y": 0, "parts": [ "engine_electric" ] },
-      { "x": -1, "y": -1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_mount_light_steerable", "wheel_motorbike" ] },
-      { "x": -2, "y": -1, "parts": [ "halfboard#hatch_wheel_left", "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 1, "parts": [ "halfboard#hatch_wheel_right", "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 0, "parts": [ "halfboard#horizontal" ] }
+      { "x": -10, "y": 0, "parts": [ "engine_electric", "halfboard#horizontal" ] },
+      { "x": -5, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -5, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": 5, "y": 0, "parts": [ "wheel_mount_light_steerable", "wheel_motorbike" ] },
+      { "x": -10, "y": -4, "parts": [ "halfboard#hatch_wheel_left", "wheel_mount_medium", "wheel" ] },
+      { "x": -10, "y": 4, "parts": [ "halfboard#hatch_wheel_right", "wheel_mount_medium", "wheel" ] }
     ]
   },
   {
@@ -1153,7 +1174,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -1171,9 +1192,9 @@
     "name": "Hatchback",
     "curb_mass": "1340 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_inline4", "alternator_car" ] },
       { "x": -12, "y": -4, "parts": [ { "part": "tank_medium", "fuel": "gasoline" } ] },
-      { "x": -12, "y": 4, "parts": [ { "part": "tank_medium", "fuel": "gasoline" } ] }
+      { "x": -12, "y": 4, "parts": [ { "part": "tank_medium", "fuel": "gasoline" } ] },
+      { "x": 12, "y": 0, "parts": [ "engine_inline4", "alternator_car" ] }
     ]
   },
   {
@@ -1184,9 +1205,9 @@
     "name": "Hatchback",
     "curb_mass": "1390 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "diesel_engine_inline4", "alternator_car" ] },
       { "x": -12, "y": -4, "parts": [ { "part": "tank_medium", "fuel": "diesel" } ] },
-      { "x": -12, "y": 4, "parts": [ { "part": "tank_medium", "fuel": "diesel" } ] }
+      { "x": -12, "y": 4, "parts": [ { "part": "tank_medium", "fuel": "diesel" } ] },
+      { "x": 12, "y": 0, "parts": [ "diesel_engine_inline4", "alternator_car" ] }
     ]
   },
   {
@@ -1238,20 +1259,10 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel_slick" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v12",
-          "alternator_car",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       {
         "x": -6,
         "y": -4,
@@ -1264,7 +1275,7 @@
         ]
       },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
       { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel_slick" ] },
       { "x": -12, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk#wheel_left" ] },
       { "x": -12, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk#wheel_right" ] },
@@ -1272,7 +1283,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v12", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1318,10 +1329,10 @@
       { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       { "x": -6, "y": -4, "parts": [ "frame#cross", "trunk", "muffler", "roof" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
       { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
       { "x": -12, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -12, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -1329,7 +1340,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1345,8 +1356,9 @@
     "type": "vehicle",
     "curb_mass": "1740 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v8", "alternator_car", "battery_car" ] },
-      { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] }
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
+      { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v8", "alternator_car" ] }
     ],
     "items": [ { "x": -6, "y": -4, "chance": 2, "item_groups": [ "hunting_lodge_weapons" ] } ]
   },
@@ -1358,25 +1370,27 @@
     "name": "Premium Shooting Brake",
     "curb_mass": "1840 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v12", "alternator_car", "battery_car" ] },
-      { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] }
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
+      { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v12", "alternator_car" ] }
     ],
     "items": [ { "x": -6, "y": -4, "chance": 5, "item_groups": [ "hunting_lodge_weapons" ] } ]
   },
   {
     "id": "car_shootingbrake_electric",
+    "copy-from": "car_shootingbrake_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_shootingbrake_abstract",
     "name": "Electric Shooting Brake",
+    "curb_mass": "1980 kg",
     "parts": [
-      { "x": -2, "y": 0, "parts": [ "engine_electric_enhanced" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] }
+      { "x": -12, "y": -4, "parts": [ "engine_electric_enhanced" ] },
+      { "x": 0, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": -6, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "storage_battery" ] }
     ],
-    "items": [ { "x": -1, "y": 0, "chance": 5, "item_groups": [ "hunting_lodge_weapons" ] } ]
+    "items": [ { "x": -6, "y": -4, "chance": 5, "item_groups": [ "hunting_lodge_weapons" ] } ]
   },
   {
     "abstract": "car_shootingbrake_long_abstract",
@@ -1419,10 +1433,10 @@
       { "x": -6, "y": -4, "parts": [ "frame#vertical", "seat_back_leather#left", "roof", "seatbelt" ] },
       { "x": -6, "y": 4, "parts": [ "frame#vertical", "seat_back_leather#right", "roof", "seatbelt" ] },
       { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       { "x": -12, "y": -4, "parts": [ "frame#cross", "trunk", "muffler", "roof" ] },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -1431,7 +1445,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_aerodynamic" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1447,8 +1461,9 @@
     "type": "vehicle",
     "curb_mass": "1860 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v8", "alternator_car", "battery_car" ] },
-      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] }
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
+      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v8", "alternator_car" ] }
     ],
     "items": [ { "x": -6, "y": -4, "chance": 2, "item_groups": [ "hunting_lodge_weapons" ] } ]
   },
@@ -1460,25 +1475,27 @@
     "name": "Premium Shooting Brake",
     "curb_mass": "1960 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v12", "alternator_car", "battery_car" ] },
-      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] }
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
+      { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v12", "alternator_car" ] }
     ],
     "items": [ { "x": -6, "y": -4, "chance": 5, "item_groups": [ "hunting_lodge_weapons" ] } ]
   },
   {
     "id": "car_shootingbrake_long_electric",
+    "copy-from": "car_shootingbrake_long_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_shootingbrake_long_abstract",
     "name": "Electric Shooting Brake",
+    "curb_mass": "2100 kg",
     "parts": [
-      { "x": -3, "y": 0, "parts": [ "engine_electric_enhanced" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] }
+      { "x": -18, "y": -4, "parts": [ "engine_electric_enhanced" ] },
+      { "x": 0, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": -6, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "storage_battery" ] }
     ],
-    "items": [ { "x": -1, "y": 0, "chance": 5, "item_groups": [ "hunting_lodge_weapons" ] } ]
+    "items": [ { "x": -6, "y": -4, "chance": 5, "item_groups": [ "hunting_lodge_weapons" ] } ]
   },
   {
     "abstract": "car_sedan_abstract",
@@ -1522,15 +1539,15 @@
       { "x": -12, "y": -4, "parts": [ "frame#cross", "windshield#horizontal_rear" ] },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "windshield#horizontal_rear" ] },
       { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
-      { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#sw" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "muffler", "trunk_sedan" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "trunk_sedan" ] },
-      { "x": -18, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -18, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#se" ] },
       { "x": -18, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -1546,12 +1563,13 @@
     "type": "vehicle",
     "curb_mass": "1480 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_inline4", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
       { "x": -6, "y": -4, "parts": [ "seat_back#left", "seatbelt" ] },
       { "x": -6, "y": 4, "parts": [ "seat_back#right", "seatbelt" ] },
       { "x": 0, "y": -4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_inline4", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 5, "item_groups": [ "snacks" ] },
@@ -1565,12 +1583,13 @@
     "type": "vehicle",
     "curb_mass": "1540 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "diesel_engine_inline4", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "diesel" } ] },
       { "x": -6, "y": -4, "parts": [ "seat_back#left", "seatbelt" ] },
       { "x": -6, "y": 4, "parts": [ "seat_back#right", "seatbelt" ] },
       { "x": 0, "y": -4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "diesel_engine_inline4", "alternator_car" ] }
     ],
     "items": [ { "x": 0, "y": 4, "chance": 2, "item_groups": [ "fast_food" ] } ]
   },
@@ -1581,12 +1600,13 @@
     "type": "vehicle",
     "curb_mass": "1640 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "diesel_engine_v6", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -12, "y": -4, "parts": [ { "part": "tank", "fuel": "diesel" } ] },
       { "x": -6, "y": -4, "parts": [ "seat_back#left", "seatbelt" ] },
       { "x": -6, "y": 4, "parts": [ "seat_back#right", "seatbelt" ] },
       { "x": 0, "y": -4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "diesel_engine_v6", "alternator_car" ] }
     ],
     "items": [ { "x": 0, "y": 4, "chance": 2, "item_groups": [ "fast_food" ] } ]
   },
@@ -1599,10 +1619,11 @@
     "curb_mass": "1710 kg",
     "parts": [
       { "x": 0, "y": -4, "parts": [ "integrated_cooler", "reclining_seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 12, "y": -4, "parts": [ "engine_v8", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" }, "seat_back_leather#left", "seatbelt" ] },
       { "x": -6, "y": 4, "parts": [ "seat_back_leather#right", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v8", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1620,10 +1641,11 @@
     "curb_mass": "1760 kg",
     "parts": [
       { "x": 0, "y": -4, "parts": [ "integrated_cooler", "reclining_seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 12, "y": -4, "parts": [ "engine_v12", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" }, "seat_back_leather#left", "seatbelt" ] },
       { "x": -6, "y": 4, "parts": [ "seat_back_leather#right", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v12", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1641,10 +1663,11 @@
     "curb_mass": "1580 kg",
     "parts": [
       { "x": 0, "y": -4, "parts": [ "integrated_cooler", "reclining_seat#windshield_front", "seatbelt" ] },
-      { "x": 12, "y": -4, "parts": [ "engine_v6", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" }, "seat_back#left", "seatbelt" ] },
       { "x": -6, "y": 4, "parts": [ "seat_back#right", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v6", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1662,76 +1685,87 @@
     "curb_mass": "1840 kg",
     "parts": [
       { "x": 0, "y": -4, "parts": [ "integrated_cooler", "reclining_seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 12, "y": -4, "parts": [ "engine_v6", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" }, "seat_back_leather#left", "seatbelt" ] },
       { "x": -6, "y": 4, "parts": [ "seat_back_leather#right", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v6", "alternator_car" ] }
     ],
     "items": [ { "x": 0, "y": 4, "chance": 10, "item_groups": [ "suits" ] } ]
   },
   {
     "id": "car_sedan_electric",
+    "copy-from": "car_sedan_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_sedan_abstract",
     "name": "Electric Sedan",
+    "curb_mass": "1920 kg",
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "integrated_cooler" ] },
-      { "x": -2, "y": 0, "parts": [ "engine_electric_large" ] },
-      { "x": -1, "y": 0, "parts": [ "seat_back#left", "seatbelt" ] },
-      { "x": -1, "y": 1, "parts": [ "seat_back#right", "seatbelt" ] },
-      { "x": 0, "y": 0, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 1, "parts": [ "reclining_seat#windshield_front", "seatbelt" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] }
+      {
+        "x": 0,
+        "y": -4,
+        "parts": [ "integrated_cooler", "reclining_seat#windshield_front", "seatbelt", "storage_battery" ]
+      },
+      { "x": -12, "y": -4, "parts": [ "engine_electric_large" ] },
+      { "x": -6, "y": -4, "parts": [ "seat_back#left", "seatbelt", "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "seat_back#right", "seatbelt", "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "reclining_seat#windshield_front", "seatbelt", "storage_battery" ] }
     ],
-    "items": [ { "x": 0, "y": 1, "chance": 2, "item_groups": [ "fast_food" ] } ]
+    "items": [ { "x": 0, "y": 4, "chance": 2, "item_groups": [ "fast_food" ] } ]
   },
   {
     "id": "car_sedan_luxury_electric",
+    "copy-from": "car_sedan_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_sedan_abstract",
     "name": "Luxury Electric Sedan",
+    "curb_mass": "2120 kg",
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "integrated_cooler" ] },
-      { "x": -2, "y": 0, "parts": [ "engine_electric_large" ] },
-      { "x": -1, "y": 0, "parts": [ "seat_back_leather#left", "seatbelt" ] },
-      { "x": -1, "y": 1, "parts": [ "seat_back_leather#right", "seatbelt" ] },
-      { "x": 0, "y": 0, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 1, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] }
+      {
+        "x": 0,
+        "y": -4,
+        "parts": [
+          "integrated_cooler",
+          "reclining_seat_leather#windshield_front",
+          "seatbelt",
+          "storage_battery"
+        ]
+      },
+      { "x": -12, "y": -4, "parts": [ "engine_electric_large" ] },
+      { "x": -6, "y": -4, "parts": [ "seat_back_leather#left", "seatbelt", "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "seat_back_leather#right", "seatbelt", "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt", "storage_battery" ] }
     ],
-    "items": [ { "x": 0, "y": 1, "chance": 10, "item_groups": [ "suits" ] } ]
+    "items": [ { "x": 0, "y": 4, "chance": 10, "item_groups": [ "suits" ] } ]
   },
   {
     "id": "car_sedan_sports_electric",
+    "copy-from": "car_sedan_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_sedan_abstract",
     "name": "Electric Sports Sedan",
+    "curb_mass": "2050 kg",
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "integrated_cooler" ] },
-      { "x": -2, "y": 0, "parts": [ "engine_electric_enhanced" ] },
-      { "x": -1, "y": 0, "parts": [ "seat_back_leather#left", "seatbelt" ] },
-      { "x": -1, "y": 1, "parts": [ "seat_back_leather#right", "seatbelt" ] },
-      { "x": 0, "y": 0, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 1, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] }
+      {
+        "x": 0,
+        "y": -4,
+        "parts": [
+          "integrated_cooler",
+          "reclining_seat_leather#windshield_front",
+          "seatbelt",
+          "storage_battery"
+        ]
+      },
+      { "x": -12, "y": -4, "parts": [ "engine_electric_enhanced" ] },
+      { "x": -6, "y": -4, "parts": [ "seat_back_leather#left", "seatbelt", "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "seat_back_leather#right", "seatbelt", "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "reclining_seat_leather#windshield_front", "seatbelt", "storage_battery" ] }
     ],
     "items": [
-      { "x": 0, "y": 0, "chance": 10, "item_groups": [ "snacks_fancy" ] },
-      { "x": 0, "y": 1, "chance": 10, "item_groups": [ "snacks_fancy" ] },
-      { "x": -1, "y": 0, "chance": 5, "item_groups": [ "snacks_fancy" ] },
-      { "x": -1, "y": 1, "chance": 5, "item_groups": [ "snacks_fancy" ] }
+      { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
+      { "x": 0, "y": 4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
+      { "x": -6, "y": -4, "chance": 5, "item_groups": [ "snacks_fancy" ] },
+      { "x": -6, "y": 4, "chance": 5, "item_groups": [ "snacks_fancy" ] }
     ]
   },
   {
@@ -1932,14 +1966,14 @@
       { "x": -6, "y": -4, "parts": [ "frame#cross", "windshield#horizontal_rear" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "windshield#horizontal_rear" ] },
       { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#sw" ] },
       { "x": -12, "y": -4, "parts": [ "frame#horizontal_rear", "muffler", "trunk_sedan" ] },
       { "x": -12, "y": 4, "parts": [ "frame#horizontal_rear", "trunk_sedan" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#se" ] },
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -1954,10 +1988,11 @@
     "type": "vehicle",
     "curb_mass": "1460 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_inline4", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
       { "x": 0, "y": -4, "parts": [ "seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_inline4", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 5, "item_groups": [ "snacks" ] },
@@ -1971,10 +2006,11 @@
     "type": "vehicle",
     "curb_mass": "1510 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "diesel_engine_inline4", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "diesel" } ] },
       { "x": 0, "y": -4, "parts": [ "seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "diesel_engine_inline4", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 5, "item_groups": [ "snacks" ] },
@@ -1988,10 +2024,11 @@
     "type": "vehicle",
     "curb_mass": "1590 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "diesel_engine_v6", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "diesel" } ] },
       { "x": 0, "y": -4, "parts": [ "seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "diesel_engine_v6", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 5, "item_groups": [ "snacks" ] },
@@ -2006,10 +2043,11 @@
     "name": "Muscle Car",
     "curb_mass": "1690 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v8", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
       { "x": 0, "y": -4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v8", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -2024,10 +2062,11 @@
     "name": "V12 Sports Coupe",
     "curb_mass": "1640 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v12", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
       { "x": 0, "y": -4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v12", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -2042,10 +2081,11 @@
     "name": "V6 Sports Coupe",
     "curb_mass": "1540 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v6", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
       { "x": 0, "y": -4, "parts": [ "seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v6", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 5, "item_groups": [ "snacks" ] },
@@ -2060,65 +2100,60 @@
     "name": "Luxury Coupe",
     "curb_mass": "1680 kg",
     "parts": [
-      { "x": 12, "y": -4, "parts": [ "engine_v6", "alternator_car", "battery_car" ] },
+      { "x": 12, "y": -4, "parts": [ "battery_car" ] },
       { "x": -6, "y": -4, "parts": [ { "part": "tank", "fuel": "gasoline" } ] },
       { "x": 0, "y": -4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] }
+      { "x": 0, "y": 4, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
+      { "x": 12, "y": 0, "parts": [ "engine_v6", "alternator_car" ] }
     ],
     "items": [ { "x": 0, "y": 4, "chance": 10, "item_groups": [ "suits" ] } ]
   },
   {
     "id": "car_coupe_electric",
+    "copy-from": "car_coupe_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_coupe_abstract",
     "name": "Electric Coupe",
+    "curb_mass": "1820 kg",
     "parts": [
-      { "x": -1, "y": 0, "parts": [ "engine_electric_large" ] },
-      { "x": 0, "y": 0, "parts": [ "seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 1, "parts": [ "seat#windshield_front", "seatbelt" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] }
+      { "x": -6, "y": -4, "parts": [ "engine_electric_large", "storage_battery" ] },
+      { "x": 0, "y": -4, "parts": [ "seat#windshield_front", "seatbelt", "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "seat#windshield_front", "seatbelt", "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "storage_battery" ] }
     ],
-    "items": [ { "x": 0, "y": 1, "chance": 2, "item_groups": [ "fast_food" ] } ]
+    "items": [ { "x": 0, "y": 4, "chance": 2, "item_groups": [ "fast_food" ] } ]
   },
   {
     "id": "car_coupe_luxury_electric",
+    "copy-from": "car_coupe_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_coupe_abstract",
     "name": "Luxury Electric Coupe",
+    "curb_mass": "1950 kg",
     "parts": [
-      { "x": -1, "y": 0, "parts": [ "engine_electric_large" ] },
-      { "x": 0, "y": 0, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 1, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] }
+      { "x": -6, "y": -4, "parts": [ "engine_electric_large", "storage_battery" ] },
+      { "x": 0, "y": -4, "parts": [ "seat_leather#windshield_front", "seatbelt", "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "seat_leather#windshield_front", "seatbelt", "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "storage_battery" ] }
     ],
-    "items": [ { "x": 0, "y": 1, "chance": 10, "item_groups": [ "suits" ] } ]
+    "items": [ { "x": 0, "y": 4, "chance": 10, "item_groups": [ "suits" ] } ]
   },
   {
     "id": "car_coupe_sports_electric",
+    "copy-from": "car_coupe_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_coupe_abstract",
     "name": "Electric Sports Coupe",
+    "curb_mass": "1890 kg",
     "parts": [
-      { "x": -1, "y": 0, "parts": [ "engine_electric_enhanced" ] },
-      { "x": 0, "y": 0, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 1, "parts": [ "seat_leather#windshield_front", "seatbelt" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] }
+      { "x": -6, "y": -4, "parts": [ "engine_electric_enhanced", "storage_battery" ] },
+      { "x": 0, "y": -4, "parts": [ "seat_leather#windshield_front", "seatbelt", "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "seat_leather#windshield_front", "seatbelt", "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "storage_battery" ] }
     ],
     "items": [
-      { "x": 0, "y": 0, "chance": 10, "item_groups": [ "snacks_fancy" ] },
-      { "x": 0, "y": 1, "chance": 10, "item_groups": [ "snacks_fancy" ] }
+      { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
+      { "x": 0, "y": 4, "chance": 10, "item_groups": [ "snacks_fancy" ] }
     ]
   },
   {
@@ -2153,10 +2188,10 @@
       { "x": 6, "y": -4, "parts": [ "xlframe#horizontal", "windshield#cover_left" ] },
       { "x": 6, "y": 4, "parts": [ "xlframe#horizontal", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel_slick" ] },
-      { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#nw", "headlight" ] },
       { "x": 12, "y": -4, "parts": [ "xlframe#horizontal_front", "trunk_sedan" ] },
       { "x": 12, "y": 4, "parts": [ "xlframe#horizontal_front", "trunk_sedan" ] },
-      { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#ne", "headlight" ] },
       { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": -4, "parts": [ "xlframe#cross", "windshield#horizontal_rear" ] },
       { "x": -6, "y": 4, "parts": [ "xlframe#cross", "windshield#horizontal_rear" ] },
@@ -2203,39 +2238,41 @@
   },
   {
     "id": "car_super_electric",
+    "copy-from": "car_super_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_super_abstract",
     "name": "Electric Super Car",
+    "curb_mass": "1790 kg",
     "parts": [
-      { "x": -2, "y": 0, "parts": [ "engine_electric_super" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] }
+      { "x": -12, "y": -4, "parts": [ "engine_electric_super" ] },
+      { "x": 0, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": -6, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "storage_battery" ] }
     ],
     "items": [
-      { "x": 0, "y": 0, "chance": 10, "item_groups": [ "snacks_fancy" ] },
-      { "x": 0, "y": 1, "chance": 10, "item_groups": [ "snacks_fancy" ] }
+      { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
+      { "x": 0, "y": 4, "chance": 10, "item_groups": [ "snacks_fancy" ] }
     ]
   },
   {
     "id": "car_super_electric_alt",
+    "copy-from": "car_super_abstract",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "car_super_abstract",
     "name": "Electric Super Car",
+    "curb_mass": "1820 kg",
     "parts": [
-      { "x": -2, "y": 0, "parts": [ "engine_electric_enhanced" ] },
-      { "x": -2, "y": 1, "parts": [ "engine_electric_enhanced" ] },
-      { "x": 0, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 0, "parts": [ "storage_battery" ] },
-      { "x": -1, "y": 1, "parts": [ "storage_battery" ] }
+      { "x": -12, "y": -4, "parts": [ "engine_electric_enhanced" ] },
+      { "x": -12, "y": 4, "parts": [ "engine_electric_enhanced" ] },
+      { "x": 0, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": 0, "y": 4, "parts": [ "storage_battery" ] },
+      { "x": -6, "y": -4, "parts": [ "storage_battery" ] },
+      { "x": -6, "y": 4, "parts": [ "storage_battery" ] }
     ],
     "items": [
-      { "x": 0, "y": 0, "chance": 10, "item_groups": [ "snacks_fancy" ] },
-      { "x": 0, "y": 1, "chance": 10, "item_groups": [ "snacks_fancy" ] }
+      { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
+      { "x": 0, "y": 4, "chance": 10, "item_groups": [ "snacks_fancy" ] }
     ]
   },
   {
@@ -2243,13 +2280,19 @@
     "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Electric Sports Car",
+    "grid_scale": 8,
+    "curb_mass": "1680 kg",
     "blueprint": [ [ "o-+o-" ], [ "+=#'|" ], [ "+=#'|" ], [ "o-+o-" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "xlframe#cross", "seat_leather#windshield_front", "seatbelt", "controls" ] },
+      { "x": 0, "y": 0, "parts": [ "frame_narrow#vertical", "shifter_console", "shell_aerodynamic" ] },
       {
         "x": 0,
-        "y": 0,
+        "y": -4,
         "parts": [
+          "xlframe#cross",
+          "seat_leather#windshield_front",
+          "controls",
+          "seatbelt",
           "stereo",
           "dashboard",
           "integrated_heater_small",
@@ -2259,35 +2302,46 @@
           "roof"
         ]
       },
-      { "x": 0, "y": -1, "parts": [ "xlframe#vertical_left", "door#nw", "atlas_roll_down_window" ] },
-      { "x": 0, "y": 1, "parts": [ "xlframe#cross", "seat_leather#windshield_front", "seatbelt", "roof" ] },
-      { "x": 0, "y": 2, "parts": [ "xlframe#vertical_right", "door#ne", "atlas_roll_down_window" ] },
-      { "x": 1, "y": -1, "parts": [ "xlframe#vertical_left", "windshield#wheel_left" ] },
-      { "x": 1, "y": -1, "parts": [ "wheel_mount_medium_steerable", "wheel_slick" ] },
-      { "x": 1, "y": 0, "parts": [ "xlframe#horizontal_2", "windshield#cover_left" ] },
-      { "x": 1, "y": 1, "parts": [ "xlframe#horizontal_2", "windshield#cover_right" ] },
-      { "x": 1, "y": 2, "parts": [ "xlframe#vertical_right", "windshield#wheel_right" ] },
-      { "x": 1, "y": 2, "parts": [ "wheel_mount_medium_steerable", "wheel_slick" ] },
-      { "x": 2, "y": -1, "parts": [ "xlframe#nw", "xlhalfboard#nw", "headlight" ] },
-      { "x": 2, "y": 0, "parts": [ "xlframe#horizontal_front", "xlhalfboard#horizontal_front" ] },
-      { "x": 2, "y": 0, "parts": [ "engine_electric_enhanced", "storage_battery" ] },
-      { "x": 2, "y": 1, "parts": [ "xlframe#horizontal_front", "engine_electric_enhanced" ] },
-      { "x": 2, "y": 1, "parts": [ "storage_battery", "xlhalfboard#horizontal_front" ] },
-      { "x": 2, "y": 2, "parts": [ "xlframe#ne", "xlhalfboard#ne", "headlight" ] },
-      { "x": -1, "y": -1, "parts": [ "xlframe#vertical_left", "xlhalfboard#vertical_left" ] },
-      { "x": -1, "y": 0, "parts": [ "xlframe#cross", "storage_battery", "trunk", "roof" ] },
-      { "x": -1, "y": 1, "parts": [ "xlframe#cross", "storage_battery", "trunk", "roof" ] },
-      { "x": -1, "y": 2, "parts": [ "xlframe#vertical_right", "xlhalfboard#vertical_right" ] },
-      { "x": -2, "y": -1, "parts": [ "xlframe#sw", "xlhalfboard#sw", "wheel_mount_medium" ] },
-      { "x": -2, "y": -1, "parts": [ "wheel_slick" ] },
-      { "x": -2, "y": 0, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
-      { "x": -2, "y": 1, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
-      { "x": -2, "y": 2, "parts": [ "xlframe#se", "xlhalfboard#se", "wheel_mount_medium" ] },
-      { "x": -2, "y": 2, "parts": [ "wheel_slick" ] }
+      { "x": 0, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#nw", "atlas_roll_down_window" ] },
+      { "x": 0, "y": 4, "parts": [ "xlframe#cross", "seat_leather#windshield_front", "seatbelt", "roof" ] },
+      { "x": 0, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#ne", "atlas_roll_down_window" ] },
+      { "x": 6, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel_slick" ] },
+      { "x": 6, "y": -4, "parts": [ "xlframe#horizontal_2", "windshield#cover_left" ] },
+      { "x": 6, "y": 4, "parts": [ "xlframe#horizontal_2", "windshield#cover_right" ] },
+      { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel_slick" ] },
+      { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "xlhalfboard#nw", "headlight" ] },
+      { "x": 12, "y": -4, "parts": [ "xlframe#horizontal_front", "xlhalfboard#horizontal_front", "storage_battery" ] },
+      {
+        "x": 12,
+        "y": 4,
+        "parts": [
+          "xlframe#horizontal_front",
+          "engine_electric_enhanced",
+          "storage_battery",
+          "xlhalfboard#horizontal_front"
+        ]
+      },
+      { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "xlhalfboard#ne", "headlight" ] },
+      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical", "xlhalfboard#vertical_left" ] },
+      { "x": -6, "y": -4, "parts": [ "xlframe#cross", "storage_battery", "trunk", "roof" ] },
+      { "x": -6, "y": 4, "parts": [ "xlframe#cross", "storage_battery", "trunk", "roof" ] },
+      { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical", "xlhalfboard#vertical_right" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "xlhalfboard#sw", "wheel_mount_medium", "wheel_slick" ]
+      },
+      { "x": -12, "y": -4, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
+      { "x": -12, "y": 4, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "xlhalfboard#se", "wheel_mount_medium", "wheel_slick" ] },
+      { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": 12, "y": 0, "parts": [ "xlframe#horizontal_front", "engine_electric_enhanced" ] }
     ],
     "items": [
-      { "x": -1, "y": 0, "chance": 8, "items": [ "sm_extinguisher" ] },
-      { "x": -1, "y": 1, "chance": 90, "item_groups": [ "car_kit" ] }
+      { "x": -6, "y": -4, "chance": 8, "items": [ "sm_extinguisher" ] },
+      { "x": -6, "y": 4, "chance": 90, "item_groups": [ "car_kit" ] }
     ]
   },
   {
@@ -2295,13 +2349,19 @@
     "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Electric Racing Car",
+    "grid_scale": 8,
+    "curb_mass": "1420 kg",
     "blueprint": [ [ "o-+o-" ], [ "+=#'|" ], [ "+=#'|" ], [ "o-+o-" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "xlframe#cross", "seat#windshield_front", "seatbelt", "controls" ] },
+      { "x": 0, "y": 0, "parts": [ "frame_narrow#vertical", "shifter_console", "shell_aerodynamic" ] },
       {
         "x": 0,
-        "y": 0,
+        "y": -4,
         "parts": [
+          "xlframe#cross",
+          "seat#windshield_front",
+          "controls",
+          "seatbelt",
           "dashboard",
           "integrated_heater_small",
           "integrated_cooler",
@@ -2310,35 +2370,37 @@
           "roof"
         ]
       },
-      { "x": 0, "y": -1, "parts": [ "xlframe#vertical_left", "door#nw", "atlas_roll_down_window" ] },
-      { "x": 0, "y": 1, "parts": [ "xlframe#cross", "seat#windshield_front", "seatbelt", "roof" ] },
-      { "x": 0, "y": 2, "parts": [ "xlframe#vertical_right", "door#ne", "atlas_roll_down_window" ] },
-      { "x": 1, "y": -1, "parts": [ "xlframe#vertical_T_left", "windshield#wheel_left" ] },
-      { "x": 1, "y": -1, "parts": [ "wheel_mount_medium_steerable", "wheel_slick" ] },
-      { "x": 1, "y": 0, "parts": [ "xlframe#horizontal_2", "windshield#cover_left" ] },
-      { "x": 1, "y": 1, "parts": [ "xlframe#horizontal_2", "windshield#cover_right" ] },
-      { "x": 1, "y": 2, "parts": [ "xlframe#vertical_T_right", "windshield#wheel_right" ] },
-      { "x": 1, "y": 2, "parts": [ "wheel_mount_medium_steerable", "wheel_slick" ] },
-      { "x": 2, "y": -1, "parts": [ "xlframe#nw", "xlhalfboard#nw", "headlight" ] },
-      { "x": 2, "y": 0, "parts": [ "xlframe#horizontal_front", "xlhalfboard#horizontal_front" ] },
-      { "x": 2, "y": 0, "parts": [ "engine_electric_super", "storage_battery" ] },
-      { "x": 2, "y": 1, "parts": [ "xlframe#horizontal_front", "storage_battery" ] },
-      { "x": 2, "y": 1, "parts": [ "xlhalfboard#horizontal_front" ] },
-      { "x": 2, "y": 2, "parts": [ "xlframe#ne", "xlhalfboard#ne", "headlight" ] },
-      { "x": -1, "y": -1, "parts": [ "xlframe#vertical_left", "xlhalfboard#vertical_left" ] },
-      { "x": -1, "y": 0, "parts": [ "xlframe#cross", "storage_battery", "trunk", "roof" ] },
-      { "x": -1, "y": 1, "parts": [ "xlframe#cross", "storage_battery", "trunk", "roof" ] },
-      { "x": -1, "y": 2, "parts": [ "xlframe#vertical_right", "xlhalfboard#vertical_right" ] },
-      { "x": -2, "y": -1, "parts": [ "xlframe#sw", "xlhalfboard#sw", "wheel_mount_medium" ] },
-      { "x": -2, "y": -1, "parts": [ "wheel_slick" ] },
-      { "x": -2, "y": 0, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
-      { "x": -2, "y": 1, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
-      { "x": -2, "y": 2, "parts": [ "xlframe#se", "xlhalfboard#se", "wheel_mount_medium" ] },
-      { "x": -2, "y": 2, "parts": [ "wheel_slick" ] }
+      { "x": 0, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#nw", "atlas_roll_down_window" ] },
+      { "x": 0, "y": 4, "parts": [ "xlframe#cross", "seat#windshield_front", "seatbelt", "roof" ] },
+      { "x": 0, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#ne", "atlas_roll_down_window" ] },
+      { "x": 6, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel_slick" ] },
+      { "x": 6, "y": -4, "parts": [ "xlframe#horizontal_2", "windshield#cover_left" ] },
+      { "x": 6, "y": 4, "parts": [ "xlframe#horizontal_2", "windshield#cover_right" ] },
+      { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel_slick" ] },
+      { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "xlhalfboard#nw", "headlight" ] },
+      { "x": 12, "y": -4, "parts": [ "xlframe#horizontal_front", "xlhalfboard#horizontal_front", "storage_battery" ] },
+      { "x": 12, "y": 4, "parts": [ "xlframe#horizontal_front", "storage_battery", "xlhalfboard#horizontal_front" ] },
+      { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "xlhalfboard#ne", "headlight" ] },
+      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical", "xlhalfboard#vertical_left" ] },
+      { "x": -6, "y": -4, "parts": [ "xlframe#cross", "storage_battery", "trunk", "roof" ] },
+      { "x": -6, "y": 4, "parts": [ "xlframe#cross", "storage_battery", "trunk", "roof" ] },
+      { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical", "xlhalfboard#vertical_right" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "xlhalfboard#sw", "wheel_mount_medium", "wheel_slick" ]
+      },
+      { "x": -12, "y": -4, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
+      { "x": -12, "y": 4, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "xlhalfboard#se", "wheel_mount_medium", "wheel_slick" ] },
+      { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": 12, "y": 0, "parts": [ "xlframe#horizontal_front", "engine_electric_super" ] }
     ],
     "items": [
-      { "x": -1, "y": 0, "chance": 8, "items": [ "sm_extinguisher" ] },
-      { "x": 0, "y": 0, "chance": 6, "items": [ "helmet_motor" ] }
+      { "x": -6, "y": -4, "chance": 8, "items": [ "sm_extinguisher" ] },
+      { "x": 0, "y": -4, "chance": 6, "items": [ "helmet_motor" ] }
     ]
   },
   {
@@ -2346,54 +2408,73 @@
     "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Electric Car",
+    "grid_scale": 8,
+    "curb_mass": "1850 kg",
     "blueprint": [ [ "##++o-" ], [ "+=##'|" ], [ "+=##'|" ], [ "##++o-" ] ],
     "parts": [
+      { "x": 0, "y": 0, "parts": [ "frame_narrow#vertical", "shifter_console" ] },
       {
         "x": 0,
-        "y": 0,
+        "y": -4,
         "parts": [
           "xlframe#cross",
           "seat#windshield_front",
-          "seatbelt",
           "controls",
+          "seatbelt",
           "atlas_cabin_hvac",
-          "stereo"
+          "stereo",
+          "dashboard",
+          "vehicle_alarm",
+          "horn_car",
+          "roof"
         ]
       },
-      { "x": 0, "y": 0, "parts": [ "dashboard", "vehicle_alarm", "horn_car" ] },
-      { "x": 0, "y": 0, "parts": [ "roof" ] },
-      { "x": 0, "y": -1, "parts": [ "xlframe#vertical_left", "door#nw", "atlas_roll_down_window" ] },
-      { "x": 0, "y": 1, "parts": [ "xlframe#cross", "seat#windshield_front", "seatbelt", "roof" ] },
-      { "x": 0, "y": 2, "parts": [ "xlframe#vertical_right", "door#ne", "atlas_roll_down_window" ] },
-      { "x": 1, "y": -1, "parts": [ "xlframe#vertical_T_left", "windshield#wheel_left" ] },
-      { "x": 1, "y": -1, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 1, "y": 0, "parts": [ "xlframe#horizontal_2", "windshield#cover_left" ] },
-      { "x": 1, "y": 1, "parts": [ "xlframe#horizontal_2", "windshield#cover_right" ] },
-      { "x": 1, "y": 2, "parts": [ "xlframe#vertical_T_right", "windshield#wheel_right" ] },
-      { "x": 1, "y": 2, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 2, "y": -1, "parts": [ "xlframe#nw", "halfboard#nw", "headlight" ] },
-      { "x": 2, "y": 0, "parts": [ "xlframe#horizontal_front", "halfboard#cover_left" ] },
-      { "x": 2, "y": 0, "parts": [ "engine_electric_large" ] },
-      { "x": 2, "y": 1, "parts": [ "xlframe#horizontal_front", "halfboard#cover_right" ] },
-      { "x": 2, "y": 2, "parts": [ "xlframe#ne", "halfboard#ne", "headlight" ] },
-      { "x": -1, "y": -1, "parts": [ "xlframe#vertical_left", "door#sw", "atlas_roll_down_window" ] },
-      { "x": -1, "y": 0, "parts": [ "xlframe#cross", "seat_back#left", "seatbelt", "roof" ] },
-      { "x": -1, "y": 1, "parts": [ "xlframe#cross", "seat_back#right", "seatbelt", "roof" ] },
-      { "x": -1, "y": 2, "parts": [ "xlframe#vertical_right", "door#se", "atlas_roll_down_window" ] },
-      { "x": -2, "y": -1, "parts": [ "xlframe#vertical_left", "halfboard#wheel_left" ] },
-      { "x": -2, "y": -1, "parts": [ "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": -1, "parts": [ "storage_battery_mount", "storage_battery_removable" ] },
-      { "x": -2, "y": 0, "parts": [ "xlframe#cross", "trunk", "roof" ] },
-      { "x": -2, "y": 1, "parts": [ "xlframe#cross", "trunk", "roof" ] },
-      { "x": -2, "y": 2, "parts": [ "xlframe#vertical_right", "halfboard#wheel_right" ] },
-      { "x": -2, "y": 2, "parts": [ "wheel_mount_medium", "wheel" ] },
-      { "x": -2, "y": 2, "parts": [ "storage_battery_mount", "storage_battery_removable" ] },
-      { "x": -3, "y": -1, "parts": [ "xlframe#sw", "halfboard#sw" ] },
-      { "x": -3, "y": 0, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
-      { "x": -3, "y": 1, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
-      { "x": -3, "y": 2, "parts": [ "xlframe#se", "halfboard#se" ] }
+      { "x": 0, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#nw", "atlas_roll_down_window" ] },
+      { "x": 0, "y": 4, "parts": [ "xlframe#cross", "seat#windshield_front", "seatbelt", "roof" ] },
+      { "x": 0, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#ne", "atlas_roll_down_window" ] },
+      { "x": 6, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": 6, "y": -4, "parts": [ "xlframe#horizontal_2", "windshield#cover_left" ] },
+      { "x": 6, "y": 4, "parts": [ "xlframe#horizontal_2", "windshield#cover_right" ] },
+      { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": 12, "y": -4, "parts": [ "xlframe#horizontal_front", "halfboard#cover_left" ] },
+      { "x": 12, "y": 4, "parts": [ "xlframe#horizontal_front", "halfboard#cover_right" ] },
+      { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
+      { "x": -6, "y": -4, "parts": [ "xlframe#cross", "seat_back#left", "seatbelt", "roof" ] },
+      { "x": -6, "y": 4, "parts": [ "xlframe#cross", "seat_back#right", "seatbelt", "roof" ] },
+      { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
+      {
+        "x": -12,
+        "y": -4,
+        "parts": [ "xlframe#cross", "storage_battery_mount", "storage_battery_removable", "trunk", "roof" ]
+      },
+      {
+        "x": -12,
+        "y": 4,
+        "parts": [ "xlframe#cross", "trunk", "roof", "storage_battery_mount", "storage_battery_removable" ]
+      },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
+      { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -18, "y": -4, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
+      { "x": -18, "y": 4, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
+      { "x": -18, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -18, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
+      { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": 12, "y": 0, "parts": [ "xlframe#horizontal_front", "engine_electric_large" ] }
     ],
-    "items": [ { "x": -2, "y": 1, "chance": 10, "item_groups": [ "spare_tire_kit_small_jack" ] } ]
+    "items": [ { "x": -12, "y": 4, "chance": 10, "item_groups": [ "spare_tire_kit_small_jack" ] } ]
   },
   {
     "id": "rara_x",
@@ -2517,28 +2598,22 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v6",
-          "alternator_car",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
       { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
       { "x": -6, "y": -4, "parts": [ "frame#cross", "seat_back#left", "seatbelt", "roof" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "seat_back#right", "seatbelt", "roof" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       { "x": -12, "y": -4, "parts": [ "frame#cross", { "part": "tank", "fuel": "gasoline" }, "trunk", "roof" ] },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical" ] },
-      { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
+      {
+        "x": -18,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
       {
         "x": -18,
         "y": -4,
@@ -2551,7 +2626,11 @@
         ]
       },
       { "x": -18, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -18, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -18,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
       { "x": -24, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -24, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -24, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -2561,7 +2640,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_suv" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 16, "items": [ "cig" ] },
@@ -2586,74 +2665,104 @@
     "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Electric SUV",
+    "grid_scale": 8,
+    "curb_mass": "2580 kg",
     "blueprint": [ [ "-o-++o-" ], [ "+==##'|" ], [ "+==##'|" ], [ "-o-++o-" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "xlframe#cross", "roof", "reclining_seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 0, "parts": [ "controls", "atlas_cabin_hvac", "dashboard", "vehicle_alarm" ] },
-      { "x": 0, "y": 0, "parts": [ "stereo", "horn_car", "storage_battery" ] },
-      { "x": 0, "y": -1, "parts": [ "xlframe#vertical_left", "door#nw", "atlas_roll_down_window" ] },
-      { "x": 0, "y": 1, "parts": [ "xlframe#cross", "roof", "reclining_seat#windshield_front", "seatbelt" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 0, "y": 2, "parts": [ "xlframe#vertical_right", "door#ne", "atlas_roll_down_window" ] },
-      { "x": 1, "y": -1, "parts": [ "xlframe#vertical_T_left", "windshield#wheel_left" ] },
-      { "x": 1, "y": -1, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 1, "y": 0, "parts": [ "xlframe#horizontal_2", "windshield#cover_left" ] },
-      { "x": 1, "y": 1, "parts": [ "xlframe#horizontal_2", "windshield#cover_right" ] },
-      { "x": 1, "y": 2, "parts": [ "xlframe#vertical_T_right", "windshield#wheel_right" ] },
-      { "x": 1, "y": 2, "parts": [ "wheel_mount_medium_steerable", "wheel" ] },
-      { "x": 2, "y": -1, "parts": [ "xlframe#nw", "halfboard#nw", "headlight" ] },
-      { "x": 2, "y": 0, "parts": [ "xlframe#horizontal_front", "halfboard#cover_left" ] },
-      { "x": 2, "y": 0, "parts": [ "engine_electric_large" ] },
-      { "x": 2, "y": 1, "parts": [ "xlframe#horizontal_front", "halfboard#cover_right" ] },
-      { "x": 2, "y": 2, "parts": [ "xlframe#ne", "halfboard#ne", "headlight" ] },
-      { "x": -1, "y": -1, "parts": [ "xlframe#vertical_left", "door#sw", "atlas_roll_down_window" ] },
-      { "x": -1, "y": 0, "parts": [ "xlframe#cross", "roof", "seat_back#left", "seatbelt" ] },
-      { "x": -1, "y": 1, "parts": [ "xlframe#cross", "roof", "seat_back#right", "seatbelt" ] },
-      { "x": -1, "y": 2, "parts": [ "xlframe#vertical_right", "door#se", "atlas_roll_down_window" ] },
-      { "x": -2, "y": -1, "parts": [ "xlframe#vertical_left", "halfboard#vertical_left" ] },
-      { "x": -2, "y": 0, "parts": [ "xlframe#cross", "trunk", "roof" ] },
-      { "x": -2, "y": 1, "parts": [ "xlframe#cross", "trunk", "roof" ] },
-      { "x": -2, "y": 2, "parts": [ "xlframe#vertical_right", "halfboard#vertical_right" ] },
-      { "x": -3, "y": -1, "parts": [ "xlframe#vertical_left", "halfboard#wheel_left" ] },
-      { "x": -3, "y": -1, "parts": [ "wheel_mount_medium", "wheel" ] },
-      { "x": -3, "y": 0, "parts": [ "xlframe#cross", "trunk", "roof" ] },
-      { "x": -3, "y": 1, "parts": [ "xlframe#cross", "trunk", "roof" ] },
-      { "x": -3, "y": 2, "parts": [ "xlframe#vertical_right", "halfboard#wheel_right" ] },
-      { "x": -3, "y": 2, "parts": [ "wheel_mount_medium", "wheel" ] },
-      { "x": -4, "y": -1, "parts": [ "xlframe#sw", "halfboard#sw" ] },
-      { "x": -4, "y": 0, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
-      { "x": -4, "y": 1, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
-      { "x": -4, "y": 2, "parts": [ "xlframe#se", "halfboard#se" ] }
+      { "x": 0, "y": 0, "parts": [ "frame_narrow#vertical", "shifter_console" ] },
+      {
+        "x": 0,
+        "y": -4,
+        "parts": [
+          "xlframe#cross",
+          "reclining_seat#windshield_front",
+          "controls",
+          "roof",
+          "seatbelt",
+          "atlas_cabin_hvac",
+          "dashboard",
+          "vehicle_alarm",
+          "stereo",
+          "horn_car",
+          "storage_battery"
+        ]
+      },
+      { "x": 0, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#nw", "atlas_roll_down_window" ] },
+      {
+        "x": 0,
+        "y": 4,
+        "parts": [ "xlframe#cross", "reclining_seat#windshield_front", "roof", "seatbelt", "storage_battery" ]
+      },
+      { "x": 0, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#ne", "atlas_roll_down_window" ] },
+      { "x": 6, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": 6, "y": -4, "parts": [ "xlframe#horizontal_2", "windshield#cover_left" ] },
+      { "x": 6, "y": 4, "parts": [ "xlframe#horizontal_2", "windshield#cover_right" ] },
+      { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
+      { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": 12, "y": -4, "parts": [ "xlframe#horizontal_front", "halfboard#cover_left" ] },
+      { "x": 12, "y": 4, "parts": [ "xlframe#horizontal_front", "halfboard#cover_right" ] },
+      { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
+      { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
+      { "x": -6, "y": -4, "parts": [ "xlframe#cross", "seat_back#left", "roof", "seatbelt" ] },
+      { "x": -6, "y": 4, "parts": [ "xlframe#cross", "seat_back#right", "roof", "seatbelt" ] },
+      { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
+      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
+      { "x": -12, "y": -4, "parts": [ "xlframe#cross", "trunk", "roof" ] },
+      { "x": -12, "y": 4, "parts": [ "xlframe#cross", "trunk", "roof" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
+      {
+        "x": -18,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
+      { "x": -18, "y": -4, "parts": [ "xlframe#cross", "trunk", "roof" ] },
+      { "x": -18, "y": 4, "parts": [ "xlframe#cross", "trunk", "roof" ] },
+      {
+        "x": -18,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
+      { "x": -24, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -24, "y": -4, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
+      { "x": -24, "y": 4, "parts": [ "xlframe#horizontal_rear", "door_trunk" ] },
+      { "x": -24, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -24, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -18, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_aerodynamic" ] },
+      { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
+      { "x": 12, "y": 0, "parts": [ "xlframe#horizontal_front", "engine_electric_large" ] }
     ],
     "items": [
-      { "x": 0, "y": 0, "chance": 16, "items": [ "cig" ] },
-      { "x": 0, "y": 0, "chance": 16, "items": [ "lighter" ] },
-      { "x": 0, "y": 1, "chance": 1, "items": [ "roadmap" ] },
-      { "x": 0, "y": 1, "chance": 10, "items": [ "flashlight" ] },
-      { "x": 0, "y": 1, "chance": 5, "item_groups": [ "used_1st_aid" ] },
-      { "x": -1, "y": 0, "chance": 5, "item_groups": [ "snacks" ] },
-      { "x": -1, "y": 0, "chance": 5, "item_groups": [ "fast_food" ] },
-      { "x": -1, "y": 1, "chance": 5, "item_groups": [ "snacks" ] },
-      { "x": -1, "y": 1, "chance": 5, "item_groups": [ "fast_food" ] },
-      { "x": -2, "y": 1, "chance": 5, "items": [ "screwdriver" ] },
-      { "x": -2, "y": 1, "chance": 90, "item_groups": [ "car_kit" ] },
-      { "x": -2, "y": 1, "chance": 5, "items": [ "scissors" ] },
-      { "x": -2, "y": 1, "chance": 5, "items": [ "crowbar" ] },
-      { "x": -2, "y": 1, "chance": 5, "items": [ "jumper_cable" ] },
-      { "x": -2, "y": 1, "chance": 50, "item_groups": [ "spare_tire_kit_small_jack" ] }
+      { "x": 0, "y": -4, "chance": 16, "items": [ "cig" ] },
+      { "x": 0, "y": -4, "chance": 16, "items": [ "lighter" ] },
+      { "x": 0, "y": 4, "chance": 1, "items": [ "roadmap" ] },
+      { "x": 0, "y": 4, "chance": 10, "items": [ "flashlight" ] },
+      { "x": 0, "y": 4, "chance": 5, "item_groups": [ "used_1st_aid" ] },
+      { "x": -6, "y": -4, "chance": 5, "item_groups": [ "snacks" ] },
+      { "x": -6, "y": -4, "chance": 5, "item_groups": [ "fast_food" ] },
+      { "x": -6, "y": 4, "chance": 5, "item_groups": [ "snacks" ] },
+      { "x": -6, "y": 4, "chance": 5, "item_groups": [ "fast_food" ] },
+      { "x": -12, "y": 4, "chance": 5, "items": [ "screwdriver" ] },
+      { "x": -12, "y": 4, "chance": 90, "item_groups": [ "car_kit" ] },
+      { "x": -12, "y": 4, "chance": 5, "items": [ "scissors" ] },
+      { "x": -12, "y": 4, "chance": 5, "items": [ "crowbar" ] },
+      { "x": -12, "y": 4, "chance": 5, "items": [ "jumper_cable" ] },
+      { "x": -12, "y": 4, "chance": 50, "item_groups": [ "spare_tire_kit_small_jack" ] }
     ]
   },
   {
     "id": "suv_electric_rack",
+    "copy-from": "suv_electric",
     "color_palette": "car_standard",
     "type": "vehicle",
-    "copy-from": "suv_electric",
     "name": "Electric SUV with Bike Rack",
+    "curb_mass": "2605 kg",
     "parts": [
-      { "x": -4, "y": -1, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 0, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 1, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 2, "parts": [ "bike_rack" ] }
+      { "x": -24, "y": -6, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": -4, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": 4, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": 6, "parts": [ "bike_rack" ] }
     ]
   },
   {
@@ -2698,24 +2807,20 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "reinforced_windshield" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel_wide_or" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#horizontal",
-          "engine_inline4",
-          "alternator_car",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#horizontal", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#horizontal" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": 17, "y": -4, "parts": [ "ram_spiked" ] },
+      { "x": 17, "y": 4, "parts": [ "ram_spiked" ] },
+      { "x": -6, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       { "x": -6, "y": -4, "parts": [ "frame#cross", "cargo_space", "recharge_station", "roof" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "big_portable_fridge", "roof" ] },
       { "x": -6, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel_wide_or" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel_wide_or" ]
+      },
       {
         "x": -12,
         "y": -4,
@@ -2728,7 +2833,11 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel_wide_or" ] },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel_wide_or" ]
+      },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "halfboard#horizontal" ] },
@@ -2737,10 +2846,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 18, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 18, "y": -3, "parts": [ "ram_spiked" ] },
-      { "x": 18, "y": 3, "parts": [ "ram_spiked" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_inline4", "alternator_car" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 15, "items": [ "survivormap" ] },

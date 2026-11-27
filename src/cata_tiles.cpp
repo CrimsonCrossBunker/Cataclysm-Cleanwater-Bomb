@@ -1401,6 +1401,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                             continue;
                                         }
                                         const vpart_info &svpi = svp.info();
+                                        if( svpi.has_flag( VPFLAG_SHELL ) ) {
+                                            continue;
+                                        }
                                         const bool part_is_roof =
                                             svpi.location->z_order >= vpart_location_on_roof->z_order;
                                         if( player_inside && part_is_roof ) {
@@ -1415,12 +1418,18 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                         entry.exact_angle_deg = raw_deg;
                                         entry.offset_x = svp.world_offset[0].x - svp.precalc[0].x();
                                         entry.offset_y = svp.world_offset[0].y - svp.precalc[0].y();
-                                        const float sx = std::clamp( static_cast<float>( svpi.sub_size.x ) / 8.0f,
-                                                                     0.25f, 2.0f );
-                                        const float sy = std::clamp( static_cast<float>( svpi.sub_size.y ) / 8.0f,
-                                                                     0.25f, 2.0f );
-                                        entry.scale_x = sy;
-                                        entry.scale_y = sx;
+                                        const point esz = veh.effective_sub_size( svp );
+                                        const auto visual_scale = []( const int dim ) {
+                                            if( dim >= 6 ) {
+                                                return std::clamp( static_cast<float>( dim ) / 6.0f, 0.95f, 1.5f );
+                                            }
+                                            if( dim >= 5 ) {
+                                                return 0.85f;
+                                            }
+                                            return std::clamp( static_cast<float>( dim ) / 6.5f, 0.35f, 0.85f );
+                                        };
+                                        entry.scale_x = visual_scale( esz.y );
+                                        entry.scale_y = visual_scale( esz.x );
                                         entry.is_roof = part_is_roof;
                                         entry.has_cargo = svpi.has_flag( VPFLAG_CARGO ) &&
                                                           !veh.get_items( svp ).empty();
@@ -5265,6 +5274,29 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
     // offset. All kinds defer to the post-z-level overlay pass so the offset sprite
     // sits on top of terrain instead of being overdrawn by rows painted later.
     restore_on_out_of_scope restore_entity_offset( m_entity_draw_offset );
+    point off;
+    if( monster_override.empty() ) {
+        if( const optional_vpart_position ovp = here.veh_at( p ) ) {
+            const vehicle &veh = ovp->vehicle();
+            if( veh.is_subtile() ) {
+                const Creature *crit = get_creature_tracker().creature_at( p );
+                const Character *ch = crit ? crit->as_character() : nullptr;
+                const int p_idx = ch ? veh.find_passenger_part( *ch ) : -1;
+                if( p_idx >= 0 ) {
+                    const vehicle_part &pvp = veh.part( p_idx );
+                    const double dx = pvp.world_offset[0].x - pvp.precalc[0].x();
+                    const double dy = pvp.world_offset[0].y - pvp.precalc[0].y();
+                    if( is_isometric() ) {
+                        off.x += static_cast<int>( std::lround( ( dx - dy ) * tile_width * 0.5 ) );
+                        off.y += static_cast<int>( std::lround( ( dx + dy ) * tile_width * 0.25 ) );
+                    } else {
+                        off.x += static_cast<int>( std::lround( dx * tile_width ) );
+                        off.y += static_cast<int>( std::lround( dy * tile_height ) );
+                    }
+                }
+            }
+        }
+    }
     if( !m_creature_anims.empty() || !m_creature_hit_anims.empty() ||
         !m_creature_attack_anims.empty() ) {
         const tripoint_abs_ms abs = here.get_abs( p );
@@ -5284,7 +5316,6 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
                 const point screen_there = player_to_screen( p.xy() + point_rel_ms( d.x, d.y ) );
                 return screen_there - screen_here;
             };
-            point off;
             if( has_move ) {
                 const creature_move_anim &anim = move_it->second;
                 // Remaining fraction of the trip back to the old tile.
@@ -5321,21 +5352,14 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
                 off.x += static_cast<int>( dir_px.x * l );
                 off.y += static_cast<int>( dir_px.y * l );
             }
-            // Defer to the post-row overlay pass ONLY when the sprite is pushed DOWN
-            // (off.y > 0), i.e. it visually intrudes into the tile row to the south.
-            // That southern row is painted later, so it would overdraw the intruding
-            // part of this sprite — the "moving up gets covered by the ground"
-            // artifact the deferred pass exists to fix. When the sprite stays put
-            // vertically or moves up/north (off.y <= 0, including pure east/west
-            // glides and upward hops), it only intrudes into already-painted northern
-            // rows, so the normal in-place draw is correct and keeps natural painter
-            // occlusion: tall terrain and creatures south of the mover still cover it.
-            if( m_collecting_glide_critters && off.y > 0 ) {
-                m_deferred_glide_critters.push_back( { p, ll, height_3d, invisible } );
-                return false;
-            }
-            m_entity_draw_offset = off;
         }
+    }
+    if( off != point::zero ) {
+        if( m_collecting_glide_critters && off.y > 0 ) {
+            m_deferred_glide_critters.push_back( { p, ll, height_3d, invisible } );
+            return false;
+        }
+        m_entity_draw_offset = off;
     }
 
     const std::optional<creature_render_view> captured = capture_critter_view( p, invisible[0] );

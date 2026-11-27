@@ -242,9 +242,13 @@
     "curb_mass": "680 kg",
     "blueprint": [ [ "|--\\" ], [ "|==O>" ], [ "|--/ " ] ],
     "parts": [
+      { "x": 0, "y": 0, "parts": [ "frame#vertical", "metal_boat_hull" ] },
+      { "x": 5, "y": 0, "parts": [ "frame#horizontal", "metal_boat_hull" ] },
+      { "x": 10, "y": 0, "parts": [ "frame#horizontal", "metal_boat_hull" ] },
+      { "x": 15, "y": 0, "parts": [ "frame#sw", "metal_boat_hull" ] },
       {
         "x": 0,
-        "y": 0,
+        "y": 6,
         "parts": [
           "frame#vertical",
           "metal_boat_hull",
@@ -253,20 +257,16 @@
           "battery_motorbike"
         ]
       },
-      { "x": 0, "y": -4, "parts": [ "frame#vertical", "metal_boat_hull" ] },
-      { "x": 5, "y": -4, "parts": [ "frame#horizontal", "metal_boat_hull" ] },
-      { "x": 10, "y": -4, "parts": [ "frame#horizontal", "metal_boat_hull" ] },
-      { "x": 15, "y": -4, "parts": [ "frame#sw", "metal_boat_hull" ] },
-      { "x": 5, "y": 0, "parts": [ "frame#cross", "metal_boat_hull", "trunk" ] },
-      { "x": 10, "y": 0, "parts": [ "frame#cross", "metal_boat_hull", { "part": "tank", "fuel": "gasoline" } ] },
-      { "x": 15, "y": 0, "parts": [ "frame#cross", "seat", "controls", "metal_boat_hull", "seatbelt", "dashboard" ] },
-      { "x": 20, "y": 0, "parts": [ "frame#horizontal", "metal_boat_hull", "windshield" ] },
-      { "x": 0, "y": 4, "parts": [ "frame#vertical", "metal_boat_hull" ] },
-      { "x": 5, "y": 4, "parts": [ "frame#horizontal", "metal_boat_hull" ] },
-      { "x": 10, "y": 4, "parts": [ "frame#horizontal", "metal_boat_hull" ] },
-      { "x": 15, "y": 4, "parts": [ "frame#ne", "metal_boat_hull" ] }
+      { "x": 5, "y": 6, "parts": [ "frame#cross", "metal_boat_hull", "trunk" ] },
+      { "x": 10, "y": 6, "parts": [ "frame#cross", "metal_boat_hull", { "part": "tank", "fuel": "gasoline" } ] },
+      { "x": 15, "y": 6, "parts": [ "frame#cross", "seat", "controls", "metal_boat_hull", "seatbelt", "dashboard" ] },
+      { "x": 20, "y": 6, "parts": [ "frame#horizontal", "metal_boat_hull", "windshield" ] },
+      { "x": 0, "y": 12, "parts": [ "frame#vertical", "metal_boat_hull" ] },
+      { "x": 5, "y": 12, "parts": [ "frame#horizontal", "metal_boat_hull" ] },
+      { "x": 10, "y": 12, "parts": [ "frame#horizontal", "metal_boat_hull" ] },
+      { "x": 15, "y": 12, "parts": [ "frame#ne", "metal_boat_hull" ] }
     ],
-    "items": [ { "x": 5, "y": 0, "chance": 40, "item_groups": [ "boat_equipment" ] } ]
+    "items": [ { "x": 5, "y": 6, "chance": 40, "item_groups": [ "boat_equipment" ] } ]
   },
   {
     "id": "wood_rowboat_double",
@@ -314,199 +314,6 @@
         "y": 0,
         "parts": [
           "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          { "part": "tank", "fuel": "gasoline" }
-        ]
-      },
-      {
-        "x": -6,
-        "y": 0,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          { "part": "tank", "fuel": "gasoline" }
-        ]
-      },
-      {
-        "x": -6,
-        "y": 6,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          "engine_v8",
-          "alternator_truck",
-          "battery_car"
-        ]
-      },
-      {
-        "x": -6,
-        "y": 12,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          { "part": "tank", "fuel": "gasoline" }
-        ]
-      },
-      { "x": -6, "y": 18, "parts": [ "frame_wood#horizontal", "door_wood", "boat_board", "door_window" ] },
-      {
-        "x": 0,
-        "y": -6,
-        "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "large_storage_battery" ]
-      },
-      {
-        "x": 0,
-        "y": 6,
-        "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "large_storage_battery" ]
-      },
-      {
-        "x": 0,
-        "y": 12,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          { "part": "tank", "fuel": "gasoline" }
-        ]
-      },
-      { "x": 0, "y": 18, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right" ] },
-      {
-        "x": 6,
-        "y": -6,
-        "parts": [ "frame_wood#horizontal", "boat_board", "windshield#horizontal_rear", "roof_wood" ]
-      },
-      {
-        "x": 6,
-        "y": 0,
-        "parts": [ "frame_wood#horizontal", "door_sliding", "boat_board", "door_window", "roof_wood" ]
-      },
-      { "x": 6, "y": 6, "parts": [ "frame_wood#horizontal", "boat_board", "windshield#horizontal_rear", "roof_wood" ] },
-      {
-        "x": 6,
-        "y": 12,
-        "parts": [ "frame_wood#horizontal", "boat_board", "windshield#horizontal_rear", "roof_wood" ]
-      },
-      {
-        "x": 6,
-        "y": 18,
-        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
-      },
-      { "x": 12, "y": -6, "parts": [ "frame_wood#horizontal", "boat_board", "wood box", "roof_wood" ] },
-      {
-        "x": 12,
-        "y": 0,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          "roof_wood",
-          { "part": "tank", "fuel": "water_clean" }
-        ]
-      },
-      { "x": 12, "y": 6, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
-      { "x": 12, "y": 12, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
-      {
-        "x": 12,
-        "y": 18,
-        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
-      },
-      { "x": 18, "y": -6, "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "roof_wood" ] },
-      {
-        "x": 18,
-        "y": 0,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          "roof_wood",
-          { "part": "tank", "fuel": "water_clean" }
-        ]
-      },
-      { "x": 18, "y": 6, "parts": [ "frame_wood#horizontal", "boat_board", "veh_table_wood", "roof_wood" ] },
-      { "x": 18, "y": 12, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
-      {
-        "x": 18,
-        "y": 18,
-        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
-      },
-      { "x": 24, "y": -6, "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "roof_wood" ] },
-      {
-        "x": 24,
-        "y": 0,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          "roof_wood",
-          { "part": "tank", "fuel": "water_clean" }
-        ]
-      },
-      { "x": 24, "y": 6, "parts": [ "frame_wood#horizontal", "boat_board", "veh_table_wood", "roof_wood" ] },
-      { "x": 24, "y": 12, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
-      {
-        "x": 24,
-        "y": 18,
-        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
-      },
-      { "x": 30, "y": -6, "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "roof_wood" ] },
-      {
-        "x": 30,
-        "y": 0,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          "roof_wood",
-          { "part": "tank", "fuel": "water_clean" }
-        ]
-      },
-      { "x": 30, "y": 6, "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "roof_wood" ] },
-      { "x": 30, "y": 12, "parts": [ "frame_wood#horizontal", "boat_board", "wood box", "roof_wood" ] },
-      {
-        "x": 30,
-        "y": 18,
-        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
-      },
-      { "x": 36, "y": -6, "parts": [ "frame_wood#horizontal", "boat_board", "roof_wood", "wood box" ] },
-      { "x": 36, "y": 0, "parts": [ "frame_wood#horizontal", "boat_board", "roof_wood", "wooden_aisle#vertical" ] },
-      { "x": 36, "y": 6, "parts": [ "frame_wood#horizontal", "boat_board", "roof_wood", "wood box" ] },
-      { "x": 36, "y": 12, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard", "roof_wood" ] },
-      { "x": 36, "y": 18, "parts": [ "frame_wood#sw", "boat_board", "woodhalfboard#ne", "roof_wood" ] },
-      { "x": 42, "y": -6, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard", "roof_wood" ] },
-      { "x": 42, "y": 0, "parts": [ "frame_wood#horizontal", "boat_board", "bed", "roof_wood" ] },
-      { "x": 42, "y": 6, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard", "roof_wood" ] },
-      { "x": 42, "y": 12, "parts": [ "frame_wood#sw", "boat_board", "woodhalfboard#ne", "roof_wood" ] },
-      { "x": 48, "y": -6, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#nw", "roof_wood" ] },
-      {
-        "x": 48,
-        "y": 0,
-        "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_2_front", "roof_wood" ]
-      },
-      { "x": 48, "y": 6, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#ne", "roof_wood" ] },
-      { "x": -12, "y": 0, "parts": [ "frame_wood#vertical", "door_wood", "boat_board", "door_window" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_rear" ] },
-      { "x": -12, "y": 12, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_rear" ] },
-      { "x": -12, "y": 18, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#se" ] },
-      {
-        "x": -6,
-        "y": -6,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          "wooden_aisle#vertical",
-          "engine_v8",
-          "alternator_truck",
-          "battery_car"
-        ]
-      },
-      {
-        "x": 0,
-        "y": -12,
-        "parts": [
-          "frame_wood#horizontal",
           "seat_wood",
           "controls",
           "boat_board",
@@ -514,30 +321,10 @@
           { "part": "tank", "fuel": "gasoline" }
         ]
       },
-      {
-        "x": 6,
-        "y": -12,
-        "parts": [ "frame_wood#horizontal", "boat_board", "windshield#horizontal_rear", "roof_wood" ]
-      },
-      { "x": 12, "y": -12, "parts": [ "frame_wood#horizontal", "boat_board", "minifridge", "roof_wood" ] },
-      {
-        "x": 18,
-        "y": -12,
-        "parts": [
-          "frame_wood#horizontal",
-          "boat_board",
-          { "part": "veh_tools_kitchen", "tools": [ "hotplate", "pan", "pot" ] },
-          "roof_wood"
-        ]
-      },
-      { "x": 24, "y": -12, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
-      { "x": 30, "y": -12, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
-      { "x": 36, "y": -12, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard", "roof_wood" ] },
-      { "x": 42, "y": -12, "parts": [ "frame_wood#sw", "boat_board", "woodhalfboard#nw", "roof_wood" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_rear" ] },
+      { "x": -6, "y": -5, "parts": [ "frame_wood#horizontal", "door_wood", "boat_board", "door_window" ] },
       {
         "x": -6,
-        "y": -12,
+        "y": 0,
         "parts": [
           "frame_wood#horizontal",
           "boat_board",
@@ -545,36 +332,245 @@
           { "part": "tank", "fuel": "gasoline" }
         ]
       },
-      { "x": 0, "y": -18, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_left" ] },
+      {
+        "x": -6,
+        "y": 5,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          "engine_v8",
+          "alternator_truck",
+          "battery_car"
+        ]
+      },
+      {
+        "x": -6,
+        "y": 10,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          { "part": "tank", "fuel": "gasoline" }
+        ]
+      },
+      {
+        "x": -6,
+        "y": 15,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          "engine_v8",
+          "alternator_truck",
+          "battery_car"
+        ]
+      },
+      {
+        "x": -6,
+        "y": 20,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          { "part": "tank", "fuel": "gasoline" }
+        ]
+      },
+      { "x": -6, "y": 25, "parts": [ "frame_wood#horizontal", "door_wood", "boat_board", "door_window" ] },
+      { "x": 0, "y": -5, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_left" ] },
+      {
+        "x": 0,
+        "y": 5,
+        "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "large_storage_battery" ]
+      },
+      {
+        "x": 0,
+        "y": 10,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          { "part": "tank", "fuel": "gasoline" }
+        ]
+      },
+      {
+        "x": 0,
+        "y": 15,
+        "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "large_storage_battery" ]
+      },
+      {
+        "x": 0,
+        "y": 20,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          { "part": "tank", "fuel": "gasoline" }
+        ]
+      },
+      { "x": 0, "y": 25, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right" ] },
       {
         "x": 6,
-        "y": -18,
+        "y": -5,
         "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_left", "roof_wood" ]
+      },
+      { "x": 6, "y": 0, "parts": [ "frame_wood#horizontal", "boat_board", "windshield#horizontal_rear", "roof_wood" ] },
+      { "x": 6, "y": 5, "parts": [ "frame_wood#horizontal", "boat_board", "windshield#horizontal_rear", "roof_wood" ] },
+      {
+        "x": 6,
+        "y": 10,
+        "parts": [ "frame_wood#horizontal", "door_sliding", "boat_board", "door_window", "roof_wood" ]
+      },
+      {
+        "x": 6,
+        "y": 15,
+        "parts": [ "frame_wood#horizontal", "boat_board", "windshield#horizontal_rear", "roof_wood" ]
+      },
+      {
+        "x": 6,
+        "y": 20,
+        "parts": [ "frame_wood#horizontal", "boat_board", "windshield#horizontal_rear", "roof_wood" ]
+      },
+      {
+        "x": 6,
+        "y": 25,
+        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
       },
       {
         "x": 12,
-        "y": -18,
+        "y": -5,
+        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_left", "roof_wood" ]
+      },
+      { "x": 12, "y": 0, "parts": [ "frame_wood#horizontal", "boat_board", "minifridge", "roof_wood" ] },
+      { "x": 12, "y": 5, "parts": [ "frame_wood#horizontal", "boat_board", "wood box", "roof_wood" ] },
+      {
+        "x": 12,
+        "y": 10,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          "roof_wood",
+          { "part": "tank", "fuel": "water_clean" }
+        ]
+      },
+      { "x": 12, "y": 15, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
+      { "x": 12, "y": 20, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
+      {
+        "x": 12,
+        "y": 25,
+        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
+      },
+      {
+        "x": 18,
+        "y": -5,
         "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_left", "roof_wood" ]
       },
       {
         "x": 18,
-        "y": -18,
-        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_left", "roof_wood" ]
+        "y": 0,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          { "part": "veh_tools_kitchen", "tools": [ "hotplate", "pan", "pot" ] },
+          "roof_wood"
+        ]
+      },
+      { "x": 18, "y": 5, "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "roof_wood" ] },
+      {
+        "x": 18,
+        "y": 10,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          "roof_wood",
+          { "part": "tank", "fuel": "water_clean" }
+        ]
+      },
+      { "x": 18, "y": 15, "parts": [ "frame_wood#horizontal", "boat_board", "veh_table_wood", "roof_wood" ] },
+      { "x": 18, "y": 20, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
+      {
+        "x": 18,
+        "y": 25,
+        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
       },
       {
         "x": 24,
-        "y": -18,
+        "y": -5,
         "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_left", "roof_wood" ]
+      },
+      { "x": 24, "y": 0, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
+      { "x": 24, "y": 5, "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "roof_wood" ] },
+      {
+        "x": 24,
+        "y": 10,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          "roof_wood",
+          { "part": "tank", "fuel": "water_clean" }
+        ]
+      },
+      { "x": 24, "y": 15, "parts": [ "frame_wood#horizontal", "boat_board", "veh_table_wood", "roof_wood" ] },
+      { "x": 24, "y": 20, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
+      {
+        "x": 24,
+        "y": 25,
+        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
       },
       {
         "x": 30,
-        "y": -18,
+        "y": -5,
         "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_left", "roof_wood" ]
       },
-      { "x": 36, "y": -18, "parts": [ "frame_wood#sw", "boat_board", "woodhalfboard#nw" ] },
-      { "x": -12, "y": -12, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_rear" ] },
-      { "x": -6, "y": -18, "parts": [ "frame_wood#horizontal", "door_wood", "boat_board", "door_window" ] },
-      { "x": -12, "y": -18, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#sw" ] }
+      { "x": 30, "y": 0, "parts": [ "frame_wood#horizontal", "seat_wood", "boat_board", "roof_wood" ] },
+      { "x": 30, "y": 5, "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "roof_wood" ] },
+      {
+        "x": 30,
+        "y": 10,
+        "parts": [
+          "frame_wood#horizontal",
+          "boat_board",
+          "wooden_aisle#vertical",
+          "roof_wood",
+          { "part": "tank", "fuel": "water_clean" }
+        ]
+      },
+      { "x": 30, "y": 15, "parts": [ "frame_wood#horizontal", "boat_board", "wooden_aisle#vertical", "roof_wood" ] },
+      { "x": 30, "y": 20, "parts": [ "frame_wood#horizontal", "boat_board", "wood box", "roof_wood" ] },
+      {
+        "x": 30,
+        "y": 25,
+        "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard#vertical_right", "roof_wood" ]
+      },
+      { "x": 36, "y": -5, "parts": [ "frame_wood#sw", "boat_board", "woodhalfboard#nw" ] },
+      { "x": 36, "y": 0, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard", "roof_wood" ] },
+      { "x": 36, "y": 5, "parts": [ "frame_wood#horizontal", "boat_board", "roof_wood", "wood box" ] },
+      { "x": 36, "y": 10, "parts": [ "frame_wood#horizontal", "boat_board", "roof_wood", "wooden_aisle#vertical" ] },
+      { "x": 36, "y": 15, "parts": [ "frame_wood#horizontal", "boat_board", "roof_wood", "wood box" ] },
+      { "x": 36, "y": 20, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard", "roof_wood" ] },
+      { "x": 36, "y": 25, "parts": [ "frame_wood#sw", "boat_board", "woodhalfboard#ne", "roof_wood" ] },
+      { "x": 42, "y": 0, "parts": [ "frame_wood#sw", "boat_board", "woodhalfboard#nw", "roof_wood" ] },
+      { "x": 42, "y": 5, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard", "roof_wood" ] },
+      { "x": 42, "y": 10, "parts": [ "frame_wood#horizontal", "boat_board", "bed", "roof_wood" ] },
+      { "x": 42, "y": 15, "parts": [ "frame_wood#horizontal", "boat_board", "woodhalfboard", "roof_wood" ] },
+      { "x": 42, "y": 20, "parts": [ "frame_wood#sw", "boat_board", "woodhalfboard#ne", "roof_wood" ] },
+      { "x": 48, "y": 5, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#nw", "roof_wood" ] },
+      {
+        "x": 48,
+        "y": 10,
+        "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_2_front", "roof_wood" ]
+      },
+      { "x": 48, "y": 15, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#ne", "roof_wood" ] },
+      { "x": -12, "y": -5, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#sw" ] },
+      { "x": -12, "y": 0, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_rear" ] },
+      { "x": -12, "y": 5, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_rear" ] },
+      { "x": -12, "y": 10, "parts": [ "frame_wood#vertical", "door_wood", "boat_board", "door_window" ] },
+      { "x": -12, "y": 15, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_rear" ] },
+      { "x": -12, "y": 20, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#horizontal_rear" ] },
+      { "x": -12, "y": 25, "parts": [ "frame_wood#vertical", "boat_board", "woodhalfboard#se" ] }
     ],
     "items": [  ]
   }

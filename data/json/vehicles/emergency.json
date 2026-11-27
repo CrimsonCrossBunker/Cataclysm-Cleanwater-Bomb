@@ -148,24 +148,18 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v8",
-          "alternator_truck",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
       { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
       { "x": -6, "y": -4, "parts": [ "frame#cross", "seat_back#left", "seatbelt", "roof" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "seat_back#right", "seatbelt", "roof" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
       {
         "x": -12,
         "y": -4,
@@ -178,7 +172,7 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#wheel_right" ] },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -187,7 +181,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v8", "alternator_truck" ] }
     ],
     "items": [
       { "x": -12, "y": 4, "chance": 75, "magazine": 100, "ammo": 50, "item_groups": [ "longguns_cop_loaded" ] },
@@ -635,24 +629,18 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v8",
-          "alternator_truck",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
       { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
       { "x": -6, "y": -4, "parts": [ "frame#cross", "seat_back#left", "seatbelt", "roof", "light_red" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "seat_back#right", "seatbelt", "roof", "light_blue" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
       {
         "x": -12,
         "y": -4,
@@ -665,7 +653,11 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -674,7 +666,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v8", "alternator_truck" ] }
     ],
     "items": [
       { "x": -12, "y": -4, "chance": 5, "item_groups": [ "tools_entry" ] },
@@ -719,24 +711,18 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v8",
-          "alternator_truck",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight" ] },
       { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
       { "x": -6, "y": -4, "parts": [ "frame#cross", "animal_compartment", "roof", "light_red" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "seat", "seatbelt", "roof", "light_blue" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
       {
         "x": -12,
         "y": -4,
@@ -749,7 +735,11 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -12,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
       { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -18, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -18, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -758,7 +748,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v8", "alternator_truck" ] }
     ],
     "items": [
       { "x": 0, "y": 4, "chance": 8, "items": [ "dog_whistle" ] },
@@ -802,24 +792,14 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight_reinforced" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v8",
-          "alternator_truck",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight_reinforced" ] },
       { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
       { "x": -6, "y": -4, "parts": [ "frame#cross", "seat_back#left", "seatbelt", "roof", "light_red" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "seat_back#right", "seatbelt", "roof", "light_blue" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       {
         "x": -12,
         "y": -4,
@@ -832,8 +812,12 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical" ] },
-      { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
+      {
+        "x": -18,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
       {
         "x": -18,
         "y": -4,
@@ -846,7 +830,11 @@
         ]
       },
       { "x": -18, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -18, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -18,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
       { "x": -24, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -24, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -24, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -856,7 +844,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_suv" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v8", "alternator_truck" ] }
     ],
     "items": [
       { "x": -12, "y": -4, "chance": 5, "item_groups": [ "cop_gear" ] },
@@ -900,24 +888,14 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight_reinforced" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v8",
-          "alternator_truck",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 6, "parts": [ "frame_narrow#vertical", "headlight_reinforced" ] },
       { "x": -6, "y": -7, "parts": [ "frame_narrow#vertical", "door_subtile#sw", "atlas_roll_down_window" ] },
       { "x": -6, "y": -4, "parts": [ "frame#cross", "animal_compartment", "roof", "light_red" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "seat", "seatbelt", "roof", "light_blue" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       {
         "x": -12,
         "y": -4,
@@ -930,8 +908,12 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical" ] },
-      { "x": -18, "y": -6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
+      {
+        "x": -18,
+        "y": -6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_left", "wheel_mount_medium", "wheel" ]
+      },
       {
         "x": -18,
         "y": -4,
@@ -944,7 +926,11 @@
         ]
       },
       { "x": -18, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -18, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium", "wheel" ] },
+      {
+        "x": -18,
+        "y": 6,
+        "parts": [ "frame_narrow#vertical", "halfboard#wheel_right", "wheel_mount_medium", "wheel" ]
+      },
       { "x": -24, "y": -6, "parts": [ "frame_narrow#vertical" ] },
       { "x": -24, "y": -4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
       { "x": -24, "y": 4, "parts": [ "frame#horizontal_rear", "door_trunk" ] },
@@ -954,7 +940,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_suv" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v8", "alternator_truck" ] }
     ],
     "items": [
       { "x": 0, "y": 4, "chance": 8, "items": [ "dog_whistle" ] },
@@ -1000,17 +986,7 @@
       { "x": 6, "y": 4, "parts": [ "frame#horizontal_2", "windshield#cover_right" ] },
       { "x": 6, "y": 6, "parts": [ "frame_narrow#vertical", "wheel_mount_medium_steerable", "wheel" ] },
       { "x": 12, "y": -6, "parts": [ "frame_narrow#vertical", "headlight_reinforced" ] },
-      {
-        "x": 12,
-        "y": -4,
-        "parts": [
-          "frame#horizontal_front",
-          "halfboard#cover_left",
-          "engine_v8",
-          "alternator_truck",
-          "battery_car"
-        ]
-      },
+      { "x": 12, "y": -4, "parts": [ "frame#horizontal_front", "halfboard#cover_left", "battery_car" ] },
       { "x": 12, "y": 4, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       {
         "x": 12,
@@ -1021,7 +997,7 @@
       { "x": -6, "y": -4, "parts": [ "frame#cross", "seat_back#left", "seatbelt", "roof", "light_red" ] },
       { "x": -6, "y": 4, "parts": [ "frame#cross", "seat_back#right", "seatbelt", "roof", "light_blue" ] },
       { "x": -6, "y": 7, "parts": [ "frame_narrow#vertical", "door_subtile#se", "atlas_roll_down_window" ] },
-      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": -6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_left" ] },
       {
         "x": -12,
         "y": -4,
@@ -1034,7 +1010,7 @@
         ]
       },
       { "x": -12, "y": 4, "parts": [ "frame#cross", "trunk", "roof" ] },
-      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical" ] },
+      { "x": -12, "y": 6, "parts": [ "frame_narrow#vertical", "halfboard#vertical_right" ] },
       {
         "x": -18,
         "y": -6,
@@ -1066,7 +1042,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v8", "alternator_truck" ] }
     ],
     "items": [
       { "x": 0, "y": 4, "chance": 14, "items": [ "dog_whistle" ] },

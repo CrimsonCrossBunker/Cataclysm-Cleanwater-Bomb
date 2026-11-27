@@ -780,7 +780,12 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
                     }
                     return true;
                 }
-                if( veh1 != veh0 && std::abs( veh0->velocity ) <= 100 ) {
+                if( veh1 == veh0 ) {
+                    you.add_msg_if_player( m_info, _( "Something is blocking your movement inside the %s." ),
+                                           veh0->name );
+                    return false;
+                }
+                if( std::abs( veh0->velocity ) <= 100 ) {
                     bool blocked_solid = false;
                     const int exit_door = veh0->find_exit_door_or_blocker( from_part, move_dir,
                                           blocked_solid );
@@ -819,7 +824,8 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
                 }
             }
         }
-        if( outside_vehicle && veh1 != nullptr && veh1->is_subtile() && !veh_closed_door ) {
+        if( outside_vehicle && veh1 != nullptr && veh1->is_subtile() ) {
+            ( void )veh_closed_door;
             int entry_door = -1;
             bool blocked_solid = false;
             const int entry_seat = veh1->find_entry_seat_and_door( you_pos, m, dest_loc,

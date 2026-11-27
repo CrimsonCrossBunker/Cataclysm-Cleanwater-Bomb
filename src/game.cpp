@@ -3148,6 +3148,14 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
 
     const bool is_adjacent = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 1;
     const bool is_self = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 0;
+    const tripoint_bub_ms target_3d( mouse_target.xy(), u.posz() );
+    const optional_vpart_position target_vp = here.veh_at( target_3d );
+    const optional_vpart_position player_vp = here.veh_at( u.pos_bub() );
+    const bool click_board_vehicle =
+        !is_self && target_vp && !target_vp->vehicle().is_appliance() &&
+        ( !player_vp || &player_vp->vehicle() != &target_vp->vehicle() ) &&
+        std::abs( target_vp->vehicle().velocity ) <= 100 &&
+        target_vp.part_with_feature( VPFLAG_BOARDABLE, true );
     if( const monster *const mon = get_creature_tracker().creature_at<monster>( mouse_target ) ) {
         if( !u.sees( here, *mon ) ) {
             add_msg( _( "Nothing relevant here." ) );
@@ -3162,6 +3170,30 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
         // TODO: Add weapon range check. This requires weapon to be reloaded.
 
         act = ACTION_FIRE;
+    } else if( click_board_vehicle ) {
+        if( is_adjacent ) {
+            act = get_movement_action_from_delta( target_3d - u.pos_bub(), iso_rotate::yes );
+            if( act == ACTION_NULL ) {
+                return false;
+            }
+        } else {
+            std::optional<std::vector<tripoint_bub_ms>> route =
+            safe_route_to( u, target_3d, 0, []( const std::string & ) {} );
+            if( !route || route->empty() ) {
+                route = safe_route_to( u, target_3d, 1, []( const std::string & msg ) {
+                    add_msg( msg );
+                } );
+            }
+            if( !route || route->empty() ) {
+                return false;
+            }
+            u.set_destination( *route );
+            act = u.get_next_auto_move_direction();
+            if( act == ACTION_NULL ) {
+                u.clear_destination();
+                return false;
+            }
+        }
     } else if( is_adjacent &&
                here.close_door( tripoint_bub_ms( mouse_target.xy(), u.posz() ),
                                 !here.is_outside( u.pos_bub() ), true ) ) {
@@ -5834,8 +5866,10 @@ void game::control_vehicle( const std::optional<tripoint_bub_ms> &p )
 
     if( const optional_vpart_position vp = here.veh_at( target_pos ) ) {
         veh = &vp->vehicle();
-        const int controls_idx = veh->avail_part_with_feature( vp->mount_pos3(), "CONTROLS" );
-        const int reins_idx = veh->avail_part_with_feature( vp->mount_pos3(), "CONTROL_ANIMAL" );
+        const std::optional<vpart_reference> controls = vp->avail_part_with_feature( "CONTROLS" );
+        const std::optional<vpart_reference> reins = vp->avail_part_with_feature( "CONTROL_ANIMAL" );
+        const int controls_idx = controls ? controls->part_index() : -1;
+        const int reins_idx = reins ? reins->part_index() : -1;
         controls_ok = controls_idx >= 0; // controls available to "drive"
         reins_ok = reins_idx >= 0 // reins + animal available to "drive"
                    && veh->has_engine_type( fuel_type_animal, false )
@@ -11376,7 +11410,7 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     }
     // Without this vehicles only load in after walking around a bit
     here.reset_vehicles_sm_pos();
-    if( here.veh_at( player.pos_bub() ) ) {
+    if( here.veh_at( player.pos_bub() ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
         here.board_vehicle( player.pos_bub(), &player );
         player.controlling_vehicle = controlling_vehicle;
     }

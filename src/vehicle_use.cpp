@@ -43,6 +43,7 @@
 #include "activity_actor_definitions.h"
 #include "activity_handlers.h"
 #include "avatar.h"
+#include "avatar_action.h"
 #include "character.h"
 #include "character_id.h"
 #include "clone_ptr.h"
@@ -2051,6 +2052,25 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     }
 
     if( !is_appliance() ) {
+        if( !player_inside && here != nullptr && std::abs( velocity ) <= 100 &&
+            vp.part_with_feature( VPFLAG_BOARDABLE, true ) &&
+            square_dist( get_player_character().pos_bub( *here ).xy(), vppos.xy() ) <= 1 &&
+            vppos.z() == get_player_character().posz() ) {
+            menu.add( _( "Board seat" ) )
+            .skip_theft_check()
+            .skip_locked_check()
+            .on_submit( [here, vppos] {
+                avatar &who = get_avatar();
+                if( vppos != who.pos_bub( *here ) )
+                {
+                    avatar_action::move( who, *here, vppos - who.pos_bub( *here ) );
+                } else
+                {
+                    here->board_vehicle( vppos, &who );
+                }
+            } );
+        }
+
         menu.add( _( "Examine vehicle" ) )
         .skip_theft_check()
         .skip_locked_check()
