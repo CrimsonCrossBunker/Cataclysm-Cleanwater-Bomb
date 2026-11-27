@@ -408,7 +408,7 @@ class highway_route_index
             }
         }
 
-        const std::vector<std::size_t> &near( point position ) const {
+        const std::vector<std::size_t> &nearby_routes( point position ) const {
             static const std::vector<std::size_t> empty;
             const auto found = cells_.find( divide_xy_round_to_minus_infinity( position, cell_size ) );
             return found == cells_.end() ? empty : found->second;
@@ -857,7 +857,7 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
     if( city_streets ) {
         visit_wide_routes( origin, side, side, false, true, false,
         [&routes, &highways]( const wide_route & route ) {
-            if( !highways.near( ( route.begin + route.end ) / 2 ).empty() ) {
+            if( !highways.nearby_routes( ( route.begin + route.end ) / 2 ).empty() ) {
                 routes.push_back( route );
             }
         }, false );
@@ -876,7 +876,7 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
             const std::size_t links = cell.connections & ~cell.mapped_wide_connections &
                                       ~cell.arterial_connections;
             const point center = ( origin.raw() + point( x, y ) ) * road_span + point( SEEX, SEEY );
-            if( links == 0 || highways.near( center ).empty() ) {
+            if( links == 0 || highways.nearby_routes( center ).empty() ) {
                 continue;
             }
             for( const om_direction::type dir : om_direction::all ) {
@@ -942,7 +942,7 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
                  } ) {
             const point sample = center + point( std::lround( side * 120 * axis.east ),
                                                  std::lround( side * 120 * axis.south ) );
-            const auto &nearby = route_index.near( sample );
+            const auto &nearby = route_index.nearby_routes( sample );
             if( std::any_of( nearby.begin(), nearby.end(), [&axis, sample, &routes,
                    &route_index]( std::size_t index ) {
             const wide_route &route = routes[index];
