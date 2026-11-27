@@ -587,6 +587,27 @@ static void visit_wide_routes( point_abs_omt origin, int width, int height, bool
     }
 }
 
+template<typename Visitor>
+static void visit_local_road_routes( point_abs_omt origin, int width, int height,
+                                     bool city_streets, const Visitor &visit )
+{
+    const auto network = road_network( origin, width, height, city_streets );
+    for( int y = 0; y < height; ++y ) {
+        for( int x = 0; x < width; ++x ) {
+            const road_cell &cell = network[y * width + x];
+            const std::size_t links = cell.connections & ~cell.mapped_wide_connections &
+                                      ~cell.arterial_connections;
+            const point center = ( origin.raw() + point( x, y ) ) * road_span + point( SEEX, SEEY );
+            for( const om_direction::type dir : om_direction::all ) {
+                if( om_lines::has_segment( links, dir ) ) {
+                    const point edge = center + om_direction::displace( dir ).raw() * SEEX;
+                    visit( wide_route{ std::min( center, edge ), std::max( center, edge ), 2, false, 8 } );
+                }
+            }
+        }
+    }
+}
+
 std::vector<unsigned char> wide_highway_footprint( point_abs_omt origin, int width, int height,
         bool mapped, bool arterials )
 {
@@ -657,10 +678,13 @@ struct wide_bridge_span {
         if( !overpass ) {
             return true;
         }
+        if( route.ramp ) {
+            return false;
+        }
         const highway_stroke stroke = make_highway_stroke( route );
         const double alignment = std::abs( stroke.east * east + stroke.south * south );
         const point offset = at( ( low + high ) / 2 ) - route.begin;
-        return alignment > 0.9 &&
+        return alignment > 0.995 &&
                std::abs( offset.y * stroke.east - offset.x * stroke.south ) < stroke.half_width;
     }
 
@@ -675,7 +699,8 @@ struct wide_bridge_span {
 
     double ramp_distance( point p ) const {
         const double along = station( p );
-        return std::min( { along - low, high - along, side_distance( p ) } );
+        const double longitudinal = std::min( along - low, high - along );
+        return overpass ? longitudinal : std::min( longitudinal, side_distance( p ) );
     }
 
     double station( point p ) const {
@@ -705,7 +730,7 @@ struct wide_bridge_span {
                                                 0.0, 1.0 );
             height = ground + fraction * ( deck_at( high ) - ground );
         }
-        if( side_distance( p ) < 0 ) {
+        if( !overpass && side_distance( p ) < 0 ) {
             const double fraction = std::clamp( 1 + side_distance( p ) / road_span, 0.0, 1.0 );
             height = ground + fraction * ( height - ground );
         }
@@ -715,9 +740,10 @@ struct wide_bridge_span {
     bool contains( point p, double margin = 0 ) const {
         const double along = station( p );
         const double normal = across( p );
+        const double side_margin = overpass ? 0 : 1.5 * road_span;
         return along >= low - low_approach - margin && along <= high + high_approach + margin &&
-               normal >= across_low - 1.5 * road_span - margin &&
-               normal <= across_high + 1.5 * road_span + margin;
+               normal >= across_low - side_margin - margin &&
+               normal <= across_high + side_margin + margin;
     }
 };
 
@@ -1012,11 +1038,19 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
             span.across_high = normal + upper.half_width + highway_shoulder;
             span.deck_height = surface_elevation( point_abs_ms( center ) ) + 5;
             span.low_approach = span.high_approach = 5 / 0.06;
+            for( int pass = 0; pass < 3; ++pass ) {
+                span.low_height = surface_elevation( point_abs_ms( span.at( span.low - span.low_approach ) ) );
+                span.high_height = surface_elevation( point_abs_ms( span.at( span.high + span.high_approach ) ) );
+                span.low_approach = std::max( span.low_approach,
+                                              ( span.deck_at( span.low ) - span.low_height ) / 0.06 );
+                span.high_approach = std::max( span.high_approach,
+                                               ( span.deck_at( span.high ) - span.high_height ) / 0.06 );
+            }
             span.low_height = surface_elevation( point_abs_ms( span.at( span.low - span.low_approach ) ) );
             span.high_height = surface_elevation( point_abs_ms( span.at( span.high + span.high_approach ) ) );
             if( !routes[j].controlled_access ) {
-                span.connections.push_back( { span.at( span.low - span.low_approach - road_span ),
-                                              span.at( span.high + span.high_approach + road_span ),
+                span.connections.push_back( { span.at( span.low - span.low_approach - 2 * road_span ),
+                                              span.at( span.high + span.high_approach + 2 * road_span ),
                                               routes[j].lanes, false, upper.half_width } );
             }
             spans.push_back( std::move( span ) );
@@ -1061,7 +1095,8 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
         for( const int side : {
                  -1, 1
                  } ) {
-            const double local_distance = ( span.high - span.low ) / 2 + span.high_approach + 30;
+            const double local_distance = ( span.high - span.low ) / 2 +
+                                          ( side < 0 ? span.low_approach : span.high_approach ) + 30;
             const point local = span.at( ( span.low + span.high ) / 2 + side * local_distance );
             const int normal_side = ( ( local.y - center.y ) * main.east - ( local.x - center.x ) * main.south )
                                     < 0 ? -1 : 1;
@@ -1165,6 +1200,17 @@ struct wide_bridge_query {
             }
         }
     }
+
+    double ramp_distance( const wide_route &route, point p ) const {
+        double result = std::numeric_limits<double>::lowest();
+        for( const wide_bridge_span *span : candidates ) {
+            if( span->contains( p ) && span->carries( route ) ) {
+                const double band = std::abs( span->east ) + std::abs( span->south );
+                result = std::max( result, span->ramp_distance( p ) / band );
+            }
+        }
+        return result;
+    }
 };
 
 double wide_road_height( point_abs_ms center, point_abs_ms position, bool mapped, bool arterials,
@@ -1179,21 +1225,22 @@ double wide_road_height( point_abs_ms center, point_abs_ms position, bool mapped
         }
         return std::nullopt;
     };
+    std::optional<double> elevation;
     if( query ) {
         for( const wide_bridge_span *span : query->candidates ) {
             if( const auto result = height( *span ) ) {
-                return *result;
+                elevation = elevation ? std::max( *elevation, *result ) : *result;
             }
         }
     } else {
         const auto spans = wide_bridge_spans_at( project_to<coords::omt>( position ), mapped, arterials );
         for( const wide_bridge_span &span : *spans ) {
             if( const auto result = height( span ) ) {
-                return *result;
+                elevation = elevation ? std::max( *elevation, *result ) : *result;
             }
         }
     }
-    return ground;
+    return elevation.value_or( ground );
 }
 } // namespace
 
@@ -1270,7 +1317,7 @@ std::vector<wide_bridge_cell> wide_bridge_footprint( point_abs_omt origin, int w
                         std::abs( span.across( center ) - ( span.across_low + span.across_high ) / 2 ) <=
                         ( span.across_high - span.across_low ) / 2 + extent ) ) {
                     const double along = span.station( center );
-                    const bool side_approach = span.side_distance( center ) <
+                    const bool side_approach = !span.overpass && span.side_distance( center ) <
                                                std::min( along - span.low, span.high - along );
                     const bool vertical = side_approach ? std::abs( span.east ) > std::abs( span.south ) :
                                           std::abs( span.south ) > std::abs( span.east );
@@ -1279,7 +1326,8 @@ std::vector<wide_bridge_cell> wide_bridge_footprint( point_abs_omt origin, int w
                                            ( vertical ? span.east < 0 : span.south > 0 ) :
                                            along < ( span.low + span.high ) / 2;
                     result[y * width + x] = { true, along - extent < span.low + 3 ||
-                                              along + extent > span.high - 3 || span.side_distance( center ) < extent + 3,
+                                              along + extent > span.high - 3 ||
+                                              ( !span.overpass &&span.side_distance( center ) < extent + 3 ),
                                               vertical, lower_end
                                             };
                     break;
@@ -1667,6 +1715,7 @@ void place_wide_highway_surface( mapgendata &dat )
         point_abs_ms center;
         bool controlled_access = false;
         bool ramp = false;
+        std::size_t route_index = 0;
     };
     std::array<lane_sample, road_span *road_span> surface{};
     std::array<double, road_span *road_span> grade_sum{};
@@ -1708,9 +1757,10 @@ void place_wide_highway_surface( mapgendata &dat )
     if( grade_surface ) {
         bridge_grades.emplace( dat.pos().xy(), mapped, arterials );
     }
+    std::vector<std::pair<wide_route, highway_stroke>> corridors;
     bool found = false;
-    visit_wide_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1, mapped, arterials, true,
-    [&]( const wide_route & route ) {
+    const auto sample_route = [&dat, &corridors, &surface, &grade_sum, &grade_weight,
+          &bridge_grades, &found, grade_surface, mapped, arterials]( const wide_route & route ) {
         const highway_stroke stroke = make_highway_stroke( route );
         const point offset = dat.pos().xy().raw() * road_span - route.begin;
         const int corridor = stroke.half_width + highway_shoulder;
@@ -1718,16 +1768,24 @@ void place_wide_highway_surface( mapgendata &dat )
             corridor + std::hypot( SEEX, SEEY ) ) {
             return;
         }
+        corridors.emplace_back( route, stroke );
         for( int row = 0; row < road_span; ++row ) {
             for( int column = 0; column < road_span; ++column ) {
                 const double east = offset.x + column + 0.5;
                 const double south = offset.y + row + 0.5;
                 const double distance = highway_distance( stroke, east, south );
+                if( distance >= corridor ) {
+                    continue;
+                }
+                const point absolute = dat.pos().xy().raw() * road_span + point( column, row );
+                if( bridge_grades && bridge_grades->ramp_distance( route, absolute ) >= 2 ) {
+                    continue;
+                }
                 lane_sample &cell = surface[row * road_span + column];
                 const bool paved = distance < stroke.half_width;
                 const bool existing_paved = cell.lanes > 0 && cell.distance < cell.half_width;
-                const bool preferred = route.controlled_access != cell.controlled_access ?
-                                       route.controlled_access : paved != existing_paved ? paved :
+                const bool preferred = paved != existing_paved ? paved :
+                                       route.controlled_access != cell.controlled_access ? route.controlled_access :
                                        route.lanes != cell.lanes ? route.lanes > cell.lanes : distance < cell.distance;
                 if( distance < corridor ) {
                     const double along = std::clamp( east * stroke.east + south * stroke.south,
@@ -1746,14 +1804,20 @@ void place_wide_highway_surface( mapgendata &dat )
                         const double station = east * stroke.east + south * stroke.south;
                         cell = { route.lanes, stroke.half_width, distance,
                                  station + route.begin.x *stroke.east + route.begin.y * stroke.south,
-                                 point_abs_ms( center ), route.controlled_access, route.ramp
+                                 point_abs_ms( center ), route.controlled_access, route.ramp, corridors.size() - 1
                                };
                     }
                     found = true;
                 }
             }
         }
-    } );
+    };
+    visit_wide_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1, mapped, arterials, true,
+                       sample_route );
+    if( bridge_grades && !bridge_grades->candidates.empty() ) {
+        visit_local_road_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1,
+                                 arterials, sample_route );
+    }
     if( !found ) {
         return;
     }
@@ -1764,6 +1828,18 @@ void place_wide_highway_surface( mapgendata &dat )
     } );
     const auto crosswalks = needs_crosswalks ? wide_urban_crosswalks( dat.pos(), mapped, arterials ) :
                             std::array<crosswalk_tile, road_span *road_span> {};
+    const point origin = project_to<coords::ms>( dat.pos().xy() ).raw();
+    const auto inside = [&corridors, &bridge_grades]( point p ) {
+        return std::any_of( corridors.begin(), corridors.end(), [p, &bridge_grades]( const auto & entry ) {
+            const wide_route &route = entry.first;
+            if( bridge_grades && bridge_grades->ramp_distance( route, p ) >= 2 ) {
+                return false;
+            }
+            const point offset = p - route.begin;
+            return highway_distance( entry.second, offset.x + 0.5, offset.y + 0.5 ) <
+                   entry.second.half_width + highway_shoulder;
+        } );
+    };
     for( int row = 0; row < road_span; ++row ) {
         for( int column = 0; column < road_span; ++column ) {
             const point_bub_ms pos( column, row );
@@ -1780,13 +1856,24 @@ void place_wide_highway_surface( mapgendata &dat )
                 continue;
             }
             const int half_width = sample.half_width;
-            const double elevation = grade_weight[row * road_span + column] > 0 ?
-                                     grade_sum[row * road_span + column] / grade_weight[row * road_span + column] : 0;
+            double elevation = grade_weight[row * road_span + column] > 0 ?
+                               grade_sum[row * road_span + column] / grade_weight[row * road_span + column] : 0;
+            if( bridge_grades && bridge_grades->ramp_distance( corridors[sample.route_index].first,
+                    origin + pos.raw() ) >= 0 ) {
+                // The structural ramp must have the same height on both layers.
+                const point absolute = origin + pos.raw();
+                elevation = wide_road_height( sample.center, point_abs_ms( absolute ), mapped,
+                                              arterials, &corridors[sample.route_index].first, &*bridge_grades );
+            }
             const int stripe = static_cast<int>( sample.distance );
             const tripoint_bub_ms tile( pos, 0 );
-            if( stripe >= half_width && sample.controlled_access ) {
-                dat.m.ter_set( pos, ter_t_sidewalk.id() );
-                if( dat.m.has_furn( pos ) && dat.m.furn( pos ) != furn_f_street_light ) {
+            if( stripe >= half_width && ( sample.controlled_access || sample.ramp ) ) {
+                const bool rail = std::any_of( four_cardinal_directions.begin(),
+                four_cardinal_directions.end(), [&inside, origin, pos]( point step ) {
+                    return !inside( origin + pos.raw() + step );
+                } );
+                dat.m.ter_set( pos, ( rail ? ter_t_guardrail : ter_t_pavement ).id() );
+                if( dat.m.has_furn( pos ) ) {
                     dat.m.furn_set( pos, furn_str_id::NULL_ID().id() );
                 }
                 if( grade_surface ) {
@@ -2253,31 +2340,28 @@ static bool draw_wide_bridge( mapgendata &dat )
     }
     const bool mapped = dat.region.place_roads || dat.region.overmap_highway.has_value();
     const bool arterials = dat.region.city_spec && dat.region.get_settings_city().city_size > 0;
+    const wide_bridge_query bridges( dat.pos().xy(), mapped, arterials );
+    if( bridges.candidates.empty() ) {
+        return false;
+    }
     std::vector<wide_route> routes;
     const point halo( wide_highway_halo, wide_highway_halo );
-    visit_wide_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1,
-    mapped, arterials, false, [&routes, &dat]( const wide_route & route ) {
+    const auto collect = [&routes, &dat]( const wide_route & route ) {
         const highway_stroke stroke = make_highway_stroke( route );
         const point local = dat.pos().xy().raw() * road_span - route.begin;
         if( highway_distance( stroke, local.x + SEEX, local.y + SEEY ) <
             stroke.half_width + highway_shoulder + std::hypot( SEEX, SEEY ) ) {
             routes.push_back( route );
         }
-    } );
+    };
+    visit_wide_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1,
+                       mapped, arterials, true, collect );
+    visit_local_road_routes( dat.pos().xy() - halo, 2 * halo.x + 1, 2 * halo.y + 1,
+                             arterials, collect );
     if( routes.empty() ) {
         return false;
     }
-    const auto spans = wide_bridge_spans_at( dat.pos().xy(), mapped, arterials );
     const point_abs_ms origin = project_to<coords::ms>( dat.pos().xy() );
-    const point center = origin.raw() + point( SEEX, SEEY );
-    const auto selected = std::find_if( spans->begin(),
-    spans->end(), [center]( const wide_bridge_span & span ) {
-        return span.contains( center, std::hypot( SEEX, SEEY ) );
-    } );
-    if( selected == spans->end() ) {
-        return false;
-    }
-    const wide_bridge_span &span = *selected;
     if( dat.zlevel() == 1 ) {
         dat.m.draw_fill_background( ter_t_open_air.id() );
     } else if( raster( dat.pos().xy(), 1, 1 ).front() != terrain::land ) {
@@ -2285,12 +2369,10 @@ static bool draw_wide_bridge( mapgendata &dat )
     } else {
         dat.m.draw_fill_background( ter_t_grass.id() );
     }
-    const double ramp_band = std::abs( span.east ) + std::abs( span.south );
-    const auto inside = [&routes, &span, &dat, ramp_band]( point p ) {
-        return std::any_of( routes.begin(), routes.end(), [p, &span, &dat,
-           ramp_band]( const wide_route & route ) {
-            if( span.overpass && ( dat.zlevel() == 1 ? !span.carries( route ) :
-                                   span.carries( route ) && span.ramp_distance( p ) >= 2 * ramp_band ) ) {
+    const auto inside = [&routes, &bridges, &dat]( point p ) {
+        return std::any_of( routes.begin(), routes.end(), [p, &bridges, &dat]( const wide_route & route ) {
+            const double ramp = bridges.ramp_distance( route, p );
+            if( dat.zlevel() == 0 ? ramp >= 2 : ramp < 0 ) {
                 return false;
             }
             const highway_stroke stroke = make_highway_stroke( route );
@@ -2302,34 +2384,38 @@ static bool draw_wide_bridge( mapgendata &dat )
     for( int y = 0; y < road_span; ++y ) {
         for( int x = 0; x < road_span; ++x ) {
             const point absolute = origin.raw() + point( x, y );
-            const double ramp = span.ramp_distance( absolute );
             const wide_route *chosen = nullptr;
             double closest = std::numeric_limits<double>::max();
             double ground_sum = 0;
             double ground_weight = 0;
             for( const wide_route &route : routes ) {
-                if( span.overpass && ( dat.zlevel() == 1 ? !span.carries( route ) :
-                                       span.carries( route ) && ramp >= 2 * ramp_band ) ) {
-                    continue;
-                }
                 const highway_stroke stroke = make_highway_stroke( route );
                 const point offset = absolute - route.begin;
                 const double distance = highway_distance( stroke, offset.x + 0.5, offset.y + 0.5 );
                 const double corridor = stroke.half_width + highway_shoulder;
+                if( distance >= corridor ) {
+                    continue;
+                }
+                const double ramp = bridges.ramp_distance( route, absolute );
+                if( dat.zlevel() == 0 ? ramp >= 2 : ramp < 0 ) {
+                    continue;
+                }
                 if( elevation_active() && distance < corridor ) {
                     const double along = std::clamp( ( offset.x + 0.5 ) * stroke.east +
                                                      ( offset.y + 0.5 ) * stroke.south, 0.0, stroke.length );
                     const point projected = route.begin + point( std::lround( along * stroke.east ),
                                             std::lround( along * stroke.south ) );
                     const double weight = ( corridor - distance ) * ( corridor - distance );
-                    ground_sum += weight * surface_elevation( point_abs_ms( projected ) );
+                    ground_sum += weight * wide_road_height( point_abs_ms( projected ),
+                                  point_abs_ms( absolute ), mapped, arterials, &route, &bridges );
                     ground_weight += weight;
                 }
                 const bool paved = distance < stroke.half_width;
                 const bool existing_paved = chosen && closest < make_highway_stroke( *chosen ).half_width;
                 const bool preferred = !chosen ? true :
+                                       paved != existing_paved ? paved :
                                        route.controlled_access != chosen->controlled_access ? route.controlled_access :
-                                       paved != existing_paved ? paved : route.lanes != chosen->lanes ?
+                                       route.lanes != chosen->lanes ?
                                        route.lanes > chosen->lanes : distance < closest;
                 if( distance < stroke.half_width + highway_shoulder && preferred ) {
                     chosen = &route;
@@ -2339,10 +2425,7 @@ static bool draw_wide_bridge( mapgendata &dat )
             if( !chosen ) {
                 continue;
             }
-            const bool upper = span.carries( *chosen );
-            if( upper && ( dat.zlevel() == 0 ? ramp >= 2 * ramp_band : ramp < 0 ) ) {
-                continue;
-            }
+            const double ramp = bridges.ramp_distance( *chosen, absolute );
             const highway_stroke stroke = make_highway_stroke( *chosen );
             const int stripe = static_cast<int>( closest );
             const bool roadway = stripe < stroke.half_width;
@@ -2353,22 +2436,32 @@ static bool draw_wide_bridge( mapgendata &dat )
             const int station = static_cast<int>( std::abs( ( absolute.x + 0.5 ) * stroke.east +
                                                   ( absolute.y + 0.5 ) * stroke.south ) );
             const bool elevated = dat.zlevel() == 1;
+            const bool highway = chosen->controlled_access || chosen->ramp;
             ter_id ground = rail ? ( elevated ? ter_t_guardrail_hw_air : ter_t_guardrail ).id() :
-                            !roadway ? ( elevated ? ter_t_sidewalk_hw_air : ter_t_sidewalk ).id() :
+                            !roadway ? ( highway ? ( elevated ? ter_t_pavement_hw_air : ter_t_pavement ) :
+                                         ( elevated ? ter_t_sidewalk_hw_air : ter_t_sidewalk ) ).id() :
                             highway_lane_surface( chosen->lanes, stripe, station % 6 < 3,
                                                   chosen->controlled_access, elevated, stroke.half_width, chosen->ramp );
-            if( upper && ramp >= 0 && ramp < 2 * ramp_band && !rail &&
+            if( ramp >= 0 && ramp < 2 && !rail &&
                 !( chosen->controlled_access && stripe < 2 ) ) {
-                const bool low = ramp < ramp_band;
+                const bool low = ramp < 1;
                 ground = ter_str_id( elevated ? ( low ? "t_ramp_down_low" : "t_ramp_down_high" ) :
                                      ( low ? "t_ramp_up_low" : "t_ramp_up_high" ) ).id();
             }
             const tripoint_bub_ms p( x, y, dat.zlevel() );
             dat.m.ter_set( p, ground );
             if( elevation_active() ) {
-                const double ground_height = ground_sum / ground_weight;
-                const double height = ( upper ? span.height_at( absolute, ground_height ) : ground_height ) -
-                                      dat.zlevel() * floor_height_m;
+                double height = ground_sum / ground_weight;
+                if( ramp >= 0 ) {
+                    const point offset = absolute - chosen->begin;
+                    const double along = std::clamp( ( offset.x + 0.5 ) * stroke.east +
+                                                     ( offset.y + 0.5 ) * stroke.south, 0.0, stroke.length );
+                    const point projected = chosen->begin + point( std::lround( along * stroke.east ),
+                                            std::lround( along * stroke.south ) );
+                    height = wide_road_height( point_abs_ms( projected ), point_abs_ms( absolute ),
+                                               mapped, arterials, chosen, &bridges );
+                }
+                height -= dat.zlevel() * floor_height_m;
                 dat.m.set_surface_grade( p, { static_cast<int>( std::lround( height * 100 ) ), 0 } );
             }
         }

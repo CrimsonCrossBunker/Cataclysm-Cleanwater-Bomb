@@ -68,6 +68,21 @@ native `t_zebra` visual through `looks_like`, including on elevated decks.
 Controlled-access wide roads have a central barrier and separated opposing
 carriageways. Through crossings use one raised route with five metres of
 physical clearance and approach grades, leaving the other road below.
+Overpass approaches grow toward a 6% grade using the elevations at both
+ends. Their structural transitions run across the road at the two ends;
+the sides of a freeway overpass do not create additional up/down ramps.
+Bridge rendering assigns each road square to its applicable spans and
+structural level instead of choosing one nearby span for an entire tile.
+Overlapping profiles use their upper envelope, and land approaches and
+bridge decks use the same height function. Structural transition squares
+use the carried road's deck height on both levels, without averaging it
+with a road below. Nearby narrow streets remain present beneath the deck.
+
+Freeway and access-ramp edges use paved shoulders and outer guardrails,
+without sidewalks. At merges, connecting pavement takes precedence over
+shoulders and the guardrail follows the combined same-level corridor,
+leaving the ramp entrance open. Local-road connectors extend beyond both
+ramp junctions, and the two ends use their respective approach lengths.
 Local crossings, including side roads ending at the highway, have narrow
 connecting roads and curved one-way ramp
 footprints. Access is grouped into 1.536 km urban and 3.072 km rural spatial
