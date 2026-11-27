@@ -7009,7 +7009,8 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
         const bool outside = veh_pointer_or_null( here.veh_at( who.pos_bub() ) ) != veh;
         if( vp ) {
             closed_vehicle_part = veh->next_part_to_close( vpart, outside );
-        } else {
+        }
+        if( closed_vehicle_part < 0 && !outside && veh->is_subtile() ) {
             closed_vehicle_part = veh->find_directional_door_part(
                                       who, closep.xy() - who.pos_bub().xy(), false );
         }

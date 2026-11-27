@@ -163,9 +163,11 @@ struct tile_render_info {
             vpart_id id;
             int subtile = 0;
             int rotation = 0;
+            int z_order = 0;
             double exact_angle_deg = 0.0;
             float offset_x = 0.0f;
             float offset_y = 0.0f;
+            float sort_y = 0.0f;
             float scale_x = 1.0f;
             float scale_y = 1.0f;
             bool is_roof = false;

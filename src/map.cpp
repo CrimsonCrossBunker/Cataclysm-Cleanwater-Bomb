@@ -2413,6 +2413,17 @@ void map::board_vehicle_part( vehicle &veh, const int part_idx, Character *p )
             part.passenger_id = character_id();
         }
     }
+    for( int idx = 0; idx < veh.part_count(); ++idx ) {
+        if( idx == part_idx ) {
+            continue;
+        }
+        vehicle_part &other = veh.part( idx );
+        if( !other.removed && other.has_flag( vp_flag::passenger_flag ) &&
+            other.passenger_id == p->getID() ) {
+            other.remove_flag( vp_flag::passenger_flag );
+            other.passenger_id = character_id();
+        }
+    }
     part.set_flag( vp_flag::passenger_flag );
     part.passenger_id = p->getID();
     veh.invalidate_mass();
@@ -2661,9 +2672,14 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
             // or a final co-rider overlap on a 0.125-tile compact cabin)
             Creature *blocking = creatures.creature_at( psgp );
             if( blocking != nullptr && blocking != psg ) {
-                const bool allow_colocated_char = veh.is_subtile() && i + 1 == riders.size() &&
+                const bool blocking_is_rider = std::any_of( riders.begin(), riders.end(),
+                [blocking]( const rider_data & rd ) {
+                    return rd.psg == blocking && !rd.moved;
+                } );
+                const bool allow_colocated_char = veh.is_subtile() &&
                                                   psg->as_character() != nullptr &&
-                                                  blocking->as_character() != nullptr;
+                                                  blocking->as_character() != nullptr &&
+                                                  ( !blocking_is_rider || i + 1 == riders.size() );
                 if( !allow_colocated_char ) {
                     complete = false;
                     continue;

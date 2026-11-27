@@ -4974,14 +4974,18 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
         if( !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
             continue;
         }
-        // Only treat non-solid or openable boardables as interior destinations
-        if( vpi.has_flag( VPFLAG_OBSTACLE ) && ( !vpi.has_flag( VPFLAG_OPENABLE ) || !cand.open ) ) {
+        const bool cand_closed_door = vpi.has_flag( VPFLAG_OBSTACLE ) &&
+                                      vpi.has_flag( VPFLAG_OPENABLE ) && !cand.open;
+        if( vpi.has_flag( VPFLAG_OBSTACLE ) && !cand_closed_door ) {
             continue;
         }
-        const double cx = static_cast<double>( cand.mount.x() ) / scale;
-        const double cy = static_cast<double>( cand.mount.y() ) / scale;
-        const double dx = cx - fx;
-        const double dy = cy - fy;
+        if( cand_closed_door && vpi.has_flag( "CABIN_WINDOW" ) ) {
+            continue;
+        }
+        const double sx = static_cast<double>( cand.mount.x() ) / scale;
+        const double sy = static_cast<double>( cand.mount.y() ) / scale;
+        const double dx = sx - fx;
+        const double dy = sy - fy;
         const double dist = std::hypot( dx, dy );
         if( dist < 0.08 || dist > 1.65 ) {
             continue;
@@ -4992,8 +4996,8 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
         }
         // Check partition obstacles between from_vp and cand
         bool blocked_solid = false;
-        int door_blocker = -1;
-        double closest_t = 1e9;
+        int door_blocker = cand_closed_door ? idx : -1;
+        double closest_t = cand_closed_door ? 1.0 : 1e9;
         for( int obs_idx = 0; obs_idx < static_cast<int>( parts.size() ); ++obs_idx ) {
             if( obs_idx == from_part || obs_idx == idx ) {
                 continue;
@@ -5017,7 +5021,7 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
             const double ohx = is_subtile() ? std::max( 0.04, osz.x / 16.0 ) : 0.45;
             const double ohy = is_subtile() ? std::max( 0.04, osz.y / 16.0 ) : 0.45;
             double t_hit = 0.0;
-            if( segment_hits_subtile_box( fx, fy, cx, cy, ox, oy, ohx, ohy, t_hit ) ) {
+            if( segment_hits_subtile_box( fx, fy, sx, sy, ox, oy, ohx, ohy, t_hit ) ) {
                 if( ovpi.has_flag( VPFLAG_OPENABLE ) && !ovpi.has_flag( "CABIN_WINDOW" ) ) {
                     if( t_hit < closest_t ) {
                         closest_t = t_hit;
@@ -5284,13 +5288,14 @@ int vehicle::find_directional_door_part( const Character &who, const point_rel_m
         const double dx = static_cast<double>( vp.mount.x() ) / scale - ref_x;
         const double dy = static_cast<double>( vp.mount.y() ) / scale - ref_y;
         const double dist = std::hypot( dx, dy );
-        if( dist > 1.55 ) {
+        const double max_dist = passenger_part >= 0 ? 1.05 : 1.45;
+        if( dist > max_dist ) {
             continue;
         }
         double score = -dist;
         if( dir_len >= 1e-4 && dist >= 0.05 ) {
             const double dot = ( dx * ( lx_raw / dir_len ) + dy * ( ly_raw / dir_len ) ) / dist;
-            if( dot < 0.25 ) {
+            if( dot < ( passenger_part >= 0 ? 0.60 : 0.55 ) ) {
                 continue;
             }
             score += dot * 2.0;

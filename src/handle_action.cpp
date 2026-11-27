@@ -624,8 +624,56 @@ static void pldrive( point_rel_ms d )
 static void close( const std::optional<tripoint_bub_ms> &p = std::nullopt )
 {
     map &here = get_map();
+    Character &who = get_player_character();
 
     std::optional<tripoint_bub_ms> pnt = p;
+    if( !pnt && get_option<bool>( "AUTOSELECT_SINGLE_VALID_TARGET" ) ) {
+        const tripoint_bub_ms u_pos = who.pos_bub( here );
+        const optional_vpart_position vp_u = here.veh_at( u_pos );
+        if( vp_u && vp_u->vehicle().is_subtile() ) {
+            vehicle &veh = vp_u->vehicle();
+            int unique_part = -1;
+            bool multiple_targets = false;
+            std::optional<tripoint_bub_ms> best_tile;
+            for( const tripoint_bub_ms &cand : here.points_in_radius( u_pos, 1 ) ) {
+                if( !can_interact_at( ACTION_CLOSE, here, cand ) ) {
+                    continue;
+                }
+                if( here.close_door( cand, !here.is_outside( u_pos ), true ) ) {
+                    multiple_targets = true;
+                    break;
+                }
+                const optional_vpart_position cvp = here.veh_at( cand );
+                int cpart = -1;
+                if( cvp ) {
+                    if( &cvp->vehicle() != &veh ) {
+                        multiple_targets = true;
+                        break;
+                    }
+                    cpart = veh.next_part_to_close( cvp->part_index(), false );
+                }
+                if( cpart < 0 ) {
+                    cpart = veh.find_directional_door_part( who, cand.xy() - u_pos.xy(), false );
+                }
+                if( cpart < 0 ) {
+                    multiple_targets = true;
+                    break;
+                }
+                if( unique_part < 0 ) {
+                    unique_part = cpart;
+                    best_tile = cand;
+                } else if( unique_part != cpart ) {
+                    multiple_targets = true;
+                    break;
+                } else if( cand == u_pos ) {
+                    best_tile = cand;
+                }
+            }
+            if( !multiple_targets && best_tile ) {
+                pnt = best_tile;
+            }
+        }
+    }
     if( !pnt ) {
         pnt = choose_adjacent_highlight(
                   here, _( "Close where?" ),
@@ -634,7 +682,7 @@ static void close( const std::optional<tripoint_bub_ms> &p = std::nullopt )
     }
 
     if( pnt ) {
-        get_player_character().assign_activity( close_tile_activity_actor( *pnt ) );
+        who.assign_activity( close_tile_activity_actor( *pnt ) );
     }
 }
 
@@ -3545,6 +3593,12 @@ bool game::handle_action()
 
     if( act == ACTION_NULL ) {
         const input_event &&evt = ctxt.get_raw_input();
+        if( evt.type == input_event_t::mouse &&
+            evt.get_first_input() == static_cast<int>( MouseInput::RightButtonPressed ) ) {
+            // Right-click actions trigger on MouseInput::RightButtonReleased via SEC_SELECT;
+            // suppress the unbound press event so every right-click doesn't warn about it.
+            return false;
+        }
         if( !evt.sequence.empty() ) {
             const int ch = evt.get_first_input();
             if( !get_option<bool>( "NO_UNKNOWN_COMMAND_MSG" ) ) {

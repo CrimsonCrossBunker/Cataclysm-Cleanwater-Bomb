@@ -64,7 +64,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_suv" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 16, "items": [ "cig" ] },
@@ -219,7 +219,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "halfboard#horizontal_front" ] }
     ]
   },
   {
@@ -364,7 +364,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_aerodynamic" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_car" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_car", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -446,7 +446,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_inline4", "alternator_car" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_inline4", "alternator_car", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -1174,7 +1174,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -1283,7 +1283,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v12", "alternator_car" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v12", "alternator_car", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1340,7 +1340,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1445,7 +1445,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_aerodynamic" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 10, "item_groups": [ "snacks_fancy" ] },
@@ -1547,7 +1547,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -1973,7 +1973,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -2640,7 +2640,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_suv" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_car" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_car", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 16, "items": [ "cig" ] },
@@ -2846,7 +2846,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_inline4", "alternator_car" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_inline4", "alternator_car", "halfboard#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 15, "items": [ "survivormap" ] },

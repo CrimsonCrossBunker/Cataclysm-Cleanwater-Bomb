@@ -131,6 +131,7 @@ static const trap_str_id tr_unfinished_construction( "tr_unfinished_construction
 
 // Iterating a vehicle's "structure" parts yields one part per occupied square, so the vehicle
 // preview draws exactly one sprite per tile (the same basis the ASCII display_veh() uses).
+static const vpart_location_id vpart_location_engine_block( "engine_block" );
 static const vpart_location_id vpart_location_on_roof( "on_roof" );
 static const vpart_location_id vpart_location_structure( "structure" );
 
@@ -1394,6 +1395,22 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                         get_vpart_tint( veh, ovp->mount_pos3() ) );
                                     const bool player_inside = veh.is_passenger( get_player_character() );
                                     const std::vector<int> &tile_parts = veh.parts_at_world_tile( world_rel );
+                                    auto is_covered_by_hood = [&]( const point_rel_ms & mnt ) {
+                                        for( const int cidx : tile_parts ) {
+                                            const vehicle_part &cvp = veh.part( cidx );
+                                            if( cvp.removed || cvp.is_fake || cvp.is_broken() ||
+                                                cvp.mount != mnt ) {
+                                                continue;
+                                            }
+                                            const vpart_info &cvpi = cvp.info();
+                                            if( !cvpi.has_flag( VPFLAG_OPENABLE ) &&
+                                                ( cvpi.has_flag( "HALF_BOARD" ) ||
+                                                  cvpi.has_flag( "FULL_BOARD" ) ) ) {
+                                                return true;
+                                            }
+                                        }
+                                        return false;
+                                    };
                                     var->subtile_vparts.reserve( tile_parts.size() );
                                     for( const int pidx : tile_parts ) {
                                         const vehicle_part &svp = veh.part( pidx );
@@ -1401,7 +1418,13 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                             continue;
                                         }
                                         const vpart_info &svpi = svp.info();
-                                        if( svpi.has_flag( VPFLAG_SHELL ) ) {
+                                        if( svpi.has_flag( VPFLAG_SHELL ) ||
+                                            svpi.location->z_order < 0 ) {
+                                            continue;
+                                        }
+                                        if( ( svpi.location == vpart_location_engine_block ||
+                                              svpi.has_flag( "ALTERNATOR" ) ) &&
+                                            is_covered_by_hood( svp.mount ) ) {
                                             continue;
                                         }
                                         const bool part_is_roof =
@@ -1415,9 +1438,14 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                                         ? open_
                                                         : ( svp.is_broken() ? broken : 0 );
                                         entry.rotation = rot4;
+                                        entry.z_order = svpi.has_flag( VPFLAG_LIGHT )
+                                                        ? std::max( svpi.location->z_order, 6 )
+                                                        : svpi.location->z_order;
                                         entry.exact_angle_deg = raw_deg;
                                         entry.offset_x = svp.world_offset[0].x - svp.precalc[0].x();
                                         entry.offset_y = svp.world_offset[0].y - svp.precalc[0].y();
+                                        entry.sort_y = static_cast<float>( tri.view.pos.y() ) +
+                                                       entry.offset_y;
                                         const point esz = veh.effective_sub_size( svp );
                                         const auto visual_scale = []( const int dim ) {
                                             if( dim >= 6 ) {
@@ -1430,6 +1458,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                         };
                                         entry.scale_x = visual_scale( esz.y );
                                         entry.scale_y = visual_scale( esz.x );
+                                        if( svpi.location == vpart_location_engine_block ) {
+                                            entry.scale_x = std::min( entry.scale_x, 0.72f );
+                                            entry.scale_y = std::min( entry.scale_y, 0.72f );
+                                        }
                                         entry.is_roof = part_is_roof;
                                         entry.has_cargo = svpi.has_flag( VPFLAG_CARGO ) &&
                                                           !veh.get_items( svp ).empty();
@@ -1444,6 +1476,14 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                         }
                                         var->subtile_vparts.emplace_back( std::move( entry ) );
                                     }
+                                    std::stable_sort( var->subtile_vparts.begin(),
+                                                      var->subtile_vparts.end(),
+                                    []( const auto & a, const auto & b ) {
+                                        if( a.z_order != b.z_order ) {
+                                            return a.z_order < b.z_order;
+                                        }
+                                        return a.sort_y < b.sort_y;
+                                    } );
                                     continue;
                                 }
                             } else {
@@ -1544,6 +1584,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_deferred_glide_critters.clear();
         m_collecting_glide_critters = !m_creature_anims.empty() || !m_creature_hit_anims.empty() ||
                                       !m_creature_attack_anims.empty();
+        m_deferred_subtile_tiles.clear();
+        m_deferred_subtile_critters.clear();
+        m_deferring_subtile_pass = true;
         int cur_zlevel = std::max( center.z() - here.observer_z_range( get_avatar() ), here.min_z() );
         bool draw_aborted = false;
         const cata_shader::variant_pass *const tint_vp = get_shared_variant_pass();
@@ -2184,6 +2227,92 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     }
                 }
             }
+            // --- Per-z-level deferred sub-tile vehicle + critter flush ---
+            // Paint all sub-tile non-roof parts across this z-level after the ground
+            // row loop (so southern terrain rows never slice north-edge shifted sprites),
+            // followed by interior riders, roofs, and nearby exterior critters.
+            m_deferring_subtile_pass = false;
+            const bool prev_collecting_glide = m_collecting_glide_critters;
+            m_collecting_glide_critters = false;
+            if( !m_deferred_subtile_tiles.empty() || !m_deferred_subtile_critters.empty() ) {
+                m_cur_bounds = nullptr;
+                m_cur_tint_sprites = nullptr;
+                m_cur_tint = nullptr;
+                struct deferred_subtile_item {
+                    const deferred_subtile_tile *src = nullptr;
+                    const tile_render_info::sprite::subtile_vpart_entry *entry = nullptr;
+                };
+                std::vector<deferred_subtile_item> non_roof_items;
+                std::vector<deferred_subtile_item> roof_items;
+                for( const deferred_subtile_tile &dt : m_deferred_subtile_tiles ) {
+                    const tile_render_info::sprite &cap =
+                        std::get<tile_render_info::sprite>( dt.tile->var );
+                    for( const auto &entry : cap.subtile_vparts ) {
+                        if( entry.is_roof ) {
+                            roof_items.push_back( { &dt, &entry } );
+                        } else {
+                            non_roof_items.push_back( { &dt, &entry } );
+                        }
+                    }
+                }
+                const auto sort_vparts = []( const deferred_subtile_item & a,
+                const deferred_subtile_item & b ) {
+                    if( a.entry->z_order != b.entry->z_order ) {
+                        return a.entry->z_order < b.entry->z_order;
+                    }
+                    return a.entry->sort_y < b.entry->sort_y;
+                };
+                std::stable_sort( non_roof_items.begin(), non_roof_items.end(), sort_vparts );
+                std::stable_sort( roof_items.begin(), roof_items.end(), sort_vparts );
+
+                std::map<tripoint_bub_ms, int> subtile_heights;
+                for( const deferred_subtile_item &it : non_roof_items ) {
+                    m_cur_tile = it.src->tile;
+                    const tripoint_bub_ms &pos = it.src->tile->view.pos;
+                    int h3d = it.src->height_3d;
+                    if( draw_subtile_vpart_entry( *it.entry, pos, it.src->ll, h3d ) ) {
+                        auto [iter, inserted] = subtile_heights.emplace( pos, h3d );
+                        if( !inserted ) {
+                            iter->second = std::max( iter->second, h3d );
+                        }
+                    }
+                }
+                std::stable_sort( m_deferred_subtile_critters.begin(),
+                                  m_deferred_subtile_critters.end(),
+                []( const deferred_subtile_critter & a, const deferred_subtile_critter & b ) {
+                    return a.sort_y < b.sort_y;
+                } );
+                m_cur_tile = nullptr;
+                for( deferred_subtile_critter &c : m_deferred_subtile_critters ) {
+                    if( c.inside_subtile ) {
+                        int h3d = c.height_3d;
+                        const auto hit = subtile_heights.find( c.pos );
+                        if( hit != subtile_heights.end() ) {
+                            h3d = std::max( h3d, hit->second );
+                        }
+                        draw_critter_at( c.pos, c.ll, h3d, c.invisible );
+                    }
+                }
+                for( const deferred_subtile_item &it : roof_items ) {
+                    m_cur_tile = it.src->tile;
+                    const tripoint_bub_ms &pos = it.src->tile->view.pos;
+                    int h3d = it.src->height_3d;
+                    const auto hit = subtile_heights.find( pos );
+                    if( hit != subtile_heights.end() ) {
+                        h3d = std::max( h3d, hit->second );
+                    }
+                    draw_subtile_vpart_entry( *it.entry, pos, it.src->ll, h3d );
+                }
+                m_cur_tile = nullptr;
+                for( deferred_subtile_critter &c : m_deferred_subtile_critters ) {
+                    if( !c.inside_subtile ) {
+                        draw_critter_at( c.pos, c.ll, c.height_3d, c.invisible );
+                    }
+                }
+                m_deferred_subtile_tiles.clear();
+                m_deferred_subtile_critters.clear();
+            }
+            m_collecting_glide_critters = prev_collecting_glide;
             // --- Per-z-level deferred critter flush ---
             // A small subset of animating critters defer to here: only those whose
             // sprite is pushed DOWN/south this frame (see draw_critter_at), because the
@@ -2203,6 +2332,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 m_deferred_glide_critters.clear();
                 m_collecting_glide_critters = true;
             }
+            m_deferring_subtile_pass = true;
             cur_zlevel += 1;
         }
 
@@ -2241,6 +2371,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_cur_tint = nullptr;
         m_collecting_glide_critters = false;
         m_deferred_glide_critters.clear();
+        m_deferring_subtile_pass = false;
+        m_deferred_subtile_tiles.clear();
+        m_deferred_subtile_critters.clear();
     }
     m_zlev_tint_bound = false;
     // The prompt redraws the UI, so it must run outside every render target scope
@@ -4832,6 +4965,45 @@ bool cata_tiles::draw_vpart_roof( const tripoint_bub_ms &p, lit_level ll, int &h
     return draw_vpart( p, ll, height_3d, invisible, true );
 }
 
+bool cata_tiles::draw_subtile_vpart_entry(
+    const tile_render_info::sprite::subtile_vpart_entry &entry,
+    const tripoint_bub_ms &p, const lit_level ll, int &height_3d )
+{
+    const int tw = tileset_ptr->get_tile_width();
+    const int th = tileset_ptr->get_tile_height();
+    int local_height = height_3d;
+    restore_on_out_of_scope restore_tint( pending_part_tint_ );
+    restore_on_out_of_scope restore_angle( pending_part_exact_angle_deg_ );
+    restore_on_out_of_scope restore_off( pending_part_offset_ );
+    restore_on_out_of_scope restore_sx( pending_part_scale_x_ );
+    restore_on_out_of_scope restore_sy( pending_part_scale_y_ );
+    pending_part_tint_ = entry.tint;
+    pending_part_exact_angle_deg_ = entry.exact_angle_deg;
+    pending_part_offset_ = point( static_cast<int>( std::lround( entry.offset_x * tw ) ),
+                                  static_cast<int>( std::lround( entry.offset_y * th ) ) );
+    pending_part_scale_x_ = entry.scale_x;
+    pending_part_scale_y_ = entry.scale_y;
+    const bool ret = draw_from_id_string(
+                         "vp_" + entry.id.str(),
+                         TILE_CATEGORY::VEHICLE_PART, empty_string, p,
+                         entry.subtile, entry.rotation, ll,
+                         nv_goggles_activated, local_height, 0,
+                         entry.variant );
+    if( ret ) {
+        if( entry.has_cargo ) {
+            draw_item_highlight( p, local_height );
+        }
+        if( !entry.carried_furn.empty() ) {
+            draw_from_id_string( entry.carried_furn,
+                                 TILE_CATEGORY::FURNITURE, empty_string, p, 0,
+                                 angle_to_dir4( 0_degrees ), ll,
+                                 nv_goggles_activated, local_height );
+        }
+        height_3d = std::max( height_3d, local_height );
+    }
+    return ret;
+}
+
 bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                              const std::array<bool, 5> &invisible, bool roof )
 {
@@ -4848,44 +5020,22 @@ bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height
 
     if( !invisible[0] ) {
         if( !cap.subtile_vparts.empty() ) {
+            if( m_deferring_subtile_pass ) {
+                if( !roof ) {
+                    m_deferred_subtile_tiles.push_back( { m_cur_tile, ll, height_3d, invisible } );
+                }
+                return false;
+            }
             int max_height = height_3d;
             bool drew_any = false;
-            const int tw = tileset_ptr->get_tile_width();
-            const int th = tileset_ptr->get_tile_height();
             for( const tile_render_info::sprite::subtile_vpart_entry &entry : cap.subtile_vparts ) {
                 if( entry.is_roof != roof ) {
                     continue;
                 }
                 int local_height = height_3d;
-                restore_on_out_of_scope restore_tint( pending_part_tint_ );
-                restore_on_out_of_scope restore_angle( pending_part_exact_angle_deg_ );
-                restore_on_out_of_scope restore_off( pending_part_offset_ );
-                restore_on_out_of_scope restore_sx( pending_part_scale_x_ );
-                restore_on_out_of_scope restore_sy( pending_part_scale_y_ );
-                pending_part_tint_ = entry.tint;
-                pending_part_exact_angle_deg_ = entry.exact_angle_deg;
-                pending_part_offset_ = point( static_cast<int>( std::lround( entry.offset_x * tw ) ),
-                                              static_cast<int>( std::lround( entry.offset_y * th ) ) );
-                pending_part_scale_x_ = entry.scale_x;
-                pending_part_scale_y_ = entry.scale_y;
-                const bool ret = draw_from_id_string(
-                                     "vp_" + entry.id.str(),
-                                     TILE_CATEGORY::VEHICLE_PART, empty_string, p,
-                                     entry.subtile, entry.rotation, ll,
-                                     nv_goggles_activated, local_height, 0,
-                                     entry.variant );
-                if( ret ) {
+                if( draw_subtile_vpart_entry( entry, p, ll, local_height ) ) {
                     drew_any = true;
                     max_height = std::max( max_height, local_height );
-                    if( entry.has_cargo ) {
-                        draw_item_highlight( p, local_height );
-                    }
-                    if( !entry.carried_furn.empty() ) {
-                        draw_from_id_string( entry.carried_furn,
-                                             TILE_CATEGORY::FURNITURE, empty_string, p, 0,
-                                             angle_to_dir4( 0_degrees ), ll,
-                                             nv_goggles_activated, local_height );
-                    }
                 }
             }
             if( !roof ) {
@@ -5275,17 +5425,23 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
     // sits on top of terrain instead of being overdrawn by rows painted later.
     restore_on_out_of_scope restore_entity_offset( m_entity_draw_offset );
     point off;
+    bool near_subtile = false;
+    bool inside_subtile = false;
+    float subtile_sort_y = static_cast<float>( p.y() );
     if( monster_override.empty() ) {
         if( const optional_vpart_position ovp = here.veh_at( p ) ) {
             const vehicle &veh = ovp->vehicle();
             if( veh.is_subtile() ) {
+                near_subtile = true;
                 const Creature *crit = get_creature_tracker().creature_at( p );
                 const Character *ch = crit ? crit->as_character() : nullptr;
                 const int p_idx = ch ? veh.find_passenger_part( *ch ) : -1;
                 if( p_idx >= 0 ) {
+                    inside_subtile = true;
                     const vehicle_part &pvp = veh.part( p_idx );
                     const double dx = pvp.world_offset[0].x - pvp.precalc[0].x();
                     const double dy = pvp.world_offset[0].y - pvp.precalc[0].y();
+                    subtile_sort_y = static_cast<float>( p.y() + dy );
                     if( is_isometric() ) {
                         off.x += static_cast<int>( std::lround( ( dx - dy ) * tile_width * 0.5 ) );
                         off.y += static_cast<int>( std::lround( ( dx + dy ) * tile_width * 0.25 ) );
@@ -5296,6 +5452,22 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
                 }
             }
         }
+        if( m_deferring_subtile_pass && !near_subtile ) {
+            for( const tripoint_bub_ms &nb : here.points_in_radius( p, 1 ) ) {
+                if( nb == p ) {
+                    continue;
+                }
+                const optional_vpart_position nvp = here.veh_at( nb );
+                if( nvp && nvp->vehicle().is_subtile() ) {
+                    near_subtile = true;
+                    break;
+                }
+            }
+        }
+    }
+    if( m_deferring_subtile_pass && near_subtile ) {
+        m_deferred_subtile_critters.push_back( { p, ll, height_3d, invisible, subtile_sort_y, inside_subtile } );
+        return false;
     }
     if( !m_creature_anims.empty() || !m_creature_hit_anims.empty() ||
         !m_creature_attack_anims.empty() ) {
