@@ -5,14 +5,11 @@
     "location": "center",
     "categories": [ "hull" ],
     "flags": [ "OBSTACLE", "NO_ROOF_NEEDED" ],
+    "sub_size": [ 5, 5 ],
+    "hardness": 20,
     "variants": [
       { "id": "horizontal", "label": "Horizontal", "symbols": "──│───│─", "symbols_broken": "#" },
-      {
-        "id": "horizontal_2",
-        "label": "Thick Horizontal",
-        "symbols": "━━┃━━━┃━",
-        "symbols_broken": "#"
-      },
+      { "id": "horizontal_2", "label": "Thick Horizontal", "symbols": "━━┃━━━┃━", "symbols_broken": "#" },
       { "id": "vertical", "label": "Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "vertical_2", "label": "Thick Vertical", "symbols": "┃┃━┃┃┃━┃", "symbols_broken": "#" },
       { "id": "ne", "label": "Front Right", "symbols": "┐┐┌└└└┘┐", "symbols_broken": "#" },
@@ -23,60 +20,20 @@
       { "id": "cover", "label": "Cover", "symbols": "^^<vvv>^", "symbols_broken": "#" },
       { "id": "cover_left", "label": "Cover Left", "symbols": "──│───│─", "symbols_broken": "#" },
       { "id": "cover_right", "label": "Cover Right", "symbols": "──│───│─", "symbols_broken": "#" },
-      {
-        "id": "horizontal_front",
-        "label": "Front Horizontal",
-        "symbols": "──│───│─",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "hatch_wheel_left",
-        "label": "Hatchback Wheel Left",
-        "symbols": "└└┘┐┐┐┌└",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "hatch_wheel_right",
-        "label": "Hatchback Wheel Right",
-        "symbols": "┘┘┐┌┌┌└┘",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "horizontal_rear",
-        "label": "Rear Horizontal",
-        "symbols": "──│───│─",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "horizontal_2_front",
-        "label": "Front Thick Horizontal",
-        "symbols": "━━┃━━━┃━",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "horizontal_2_rear",
-        "label": "Rear Thick Horizontal",
-        "symbols": "━━┃━━━┃━",
-        "symbols_broken": "#"
-      },
+      { "id": "horizontal_front", "label": "Front Horizontal", "symbols": "──│───│─", "symbols_broken": "#" },
+      { "id": "hatch_wheel_left", "label": "Hatchback Wheel Left", "symbols": "└└┘┐┐┐┌└", "symbols_broken": "#" },
+      { "id": "hatch_wheel_right", "label": "Hatchback Wheel Right", "symbols": "┘┘┐┌┌┌└┘", "symbols_broken": "#" },
+      { "id": "horizontal_rear", "label": "Rear Horizontal", "symbols": "──│───│─", "symbols_broken": "#" },
+      { "id": "horizontal_2_front", "label": "Front Thick Horizontal", "symbols": "━━┃━━━┃━", "symbols_broken": "#" },
+      { "id": "horizontal_2_rear", "label": "Rear Thick Horizontal", "symbols": "━━┃━━━┃━", "symbols_broken": "#" },
       { "id": "nw_edge", "label": "Front Left Corner", "symbols": "┌┌└┘┘┘┐┌", "symbols_broken": "#" },
       { "id": "ne_edge", "label": "Front Right Corner", "symbols": "┐┐┌└└└┘┐", "symbols_broken": "#" },
       { "id": "vertical_left", "label": "Left Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "vertical_right", "label": "Right Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "vertical_T_left", "label": "Left T Joint", "symbols": "[\\-/[\\-/", "symbols_broken": "#" },
       { "id": "vertical_T_right", "label": "Right T Joint", "symbols": "]\\-/]\\-/", "symbols_broken": "#" },
-      {
-        "id": "vertical_2_left",
-        "label": "Left Thick Vertical",
-        "symbols": "┃┃━┃┃┃━┃",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "vertical_2_right",
-        "label": "Right Thick Vertical",
-        "symbols": "┃┃━┃┃┃━┃",
-        "symbols_broken": "#"
-      },
+      { "id": "vertical_2_left", "label": "Left Thick Vertical", "symbols": "┃┃━┃┃┃━┃", "symbols_broken": "#" },
+      { "id": "vertical_2_right", "label": "Right Thick Vertical", "symbols": "┃┃━┃┃┃━┃", "symbols_broken": "#" },
       { "id": "wheel_left", "label": "Wheel Left", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "wheel_right", "label": "Wheel Right", "symbols": "│\\─/│\\─/", "symbols_broken": "#" }
     ]
@@ -98,7 +55,9 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "10 m", "using": [ [ "repair_welding_lc_steel", 5 ] ] }
     },
-    "damage_reduction": { "all": 7 }
+    "damage_reduction": { "all": 7 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 20
   },
   {
     "id": "board",
@@ -106,6 +65,8 @@
     "copy-from": "board_abstract",
     "name": { "str": "board" },
     "description": "A metal wall.  Keeps zombies outside the vehicle and prevents people from seeing through it.",
+    "sub_size": [ 5, 5 ],
+    "hardness": 22,
     "extend": { "flags": [ "OPAQUE", "FULL_BOARD" ] }
   },
   {
@@ -115,6 +76,8 @@
     "name": { "str": "quarterpanel" },
     "description": "A half-height metal wall.  Keeps zombies outside the vehicle but allows people to see over it.",
     "proportional": { "durability": 0.8 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 20,
     "extend": { "flags": [ "HALF_BOARD" ] }
   },
   {
@@ -135,7 +98,9 @@
       "removal": { "skills": [ [ "fabrication", 2 ] ], "time": "1 m", "using": [ [ "vehicle_nail_removal", 1 ] ] },
       "repair": { "skills": [ [ "fabrication", 2 ] ], "time": "1 m", "using": [ [ "adhesive", 2 ] ] }
     },
-    "damage_reduction": { "all": 0, "bash": 3 }
+    "damage_reduction": { "all": 0, "bash": 3 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 3
   },
   {
     "id": "clothboard",
@@ -143,6 +108,8 @@
     "type": "vehicle_part",
     "name": { "str": "cloth board" },
     "description": "A cloth wall.  Keeps zombies outside the vehicle and prevents people from seeing through it.",
+    "sub_size": [ 5, 5 ],
+    "hardness": 3,
     "extend": { "flags": [ "OPAQUE", "FULL_BOARD" ] }
   },
   {
@@ -152,6 +119,8 @@
     "name": { "str": "cloth quarterpanel" },
     "description": "A half-height cloth wall.  Keeps zombies outside the vehicle but allows people to see over it.",
     "proportional": { "durability": 0.8 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 3,
     "extend": { "flags": [ "HALF_BOARD" ] }
   },
   {
@@ -174,6 +143,8 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "10 m", "using": [ [ "repair_welding_lc_steel", 5 ] ] }
     },
+    "sub_size": [ 5, 5 ],
+    "hardness": 20,
     "extend": { "categories": [ "cargo" ], "flags": [ "OPAQUE", "CARGO", "COVERED", "FULL_BOARD", "LOCKABLE_CARGO" ] },
     "damage_reduction": { "all": 7 }
   },
@@ -186,7 +157,9 @@
     "color": "brown",
     "broken_color": "dark_gray",
     "proportional": { "durability": 4.15, "size": 0.76 },
-    "damage_reduction": { "all": 20 }
+    "damage_reduction": { "all": 20 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 44
   },
   {
     "abstract": "hdboard_abstract",
@@ -207,13 +180,17 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "24 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "10 m", "using": [ [ "repair_welding_lc_steel", 5 ] ] }
     },
-    "damage_reduction": { "all": 20 }
+    "damage_reduction": { "all": 20 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 46
   },
   {
     "id": "hdboard",
     "type": "vehicle_part",
     "copy-from": "hdboard_abstract",
     "name": { "str": "heavy-duty board" },
+    "sub_size": [ 5, 5 ],
+    "hardness": 46,
     "extend": { "flags": [ "OPAQUE", "FULL_BOARD" ] }
   },
   {
@@ -223,6 +200,8 @@
     "name": { "str": "heavy-duty quarterpanel" },
     "description": "A half-height strong metal wall.  Keeps zombies outside the vehicle but allows people to see over it.",
     "proportional": { "durability": 0.8 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 44,
     "extend": { "flags": [ "HALF_BOARD" ] }
   },
   {
@@ -239,7 +218,9 @@
       "removal": { "skills": [ [ "fabrication", 2 ] ], "time": "15 m", "using": [ [ "vehicle_nail_removal", 1 ] ] },
       "repair": { "skills": [ [ "fabrication", 2 ] ], "time": "10 m", "using": [ [ "adhesive", 2 ] ] }
     },
-    "damage_reduction": { "all": 5 }
+    "damage_reduction": { "all": 5 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 9
   },
   {
     "id": "woodboard",
@@ -247,6 +228,8 @@
     "copy-from": "woodboard_abstract",
     "name": { "str": "wooden board" },
     "description": "A wooden wall.  Keeps zombies outside the vehicle and prevents people from seeing through it.",
+    "sub_size": [ 5, 5 ],
+    "hardness": 10,
     "extend": { "flags": [ "OPAQUE", "FULL_BOARD" ] }
   },
   {
@@ -256,6 +239,8 @@
     "name": { "str": "wooden quarterpanel" },
     "description": "A half-height wooden wall.  Keeps zombies outside the vehicle but allows people to see over it.",
     "proportional": { "durability": 0.8 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 9,
     "extend": { "flags": [ "HALF_BOARD" ] }
   },
   {
@@ -278,6 +263,8 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "10 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "repair_welding_standard", 3 ] ] }
     },
+    "sub_size": [ 4, 4 ],
+    "hardness": 14,
     "extend": { "flags": [ "HALF_BOARD" ] },
     "damage_reduction": { "all": 5 }
   },
@@ -299,6 +286,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "5 m", "using": [ [ "repair_welding_standard", 3 ] ] }
     },
     "damage_reduction": { "all": 20 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 55,
     "extend": { "flags": [ "HALF_BOARD" ] }
   }
 ]

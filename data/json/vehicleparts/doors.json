@@ -32,6 +32,8 @@
     },
     "size": "2500 ml",
     "type": "vehicle_part",
+    "sub_size": [ 5, 5 ],
+    "hardness": 22,
     "variants_bases": [ { "id": "full", "label": "Full" } ],
     "variants": [
       { "id": "front", "label": "Front", "symbols": "+", "symbols_broken": "&" },
@@ -69,6 +71,8 @@
       "repair": { "skills": [ [ "fabrication", 2 ] ], "time": "5 m", "using": [ [ "adhesive", 2 ] ] }
     },
     "damage_reduction": { "all": 0, "bash": 3 },
+    "sub_size": [ 5, 2 ],
+    "hardness": 3,
     "delete": { "flags": [ "LOCKABLE_DOOR", "WINDOW_MOUNTABLE" ] }
   },
   {
@@ -77,7 +81,9 @@
     "looks_like": "door",
     "type": "vehicle_part",
     "name": { "str": "cloth curtain door" },
-    "description": "A cloth sheet that can be slid into a closed position to act as a door."
+    "description": "A cloth sheet that can be slid into a closed position to act as a door.",
+    "sub_size": [ 5, 2 ],
+    "hardness": 3
   },
   {
     "id": "door_opaque",
@@ -85,6 +91,8 @@
     "description": "A door.  Solid construction means you can't see through it when closed.",
     "durability": 240,
     "name": { "str": "opaque door" },
+    "sub_size": [ 5, 5 ],
+    "hardness": 24,
     "extend": { "flags": [ "OPAQUE" ] },
     "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "type": "vehicle_part",
@@ -106,6 +114,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "8 m", "using": [ [ "repair_welding_lc_steel", 4 ] ] }
     },
     "type": "vehicle_part",
+    "sub_size": [ 5, 5 ],
+    "hardness": 46,
     "variants_bases": [ { "id": "full", "label": "Full" } ]
   },
   {
@@ -115,6 +125,8 @@
     "durability": 660,
     "looks_like": "door_opaque",
     "name": { "str": "heavy-duty opaque door" },
+    "sub_size": [ 5, 5 ],
+    "hardness": 50,
     "extend": { "flags": [ "OPAQUE" ] },
     "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "type": "vehicle_part",
@@ -126,7 +138,9 @@
     "damage_modifier": 75,
     "description": "An interior door.  Solid construction means you can't see through it when closed.",
     "name": { "str": "internal door" },
-    "type": "vehicle_part"
+    "type": "vehicle_part",
+    "sub_size": [ 2, 6 ],
+    "hardness": 18
   },
   {
     "id": "hatch",
@@ -149,6 +163,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "5 m", "using": [ [ "repair_welding_lc_steel", 3 ] ] }
     },
     "size": "37500 ml",
+    "sub_size": [ 5, 5 ],
+    "hardness": 22,
     "extend": { "flags": [ "LOCKABLE_CARGO", "MULTISQUARE", "COVERED" ] },
     "type": "vehicle_part"
   },
@@ -159,6 +175,8 @@
     "durability": 450,
     "looks_like": "door_opaque",
     "name": { "str": "opaque hatch" },
+    "sub_size": [ 5, 5 ],
+    "hardness": 24,
     "extend": { "flags": [ "OPAQUE" ] },
     "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "type": "vehicle_part"
@@ -186,7 +204,9 @@
       },
       "repair": { "skills": [ [ "mechanics", 4 ] ], "time": "8 m", "using": [ [ "repair_welding_lc_steel", 4 ] ] }
     },
-    "type": "vehicle_part"
+    "type": "vehicle_part",
+    "sub_size": [ 5, 5 ],
+    "hardness": 46
   },
   {
     "id": "hdhatch_opaque",
@@ -195,6 +215,8 @@
     "durability": 1000,
     "looks_like": "hatch_opaque",
     "name": { "str": "heavy-duty opaque hatch" },
+    "sub_size": [ 5, 5 ],
+    "hardness": 50,
     "extend": { "flags": [ "OPAQUE" ] },
     "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "type": "vehicle_part"
@@ -220,6 +242,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "5 m", "using": [ [ "repair_welding_lc_steel", 3 ] ] }
     },
     "size": "125000 ml",
+    "sub_size": [ 4, 6 ],
+    "hardness": 20,
     "extend": { "flags": [ "LOCKABLE_CARGO", "MULTISQUARE", "COVERED" ] },
     "type": "vehicle_part"
   },
@@ -241,6 +265,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "30 m", "using": [ [ "adhesive", 2 ] ] }
     },
     "breaks_into": [ { "item": "splinter", "count": [ 7, 9 ] } ],
+    "sub_size": [ 5, 5 ],
+    "hardness": 10,
     "extend": { "flags": [ "SIMPLE_PART" ] },
     "delete": { "flags": [ "CARGO", "CARGO_PASSABLE", "LOCKABLE_DOOR" ] },
     "damage_reduction": { "all": 8 }
@@ -252,6 +278,8 @@
     "name": { "str": "opaque wooden door" },
     "durability": 170,
     "description": "A door.  Solid construction means you can't see through it when closed.",
+    "sub_size": [ 5, 5 ],
+    "hardness": 11,
     "extend": { "flags": [ "OPAQUE" ] },
     "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "damage_reduction": { "all": 12 }
@@ -269,6 +297,8 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "60 m", "using": [ [ "repair_welding_lc_steel", 2 ] ] }
     },
+    "sub_size": [ 3, 6 ],
+    "hardness": 22,
     "extend": { "flags": [ "LOW_FINAL_AIR_DRAG", "SIMPLE_PART", "NO_ROOF_NEEDED" ] },
     "delete": { "flags": [ "CARGO", "CARGO_PASSABLE", "COVERED", "LOCKABLE_CARGO", "WINDOW_MOUNTABLE" ] }
   },
@@ -286,6 +316,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "60 m", "using": [ [ "repair_welding_lc_steel", 4 ] ] }
     },
     "breaks_into": "ig_vp_hdframe",
+    "sub_size": [ 3, 6 ],
+    "hardness": 46,
     "delete": { "flags": [ "NO_ROOF_NEEDED" ] },
     "damage_reduction": { "all": 30 }
   },
@@ -304,6 +336,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "60 m", "using": [ [ "repair_welding_lc_steel", 2 ] ] }
     },
     "breaks_into": "ig_vp_sheet_metal",
+    "sub_size": [ 2, 6 ],
+    "hardness": 28,
     "extend": { "flags": [ "OPAQUE", "SIMPLE_PART" ] },
     "delete": { "flags": [ "CARGO", "CARGO_PASSABLE", "COVERED", "LOCKABLE_CARGO", "WINDOW_MOUNTABLE" ] },
     "damage_reduction": { "all": 7 }
@@ -316,6 +350,8 @@
     "looks_like": "door",
     "description": "A door.  A window lets you see through it when closed.",
     "breaks_into": "ig_vp_frame",
+    "sub_size": [ 7, 2 ],
+    "hardness": 24,
     "extend": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "delete": { "flags": [ "LOW_FINAL_AIR_DRAG", "NO_ROOF_NEEDED" ] }
   }

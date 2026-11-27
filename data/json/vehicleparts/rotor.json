@@ -6,6 +6,8 @@
     "location": "on_roof",
     "color": "light_blue",
     "flags": [ "ROTOR", "NO_INSTALL_PLAYER", "NO_REPAIR", "SMASH_REMOVE" ],
+    "sub_size": [ 6, 6 ],
+    "hardness": 34,
     "variants": [ { "symbols": "X", "symbols_broken": "O" } ],
     "control_requirements": { "air": { "proficiencies": [ "prof_helicopter_pilot" ] } }
   },
@@ -22,7 +24,9 @@
     "damage_modifier": 80,
     "requirements": { "removal": { "skills": [ [ "mechanics", 3 ] ], "time": "1 h", "using": "vehicle_weld_removal" } },
     "breaks_into": [ { "item": "scrap", "count": [ 15, 30 ] }, { "item": "ch_steel_chunk", "count": [ 8, 16 ] } ],
-    "damage_reduction": { "all": 66 }
+    "damage_reduction": { "all": 66 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 48
   },
   {
     "id": "small_civilian_rotors",
@@ -37,7 +41,9 @@
     "damage_modifier": 80,
     "requirements": { "removal": { "skills": [ [ "mechanics", 3 ] ], "time": "1 h", "using": "vehicle_weld_removal" } },
     "breaks_into": [ { "item": "scrap", "count": [ 8, 15 ] }, { "item": "ch_steel_chunk", "count": [ 2, 8 ] } ],
-    "damage_reduction": { "all": 22 }
+    "damage_reduction": { "all": 22 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 28
   },
   {
     "id": "heavy_duty_military_blackhawk_rotors",
@@ -46,7 +52,9 @@
     "name": { "str": "heavy-duty military Blackhawk rotors" },
     "//": "rotor diameter is in meters",
     "rotor_diameter": 16,
-    "max_flight_altitude_m": 5180
+    "max_flight_altitude_m": 5180,
+    "sub_size": [ 6, 6 ],
+    "hardness": 46
   },
   {
     "id": "heavy_duty_military_osprey_rotors",
@@ -55,6 +63,8 @@
     "name": { "str": "heavy-duty military Osprey rotors" },
     "//": "rotor diameter is in meters",
     "rotor_diameter": 11,
-    "max_flight_altitude_m": 7620
+    "max_flight_altitude_m": 7620,
+    "sub_size": [ 6, 6 ],
+    "hardness": 46
   }
 ]

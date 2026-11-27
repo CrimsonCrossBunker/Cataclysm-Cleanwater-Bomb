@@ -7,6 +7,8 @@
     "broken_color": "red",
     "categories": [ "energy" ],
     "flags": [ "ALTERNATOR" ],
+    "sub_size": [ 2, 2 ],
+    "hardness": 26,
     "variants": [ { "symbols": "*", "symbols_broken": "#" } ]
   },
   {
@@ -26,9 +28,15 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 2 ] ], "time": "60 m", "using": [ [ "vehicle_screw", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_screw", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "60 m", "using": [ [ "adhesive", 1 ], [ "vehicle_screw", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "60 m",
+        "using": [ [ "adhesive", 1 ], [ "vehicle_screw", 1 ] ]
+      }
     },
-    "damage_reduction": { "all": 12 }
+    "damage_reduction": { "all": 12 },
+    "sub_size": [ 1, 1 ],
+    "hardness": 18
   },
   {
     "id": "alternator_motorbike",
@@ -56,7 +64,9 @@
         "using": [ [ "adhesive", 1 ], [ "soldering_standard", 3 ], [ "vehicle_screw", 1 ] ]
       }
     },
-    "damage_reduction": { "all": 12 }
+    "damage_reduction": { "all": 12 },
+    "sub_size": [ 2, 2 ],
+    "hardness": 24
   },
   {
     "id": "alternator_car",
@@ -81,10 +91,17 @@
       "repair": {
         "skills": [ [ "mechanics", 3 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 2 ], [ "soldering_standard", 6 ], [ "vehicle_wrench_1", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 2 ],
+          [ "soldering_standard", 6 ],
+          [ "vehicle_wrench_1", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 20 }
+    "damage_reduction": { "all": 20 },
+    "sub_size": [ 2, 2 ],
+    "hardness": 28
   },
   {
     "id": "alternator_truck",
@@ -109,9 +126,16 @@
       "repair": {
         "skills": [ [ "mechanics", 3 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 2 ], [ "soldering_standard", 10 ], [ "vehicle_wrench_1", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 2 ],
+          [ "soldering_standard", 10 ],
+          [ "vehicle_wrench_1", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 20 }
+    "damage_reduction": { "all": 20 },
+    "sub_size": [ 3, 2 ],
+    "hardness": 34
   }
 ]

@@ -130,6 +130,7 @@ static const trap_str_id tr_unfinished_construction( "tr_unfinished_construction
 
 // Iterating a vehicle's "structure" parts yields one part per occupied square, so the vehicle
 // preview draws exactly one sprite per tile (the same basis the ASCII display_veh() uses).
+static const vpart_location_id vpart_location_on_roof( "on_roof" );
 static const vpart_location_id vpart_location_structure( "structure" );
 
 static const std::string ITEM_HIGHLIGHT( "highlight_item" );
@@ -1377,23 +1378,83 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             here.veh_at( tri.view.pos );
                         if( ovp ) {
                             const vehicle &veh = ovp->vehicle();
-                            const vpart_display vd =
-                                veh.get_display_of_tile(
-                                    ovp->mount_pos3() );
-                            if( !vd.id.is_null() ) {
-                                const int subtile =
-                                    vd.is_open ? open_ :
-                                    vd.is_broken ? broken : 0;
-                                var->set_vpart_content(
-                                    vd.id, subtile,
-                                    angle_to_dir4( veh.face.dir()
-                                                   - 270_degrees ),
-                                    vd.variant.id,
-                                    vd.carried_furn,
-                                    vd.has_cargo,
-                                    get_vpart_tint( veh,
-                                                    ovp->mount_pos3() ) );
-                                continue;
+                            if( veh.is_subtile() ) {
+                                const tripoint_rel_ms &world_rel = veh.part( ovp->part_index() ).precalc[0];
+                                const vpart_display vd = veh.get_display_of_world_tile( world_rel );
+                                if( !vd.id.is_null() ) {
+                                    const int subtile =
+                                        vd.is_open ? open_ :
+                                        vd.is_broken ? broken : 0;
+                                    const double raw_deg = to_degrees( veh.face.dir() - 270_degrees );
+                                    const int rot4 = angle_to_dir4( veh.face.dir() - 270_degrees );
+                                    var->set_vpart_content(
+                                        vd.id, subtile, rot4,
+                                        vd.variant.id, vd.carried_furn, vd.has_cargo,
+                                        get_vpart_tint( veh, ovp->mount_pos3() ) );
+                                    const bool player_inside = veh.is_passenger( get_player_character() );
+                                    const std::vector<int> &tile_parts = veh.parts_at_world_tile( world_rel );
+                                    var->subtile_vparts.reserve( tile_parts.size() );
+                                    for( const int pidx : tile_parts ) {
+                                        const vehicle_part &svp = veh.part( pidx );
+                                        if( svp.removed || svp.is_fake || svp.hidden ) {
+                                            continue;
+                                        }
+                                        const vpart_info &svpi = svp.info();
+                                        const bool part_is_roof =
+                                            svpi.location->z_order >= vpart_location_on_roof->z_order;
+                                        if( player_inside && part_is_roof ) {
+                                            continue;
+                                        }
+                                        tile_render_info::sprite::subtile_vpart_entry entry;
+                                        entry.id = svpi.id;
+                                        entry.subtile = ( svp.open && svpi.has_flag( VPFLAG_OPENABLE ) )
+                                                        ? open_
+                                                        : ( svp.is_broken() ? broken : 0 );
+                                        entry.rotation = rot4;
+                                        entry.exact_angle_deg = raw_deg;
+                                        entry.offset_x = svp.world_offset[0].x - svp.precalc[0].x();
+                                        entry.offset_y = svp.world_offset[0].y - svp.precalc[0].y();
+                                        const float sx = std::clamp( static_cast<float>( svpi.sub_size.x ) / 8.0f,
+                                                                     0.25f, 2.0f );
+                                        const float sy = std::clamp( static_cast<float>( svpi.sub_size.y ) / 8.0f,
+                                                                     0.25f, 2.0f );
+                                        entry.scale_x = sy;
+                                        entry.scale_y = sx;
+                                        entry.is_roof = part_is_roof;
+                                        entry.has_cargo = svpi.has_flag( VPFLAG_CARGO ) &&
+                                                          !veh.get_items( svp ).empty();
+                                        entry.variant = svp.variant;
+                                        entry.carried_furn = svp.get_base().get_var( "tied_down_furniture" );
+                                        if( get_option<bool>( "VEHICLE_PART_COLOR" ) ) {
+                                            if( svp.has_custom_color() ) {
+                                                entry.tint = svp.get_color( true ).fg;
+                                            } else {
+                                                entry.tint = svpi.default_tint_color;
+                                            }
+                                        }
+                                        var->subtile_vparts.emplace_back( std::move( entry ) );
+                                    }
+                                    continue;
+                                }
+                            } else {
+                                const vpart_display vd =
+                                    veh.get_display_of_tile(
+                                        ovp->mount_pos3() );
+                                if( !vd.id.is_null() ) {
+                                    const int subtile =
+                                        vd.is_open ? open_ :
+                                        vd.is_broken ? broken : 0;
+                                    var->set_vpart_content(
+                                        vd.id, subtile,
+                                        angle_to_dir4( veh.face.dir()
+                                                       - 270_degrees ),
+                                        vd.variant.id,
+                                        vd.carried_furn,
+                                        vd.has_cargo,
+                                        get_vpart_tint( veh,
+                                                        ovp->mount_pos3() ) );
+                                    continue;
+                                }
                             }
                         }
                     } else {
@@ -3915,10 +3976,10 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
     //draw it!
     tile_render_params rp{ ll, nv_color_active, pos, m_draw_light, m_shown_anchor };
     test_draw_id = test_draw_light_log ? sprite_id : nullptr;
-    // Vehicle parts carry a per-instance paint color via pending_part_tint_
-    // (set by draw_vpart). Only apply it to vehicle part sprites.
+    // Vehicle parts carry per-instance paint tint & optional sub-tile offset/scale.
     if( category == TILE_CATEGORY::VEHICLE_PART ) {
         rp.tint = pending_part_tint_;
+        render_offset += pending_part_offset_;
     }
     draw_tile_at( display_tile, screen_pos, loc_rand, rota, rp,
                   retract, height_3d, render_offset, /*allow_diagonal_rota:*/ category == TILE_CATEGORY::BULLET );
@@ -4050,12 +4111,11 @@ bool cata_tiles::draw_sprite_at(
         rotate_sprite = true;
         sprite_num = 0;
     } else {
-        // multiple rotated tiles defined, don't apply sprite rotation after picking one
-        rotate_sprite = false;
-        // two tiles, tile 0 is N/S, tile 1 is E/W
-        // four tiles, 0=N, 1=E, 2=S, 3=W
-        // extending this to more than 4 rotated tiles will require changing rota to degrees
+        // multiple rotated tiles defined: pick closest cardinal sprite and apply residual
+        // continuous angle if exact_angle_deg is active for sub-tile vehicles.
         sprite_num = rota % spritelist.size();
+        rotate_sprite = !is_isometric() && pending_part_exact_angle_deg_.has_value() &&
+                        rp.tint.has_value() == pending_part_tint_.has_value();
     }
 
     const int sprite_index = spritelist[sprite_num];
@@ -4080,9 +4140,11 @@ bool cata_tiles::draw_sprite_at(
     // fragment shader. On unsupported variant (untinted NORMAL, custom MEMORY
     // preset, clean session-disable) try_begin reports use_atlas; abort_frame
     // means undefined shader state -- latch recovery and throw.
+    const bool use_subtile_angle = rotate_sprite && pending_part_exact_angle_deg_.has_value() &&
+                                   !rp.anchor.has_value();
     const bool scene_lit = smooth_lighting::lit_path_for( smooth_lighting_active,
                            rp.light == draw_light::scene, lit_extent.covers( rp.pos ) ) &&
-                           !rp.tint && !allow_diagonal_rota;
+                           !rp.tint && !allow_diagonal_rota && !use_subtile_angle;
     // sprites that keep their lit_level's look draw classic while lighting is on
     const bool shown_unlit = smooth_lighting_active && !scene_lit;
     if( test_draw_light_log && test_draw_id ) {
@@ -4160,6 +4222,32 @@ bool cata_tiles::draw_sprite_at(
     geometry_input.rotation = rota;
     geometry_input.isometric = is_isometric();
     geometry_input.allow_diagonal_rotation = allow_diagonal_rota;
+    if( !is_isometric() && pending_part_exact_angle_deg_ ) {
+        if( spritelist.size() <= 1 ) {
+            geometry_input.exact_angle_deg = *pending_part_exact_angle_deg_;
+        } else if( rotate_sprite ) {
+            double snapped = 0.0;
+            if( spritelist.size() == 2 ) {
+                snapped = ( sprite_num % 2 ) == 1 ? 90.0 : 0.0;
+            } else {
+                snapped = static_cast<double>( sprite_num ) * 90.0;
+            }
+            double residual = std::fmod( *pending_part_exact_angle_deg_ - snapped + 540.0, 360.0 ) - 180.0;
+            if( spritelist.size() == 2 && std::abs( residual ) > 90.0 ) {
+                residual = residual > 0.0 ? residual - 180.0 : residual + 180.0;
+            }
+            geometry_input.exact_angle_deg = residual;
+        }
+    }
+    if( ( pending_part_scale_x_ != 1.0f || pending_part_scale_y_ != 1.0f ) && !is_isometric() ) {
+        if( spritelist.size() >= 2 && ( sprite_num % 2 ) == 1 ) {
+            geometry_input.scale_x = pending_part_scale_y_;
+            geometry_input.scale_y = pending_part_scale_x_;
+        } else {
+            geometry_input.scale_x = pending_part_scale_x_;
+            geometry_input.scale_y = pending_part_scale_y_;
+        }
+    }
     geometry_input.calculate_opaque_bounds = m_cur_bounds != nullptr;
     if( geometry_input.calculate_opaque_bounds ) {
         const SDL_Rect opaque = sprite_tex->get_opaque_rect();
@@ -4749,6 +4837,52 @@ bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height
     }
 
     if( !invisible[0] ) {
+        if( !cap.subtile_vparts.empty() ) {
+            int max_height = height_3d;
+            bool drew_any = false;
+            const int tw = tileset_ptr->get_tile_width();
+            const int th = tileset_ptr->get_tile_height();
+            for( const tile_render_info::sprite::subtile_vpart_entry &entry : cap.subtile_vparts ) {
+                if( entry.is_roof != roof ) {
+                    continue;
+                }
+                int local_height = height_3d;
+                restore_on_out_of_scope restore_tint( pending_part_tint_ );
+                restore_on_out_of_scope restore_angle( pending_part_exact_angle_deg_ );
+                restore_on_out_of_scope restore_off( pending_part_offset_ );
+                restore_on_out_of_scope restore_sx( pending_part_scale_x_ );
+                restore_on_out_of_scope restore_sy( pending_part_scale_y_ );
+                pending_part_tint_ = entry.tint;
+                pending_part_exact_angle_deg_ = entry.exact_angle_deg;
+                pending_part_offset_ = point( static_cast<int>( std::lround( entry.offset_x * tw ) ),
+                                              static_cast<int>( std::lround( entry.offset_y * th ) ) );
+                pending_part_scale_x_ = entry.scale_x;
+                pending_part_scale_y_ = entry.scale_y;
+                const bool ret = draw_from_id_string(
+                                     "vp_" + entry.id.str(),
+                                     TILE_CATEGORY::VEHICLE_PART, empty_string, p,
+                                     entry.subtile, entry.rotation, ll,
+                                     nv_goggles_activated, local_height, 0,
+                                     entry.variant );
+                if( ret ) {
+                    drew_any = true;
+                    max_height = std::max( max_height, local_height );
+                    if( entry.has_cargo ) {
+                        draw_item_highlight( p, local_height );
+                    }
+                    if( !entry.carried_furn.empty() ) {
+                        draw_from_id_string( entry.carried_furn,
+                                             TILE_CATEGORY::FURNITURE, empty_string, p, 0,
+                                             angle_to_dir4( 0_degrees ), ll,
+                                             nv_goggles_activated, local_height );
+                    }
+                }
+            }
+            if( !roof ) {
+                height_3d = max_height;
+            }
+            return drew_any;
+        }
         // Normal or override path — both read from the per-frame cache
         int height_3d_temp = height_3d;
         pending_part_tint_ = cap.vpart_tint;
@@ -4857,39 +4991,84 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
     RenderSetClipRect( renderer, &clip );
 
     int center_part = -1;
-    // One sprite per structural square, mirroring the ASCII display_veh().
-    for( const int part_idx : veh.all_parts_at_location( vpart_location_structure ) ) {
-        const vehicle_part &vp = veh.part( part_idx );
-        if( vp.mount_level != deck ) {
-            continue;
+    if( veh.is_subtile() ) {
+        // Scale preview up slightly so 0.125m parts are clear in the workshop pane
+        const int subtile_preview_scale = 24;
+        set_draw_scale( subtile_preview_scale );
+        const int tw = tileset_ptr->get_tile_width();
+        const int th = tileset_ptr->get_tile_height();
+        constexpr int subtile_step = 4; // 0.25 tile per sub-tile unit at zoomed preview
+        for( int part_idx = 0; part_idx < veh.part_count(); ++part_idx ) {
+            const vehicle_part &vp = veh.part( part_idx );
+            if( vp.removed || vp.is_fake || vp.hidden || vp.mount_level != deck ) {
+                continue;
+            }
+            const vpart_info &vpi = vp.info();
+            const point_rel_ms q_sub = ( vp.mount + cursor_vp_mount ).rotate( 3 );
+            const int cell_x = divide_round_down( q_sub.x(), subtile_step );
+            const int cell_y = divide_round_down( q_sub.y(), subtile_step );
+            const tripoint_bub_ms screen_tile( tripoint( cell_x, cell_y, 0 ) );
+            const int rem_x = q_sub.x() - cell_x * subtile_step;
+            const int rem_y = q_sub.y() - cell_y * subtile_step;
+            restore_on_out_of_scope restore_tint( pending_part_tint_ );
+            restore_on_out_of_scope restore_off( pending_part_offset_ );
+            restore_on_out_of_scope restore_sx( pending_part_scale_x_ );
+            restore_on_out_of_scope restore_sy( pending_part_scale_y_ );
+            pending_part_offset_ = point( rem_x * tw / subtile_step, rem_y * th / subtile_step );
+            pending_part_scale_x_ = std::clamp( static_cast<float>( vpi.sub_size.y ) / 3.0f, 0.35f, 2.5f );
+            pending_part_scale_y_ = std::clamp( static_cast<float>( vpi.sub_size.x ) / 3.0f, 0.35f, 2.5f );
+            if( get_option<bool>( "VEHICLE_PART_COLOR" ) ) {
+                pending_part_tint_ = vp.has_custom_color() ? vp.get_color( true ).fg
+                                     : vpi.default_tint_color;
+            }
+            const int subtile = ( vp.open && vpi.has_flag( VPFLAG_OPENABLE ) ) ? open_
+                                : ( vp.is_broken() ? broken : 0 );
+            int height_3d = 0;
+            draw_from_id_string( "vp_" + vpi.id.str(), TILE_CATEGORY::VEHICLE_PART, empty_string,
+                                 screen_tile, subtile, 0, lit_level::LIT, false, height_3d, 0,
+                                 vp.variant );
+            if( vpi.has_flag( VPFLAG_CARGO ) && !veh.get_items( vp ).empty() ) {
+                draw_item_highlight( screen_tile, height_3d );
+            }
+            if( q_sub == point_rel_ms::zero ) {
+                center_part = part_idx;
+            }
         }
-        const vpart_display vd = veh.get_display_of_tile( vp.mount_pos3(), false, false );
-        if( vd.id.is_null() ) {
-            continue;
-        }
-        // Same fixed, heading-independent layout transform the ASCII view uses.
-        const point_rel_ms q = ( vp.mount + cursor_vp_mount ).rotate( 3 );
-        const tripoint_bub_ms screen_tile( tripoint( q.x(), q.y(), 0 ) );
-        const int subtile = vd.is_open ? open_ : vd.is_broken ? broken : 0;
-        // Canonical (un-rotated) orientation, the tile analogue of the ASCII path's
-        // rotate=false symbols. If the whole vehicle looks rotated by a multiple of 90
-        // degrees, change this to 1, 2 or 3.
-        const int rotation = 0;
-        int height_3d = 0;
-        // Tint with the DISPLAYED part's paint (which may be a board/door on top
-        // of this structure frame), mirroring the main-map path. The frame itself
-        // is never colored by a palette, so checking vp here would always be empty.
-        pending_part_tint_ = get_vpart_tint( veh, vp.mount_pos3() );
-        draw_from_id_string( "vp_" + vd.id.str(), TILE_CATEGORY::VEHICLE_PART, empty_string,
-                             screen_tile, subtile, rotation, lit_level::LIT, false, height_3d, 0,
-                             vd.variant.id );
-        pending_part_tint_ = std::nullopt;
-        if( vd.has_cargo ) {
-            // Cargo space holding items: overlay the item-highlight, as the map path does.
-            draw_item_highlight( screen_tile, height_3d );
-        }
-        if( q == point_rel_ms::zero ) {
-            center_part = part_idx;   // the part under the cursor, drawn at the window centre
+    } else {
+        // One sprite per structural square, mirroring the ASCII display_veh().
+        for( const int part_idx : veh.all_parts_at_location( vpart_location_structure ) ) {
+            const vehicle_part &vp = veh.part( part_idx );
+            if( vp.mount_level != deck ) {
+                continue;
+            }
+            const vpart_display vd = veh.get_display_of_tile( vp.mount_pos3(), false, false );
+            if( vd.id.is_null() ) {
+                continue;
+            }
+            // Same fixed, heading-independent layout transform the ASCII view uses.
+            const point_rel_ms q = ( vp.mount + cursor_vp_mount ).rotate( 3 );
+            const tripoint_bub_ms screen_tile( tripoint( q.x(), q.y(), 0 ) );
+            const int subtile = vd.is_open ? open_ : vd.is_broken ? broken : 0;
+            // Canonical (un-rotated) orientation, the tile analogue of the ASCII path's
+            // rotate=false symbols. If the whole vehicle looks rotated by a multiple of 90
+            // degrees, change this to 1, 2 or 3.
+            const int rotation = 0;
+            int height_3d = 0;
+            // Tint with the DISPLAYED part's paint (which may be a board/door on top
+            // of this structure frame), mirroring the main-map path. The frame itself
+            // is never colored by a palette, so checking vp here would always be empty.
+            pending_part_tint_ = get_vpart_tint( veh, vp.mount_pos3() );
+            draw_from_id_string( "vp_" + vd.id.str(), TILE_CATEGORY::VEHICLE_PART, empty_string,
+                                 screen_tile, subtile, rotation, lit_level::LIT, false, height_3d, 0,
+                                 vd.variant.id );
+            pending_part_tint_ = std::nullopt;
+            if( vd.has_cargo ) {
+                // Cargo space holding items: overlay the item-highlight, as the map path does.
+                draw_item_highlight( screen_tile, height_3d );
+            }
+            if( q == point_rel_ms::zero ) {
+                center_part = part_idx;   // the part under the cursor, drawn at the window centre
+            }
         }
     }
     cpart = center_part;

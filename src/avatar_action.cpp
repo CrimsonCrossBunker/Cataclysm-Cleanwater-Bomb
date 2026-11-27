@@ -41,6 +41,7 @@
 #include "enums.h"
 #include "flag.h"
 #include "game.h"
+#include "gates.h"
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "gun_mode.h"
@@ -708,6 +709,157 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
     if( veh1 != nullptr ) {
         dpart = veh1->next_part_to_open( vp1->part_index(), outside_vehicle );
         veh_closed_door = dpart >= 0 && !veh1->part( dpart ).open;
+    }
+
+    // Sub-tile interior sliding, directional door opening, and cabin perimeter entry/exit
+    if( !is_riding && dest_loc.z() == you_pos.z() ) {
+        const point_rel_ms move_dir = dest_loc.xy() - you_pos.xy();
+        if( veh0 != nullptr && veh0->is_subtile() ) {
+            const int from_part = veh0->find_passenger_part( you );
+            if( from_part >= 0 ) {
+                int interior_door = -1;
+                const int interior_target = veh0->find_interior_move_target( from_part, move_dir,
+                                            interior_door );
+                if( interior_target >= 0 ) {
+                    Character *occupant = veh0->get_passenger( interior_target );
+                    if( occupant != nullptr && occupant != &you ) {
+                        if( occupant->is_npc() && local_input ) {
+                            g->npc_menu( *occupant->as_npc() );
+                        } else {
+                            you.add_msg_if_player( m_info, _( "That seat is occupied by %s." ),
+                                                   occupant->disp_name() );
+                        }
+                        return false;
+                    }
+                    if( ( choices && veh0->has_owner() && !veh0->is_owned_by( you ) &&
+                          !choices->permits_theft( *veh0 ) ) ||
+                        !veh0->handle_potential_theft( you, false, local_input ) || !at_origin() ) {
+                        return false;
+                    }
+                    const int move_cost = std::max( 25,
+                                                    you.run_cost( veh0->part( interior_target ).move_penalty() + 4, false, dest_loc ) );
+                    you.mod_moves( -move_cost );
+                    const bool was_moving = veh0->is_moving();
+                    const bool had_ctrl = you.controlling_vehicle;
+                    m.unboard_vehicle( vpart_reference( *veh0, from_part ), &you );
+                    if( !was_moving ) {
+                        veh0->skidding = false;
+                    }
+                    m.board_vehicle_part( *veh0, interior_target, &you );
+                    if( !was_moving && had_ctrl && veh0->player_in_control( m, you ) ) {
+                        you.controlling_vehicle = true;
+                    }
+                    if( lifetime && you.pos_abs() != origin ) {
+                        g->on_move_effects( you );
+                    }
+                    return true;
+                }
+                if( interior_door >= 0 ) {
+                    const int64_t vid = veh0->uid().get_value();
+                    if( ( choices && veh0->has_owner() && !veh0->is_owned_by( you ) &&
+                          !choices->permits_theft( *veh0 ) ) ||
+                        !veh0->handle_potential_theft( you, false, local_input ) || !at_origin() ) {
+                        return false;
+                    }
+                    const optional_vpart_position refreshed = m.veh_at( you_pos );
+                    if( !refreshed || refreshed->vehicle().uid().get_value() != vid ) {
+                        return false;
+                    }
+                    if( refreshed->vehicle().part( interior_door ).locked ) {
+                        you.add_msg_if_player( m_info, _( "The %s is locked." ),
+                                               refreshed->vehicle().part( interior_door ).name() );
+                        return false;
+                    }
+                    const std::string vname = refreshed->vehicle().name;
+                    const std::string dname = refreshed->vehicle().part( interior_door ).name();
+                    refreshed->vehicle().open( m, interior_door );
+                    you.add_msg_if_player( _( "You open the %1$s's %2$s." ), vname, dname );
+                    you.mod_moves( -you.get_speed() );
+                    if( you.is_auto_moving() ) {
+                        you.defer_move( dest_loc );
+                    }
+                    return true;
+                }
+                if( veh1 != veh0 && std::abs( veh0->velocity ) <= 100 ) {
+                    bool blocked_solid = false;
+                    const int exit_door = veh0->find_exit_door_or_blocker( from_part, move_dir,
+                                          blocked_solid );
+                    if( exit_door >= 0 ) {
+                        const int64_t vid = veh0->uid().get_value();
+                        if( ( choices && veh0->has_owner() && !veh0->is_owned_by( you ) &&
+                              !choices->permits_theft( *veh0 ) ) ||
+                            !veh0->handle_potential_theft( you, false, local_input ) || !at_origin() ) {
+                            return false;
+                        }
+                        const optional_vpart_position refreshed = m.veh_at( you_pos );
+                        if( !refreshed || refreshed->vehicle().uid().get_value() != vid ) {
+                            return false;
+                        }
+                        if( refreshed->vehicle().part( exit_door ).locked &&
+                            refreshed->vehicle().part_has_lock( exit_door ) ) {
+                            you.add_msg_if_player( m_info, _( "The %s is locked." ),
+                                                   refreshed->vehicle().part( exit_door ).name() );
+                            return false;
+                        }
+                        const std::string vname = refreshed->vehicle().name;
+                        const std::string dname = refreshed->vehicle().part( exit_door ).name();
+                        refreshed->vehicle().open( m, exit_door );
+                        you.add_msg_if_player( _( "You open the %1$s's %2$s." ), vname, dname );
+                        you.mod_moves( -you.get_speed() );
+                        if( you.is_auto_moving() ) {
+                            you.defer_move( dest_loc );
+                        }
+                        return true;
+                    }
+                    if( blocked_solid ) {
+                        you.add_msg_if_player( m_info, _( "You cannot exit through the %s here." ),
+                                               veh0->name );
+                        return false;
+                    }
+                }
+            }
+        }
+        if( outside_vehicle && veh1 != nullptr && veh1->is_subtile() && !veh_closed_door ) {
+            int entry_door = -1;
+            bool blocked_solid = false;
+            const int entry_seat = veh1->find_entry_seat_and_door( you_pos, m, dest_loc,
+                                   entry_door, blocked_solid );
+            if( entry_door >= 0 ) {
+                const int64_t vid = veh1->uid().get_value();
+                if( ( choices && veh1->has_owner() && !veh1->is_owned_by( you ) &&
+                      !choices->permits_theft( *veh1 ) ) ||
+                    !veh1->handle_potential_theft( you, false, local_input ) || !at_origin() ) {
+                    return false;
+                }
+                const optional_vpart_position refreshed = m.veh_at( dest_loc );
+                if( !refreshed || refreshed->vehicle().uid().get_value() != vid ) {
+                    return false;
+                }
+                if( refreshed->vehicle().part( entry_door ).locked &&
+                    refreshed->vehicle().part_has_lock( entry_door ) ) {
+                    if( doors::can_unlock_door( m, you, refreshed->vehicle().bub_part_pos( m, entry_door ) ) ) {
+                        doors::unlock_door( m, you, refreshed->vehicle().bub_part_pos( m, entry_door ) );
+                    } else {
+                        you.add_msg_if_player( m_info, _( "That door is locked!" ) );
+                    }
+                    return false;
+                }
+                const std::string vname = refreshed->vehicle().name;
+                const std::string dname = refreshed->vehicle().part( entry_door ).name();
+                refreshed->vehicle().open_all_at( m, entry_door );
+                you.add_msg_if_player( _( "You open the %1$s's %2$s." ), vname, dname );
+                you.mod_moves( -you.get_speed() );
+                if( you.is_auto_moving() ) {
+                    you.defer_move( dest_loc );
+                }
+                return true;
+            }
+            if( entry_seat < 0 && blocked_solid && vp1.part_with_feature( VPFLAG_BOARDABLE, true ) ) {
+                you.add_msg_if_player( m_info, _( "There is no open door on this side of the %s." ),
+                                       veh1->name );
+                return false;
+            }
+        }
     }
 
     if( veh0 != nullptr && std::abs( veh0->velocity ) > 100 ) {

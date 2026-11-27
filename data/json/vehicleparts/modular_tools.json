@@ -147,6 +147,8 @@
         "using": [ [ "repair_welding_standard", 1 ], [ "soldering_standard", 10 ] ]
       }
     },
+    "sub_size": [ 5, 5 ],
+    "hardness": 18,
     "variants": [ { "symbols": "&", "symbols_broken": "x" } ]
   },
   {
@@ -158,6 +160,8 @@
     "looks_like": "kitchen_unit",
     "pseudo_tools": [ { "id": "water_faucet" } ],
     "//": "allow tools here that require a fume hood but unpowered or low-power",
+    "sub_size": [ 5, 5 ],
+    "hardness": 16,
     "extend": {
       "allowed_tools": [
         "chemistry_set",
@@ -187,8 +191,17 @@
     "looks_like": "welding_rig",
     "item": "veh_tools_workshop",
     "//": "allow tools here that require high power draw but no fume hood",
+    "sub_size": [ 5, 5 ],
+    "hardness": 24,
     "extend": {
-      "allowed_tools": [ "circsaw_off", "cordless_impact_wrench", "reciprocating_saw", "welder", "welder_crude", "welding_kit" ]
+      "allowed_tools": [
+        "circsaw_off",
+        "cordless_impact_wrench",
+        "reciprocating_saw",
+        "welder",
+        "welder_crude",
+        "welding_kit"
+      ]
     }
   }
 ]

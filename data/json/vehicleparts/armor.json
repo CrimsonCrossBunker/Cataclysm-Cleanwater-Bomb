@@ -18,6 +18,8 @@
     },
     "flags": [ "ARMOR" ],
     "damage_reduction": { "all": 10, "cut": 45, "stab": 45 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 30,
     "variants": [ { "symbols": "X", "symbols_broken": "*" } ]
   },
   {
@@ -40,6 +42,8 @@
     },
     "flags": [ "SHOCK_ABSORBER" ],
     "damage_reduction": { "all": 25 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 34,
     "variants": [ { "symbols": "X", "symbols_broken": "*" } ]
   }
 ]

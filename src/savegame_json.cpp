@@ -5029,6 +5029,10 @@ void vehicle::deserialize( const JsonObject &data )
     }
 
     data.read( "type", type );
+    grid_scale = std::clamp( data.get_int( "grid_scale", 1 ), 1, 8 );
+    chassis_ballast_mass = 0_gram;
+    data.read( "chassis_ballast_mass", chassis_ballast_mass );
+    initial_structure_count = data.get_int( "initial_structure_count", 0 );
     data.read( "posx", pos.x() );
     data.read( "posy", pos.y() );
     data.read( "om_id", om_id );
@@ -5167,6 +5171,13 @@ void vehicle::serialize( JsonOut &json ) const
     json.start_object();
     json.member( "uid", uid_ );
     json.member( "type", type );
+    if( grid_scale != 1 ) {
+        json.member( "grid_scale", grid_scale );
+    }
+    if( chassis_ballast_mass > 0_gram ) {
+        json.member( "chassis_ballast_mass", chassis_ballast_mass );
+        json.member( "initial_structure_count", initial_structure_count );
+    }
     json.member( "posx", pos.x() );
     json.member( "posy", pos.y() );
     json.member( "om_id", om_id );

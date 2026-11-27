@@ -1,0 +1,241 @@
+[
+  {
+    "id": "frame_narrow",
+    "type": "vehicle_part",
+    "copy-from": "frame_abstract",
+    "name": { "str": "narrow sill frame" },
+    "description": "A slim steel sill or tunnel cross-member that mounts narrow doors, center shifter consoles, and perimeter hardware.",
+    "item": "veh_sill_frame",
+    "durability": 260,
+    "sub_size": [ 6, 1 ],
+    "hardness": 28,
+    "looks_like": "frame",
+    "damage_reduction": { "all": 16 }
+  },
+  {
+    "id": "door_subtile",
+    "type": "vehicle_part",
+    "copy-from": "door",
+    "name": { "str": "narrow side door" },
+    "description": "A slim automotive side door contoured to fit an outer sill frame.  Has a window so you can see out of it, even when closed.",
+    "item": "veh_door_panel_narrow",
+    "looks_like": "door",
+    "durability": 220,
+    "size": "4 L",
+    "sub_size": [ 6, 1 ],
+    "hardness": 22,
+    "delete": { "flags": [ "BOARDABLE" ] }
+  },
+  {
+    "id": "door_subtile_opaque",
+    "type": "vehicle_part",
+    "copy-from": "door_opaque",
+    "name": { "str": "opaque narrow side door" },
+    "description": "A slim solid-steel automotive side door.  Solid construction means you can't see through it when closed.",
+    "item": "veh_door_panel_narrow",
+    "looks_like": "door_opaque",
+    "durability": 240,
+    "size": "4 L",
+    "sub_size": [ 6, 1 ],
+    "hardness": 26,
+    "delete": { "flags": [ "BOARDABLE" ] }
+  },
+  {
+    "id": "door_subtile_heavy",
+    "type": "vehicle_part",
+    "copy-from": "hddoor",
+    "name": { "str": "heavy-duty narrow door" },
+    "description": "A reinforced slim side door with armored glass.  You can still see out of it even when closed.",
+    "item": "veh_door_panel_narrow",
+    "looks_like": "hddoor",
+    "durability": 520,
+    "size": "4 L",
+    "sub_size": [ 6, 1 ],
+    "hardness": 48,
+    "delete": { "flags": [ "BOARDABLE" ] }
+  },
+  {
+    "id": "shifter_console",
+    "type": "vehicle_part",
+    "name": { "str": "center shifter console" },
+    "description": "A slim center tunnel console housing a gear selector, handbrake lever, and cupholders between the front seats.",
+    "item": "veh_center_console",
+    "location": "center",
+    "categories": [ "operations", "passengers" ],
+    "looks_like": "aisle",
+    "color": "dark_gray",
+    "broken_color": "dark_gray",
+    "durability": 180,
+    "size": "3 L",
+    "sub_size": [ 5, 1 ],
+    "hardness": 12,
+    "breaks_into": "ig_vp_device",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "20 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "10 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "repair_welding_lc_steel", 1 ] ] }
+    },
+    "flags": [ "CARGO", "CARGO_PASSABLE", "BOARD_INTERNAL" ],
+    "damage_reduction": { "all": 8 },
+    "variants": [ { "symbols": "│\\─/│\\─/", "symbols_broken": ":" } ]
+  },
+  {
+    "abstract": "shell_abstract",
+    "type": "vehicle_part",
+    "location": "shell",
+    "categories": [ "hull" ],
+    "color": "light_cyan",
+    "broken_color": "dark_gray",
+    "durability": 380,
+    "looks_like": "roof",
+    "breaks_into": "ig_vp_sheet_metal",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "90 m",
+        "using": [ [ "welding_standard", 240 ], [ "vehicle_bolt_install", 4 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "60 m",
+        "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
+      },
+      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "repair_welding_lc_steel", 4 ] ] }
+    },
+    "flags": [ "VEHICLE_SHELL" ],
+    "damage_reduction": { "all": 18, "bullet": 12, "cut": 24, "stab": 24 },
+    "variants": [ { "symbols": "#", "symbols_broken": ":" } ]
+  },
+  {
+    "id": "shell_motorcycle_fairing",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "motorcycle fairing shell" },
+    "description": "A sculpted front fairing and tail cowl shell that trims motorcycle wind resistance.",
+    "item": "veh_shell_composite",
+    "color": "white",
+    "durability": 140,
+    "sub_size": [ 14, 5 ],
+    "hardness": 10,
+    "damage_reduction": { "all": 8, "cut": 12 },
+    "shell": { "drag_coeff": 0.42, "frontal_height_m": 1.15, "crumple_absorption": 0.14, "hardness": 10 }
+  },
+  {
+    "id": "shell_micro",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "microcar body shell" },
+    "description": "A tiny city-car outer body shell sized for two-seat microcars and narrow cabin commuters.",
+    "item": "veh_shell_steel",
+    "durability": 280,
+    "sub_size": [ 22, 12 ],
+    "hardness": 14,
+    "shell": { "drag_coeff": 0.32, "frontal_height_m": 1.48, "crumple_absorption": 0.28, "hardness": 14 }
+  },
+  {
+    "id": "shell_compact",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "compact car body shell" },
+    "description": "A formed sheet-steel hatchback body shell sized for subcompact and compact passenger cars.",
+    "item": "veh_shell_steel",
+    "durability": 340,
+    "sub_size": [ 30, 13 ],
+    "hardness": 16,
+    "shell": { "drag_coeff": 0.30, "frontal_height_m": 1.42, "crumple_absorption": 0.32, "hardness": 16 }
+  },
+  {
+    "id": "shell_sedan",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "sedan body shell" },
+    "description": "A stamped sheet-steel sedan outer shell providing balanced aerodynamics, crumple absorption, and weather protection.",
+    "item": "veh_shell_steel",
+    "durability": 380,
+    "sub_size": [ 36, 15 ],
+    "hardness": 18,
+    "shell": { "drag_coeff": 0.28, "frontal_height_m": 1.46, "crumple_absorption": 0.35, "hardness": 18 }
+  },
+  {
+    "id": "shell_aerodynamic",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "aerodynamic streamline shell" },
+    "description": "A sleek low-drag aluminum and composite body shell engineered for high-speed stability and reduced fuel consumption.",
+    "item": "veh_shell_streamline",
+    "color": "light_blue",
+    "durability": 360,
+    "sub_size": [ 36, 15 ],
+    "hardness": 18,
+    "shell": { "drag_coeff": 0.24, "frontal_height_m": 1.32, "crumple_absorption": 0.38, "hardness": 18 }
+  },
+  {
+    "id": "shell_suv",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "SUV body shell" },
+    "description": "A reinforced tall-profile steel body shell for crossovers, wagons, and off-road utility vehicles.",
+    "item": "veh_shell_steel",
+    "durability": 440,
+    "sub_size": [ 40, 16 ],
+    "hardness": 22,
+    "damage_reduction": { "all": 20, "bullet": 14, "cut": 26, "stab": 26 },
+    "shell": { "drag_coeff": 0.38, "frontal_height_m": 1.76, "crumple_absorption": 0.34, "hardness": 22 }
+  },
+  {
+    "id": "shell_commercial",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "commercial truck body shell" },
+    "description": "A heavy stamped-steel cab and cargo shell designed for vans, pickups, ambulances, and delivery trucks.",
+    "item": "veh_shell_heavy",
+    "color": "light_gray",
+    "durability": 520,
+    "sub_size": [ 48, 18 ],
+    "hardness": 26,
+    "damage_reduction": { "all": 24, "bullet": 16, "cut": 30, "stab": 30 },
+    "shell": { "drag_coeff": 0.56, "frontal_height_m": 2.55, "crumple_absorption": 0.30, "hardness": 26 }
+  },
+  {
+    "id": "shell_long_body",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "full-length coach shell" },
+    "description": "A full-length heavy outer coachwork shell for city buses, motorhomes, semi tractors, and commercial trailers.",
+    "item": "veh_shell_heavy",
+    "color": "light_gray",
+    "durability": 600,
+    "sub_size": [ 72, 19 ],
+    "hardness": 28,
+    "damage_reduction": { "all": 26, "bullet": 18, "cut": 32, "stab": 32 },
+    "shell": { "drag_coeff": 0.62, "frontal_height_m": 2.85, "crumple_absorption": 0.28, "hardness": 28 }
+  },
+  {
+    "id": "shell_armored_hull",
+    "type": "vehicle_part",
+    "copy-from": "shell_abstract",
+    "name": { "str": "armored hull shell" },
+    "description": "A heavy sloped hardened-steel hull shell offering ballistic protection and high collision hardness for tactical vehicles.",
+    "item": "veh_shell_armored",
+    "color": "green",
+    "durability": 920,
+    "sub_size": [ 46, 18 ],
+    "hardness": 62,
+    "breaks_into": "ig_vp_steel_plate",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "120 m",
+        "using": [ [ "welding_standard", 360 ], [ "vehicle_bolt_install", 6 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "90 m",
+        "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
+      },
+      "repair": { "skills": [ [ "mechanics", 4 ] ], "time": "20 m", "using": [ [ "repair_welding_standard", 6 ] ] }
+    },
+    "damage_reduction": { "all": 58, "bullet": 95, "cut": 72, "stab": 72 },
+    "shell": { "drag_coeff": 0.64, "frontal_height_m": 2.35, "crumple_absorption": 0.28, "hardness": 62 }
+  }
+]

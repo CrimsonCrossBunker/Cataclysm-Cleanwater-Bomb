@@ -894,6 +894,8 @@ class map
         const vehicle *veh_at_internal( const tripoint_bub_ms &p, int &part_num ) const;
         // Put player on vehicle at x,y
         void board_vehicle( const tripoint_bub_ms &p, Character *pl );
+        // Put player onto a specific boardable part of a vehicle (used by sub-tile interior movement)
+        void board_vehicle_part( vehicle &veh, int part_idx, Character *pl );
         // Remove given passenger from given vehicle part.
         // If dead_passenger, then null passenger is acceptable.
         void unboard_vehicle( const vpart_reference &, Character *passenger,

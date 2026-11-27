@@ -9446,7 +9446,18 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
         if( who.pos_bub() == dest_loc ) {
             was_in_control_same_pos = true;
         } else {
-            if( here.veh_at( who.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
+            const optional_vpart_position cur_vp = here.veh_at( who.pos_bub() );
+            if( cur_vp && cur_vp->vehicle().is_subtile() ) {
+                const int p_idx = cur_vp->vehicle().find_passenger_part( who );
+                if( p_idx >= 0 ) {
+                    here.unboard_vehicle( vpart_reference( cur_vp->vehicle(), p_idx ), &who );
+                } else if( cur_vp.part_with_feature( "BOARDABLE", true ) ) {
+                    here.unboard_vehicle( who.pos_bub() );
+                } else {
+                    who.in_vehicle = false;
+                    who.controlling_vehicle = false;
+                }
+            } else if( cur_vp.part_with_feature( "BOARDABLE", true ) ) {
                 here.unboard_vehicle( who.pos_bub() );
             } else {
                 who.in_vehicle = false;
@@ -9471,6 +9482,18 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
             who.stop_hauling();
         }
     }
+    // Pre-resolve preferred sub-tile entry seat before update_map shifts dest_loc
+    int planned_subtile_seat = -1;
+    int64_t planned_subtile_vid = 0;
+    if( !was_in_control_same_pos && vp_there && vp_there->vehicle().is_subtile() &&
+        !who.is_mounted() ) {
+        int tmp_door = -1;
+        bool tmp_solid = false;
+        planned_subtile_seat = vp_there->vehicle().find_entry_seat_and_door(
+                                   pos, here, dest_loc, tmp_door, tmp_solid );
+        planned_subtile_vid = vp_there->vehicle().uid().get_value();
+    }
+
     who.setpos( here, dest_loc );
     if( !lifetime ) {
         return point_rel_sm::zero;
@@ -9554,9 +9577,15 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
         return point_rel_sm::zero;
     }
     // If the new tile is a boardable part, board it
-    if( !was_in_control_same_pos &&
-        here.veh_at( who.pos_bub() ).part_with_feature( "BOARDABLE", true ) && !who.is_mounted() ) {
-        here.board_vehicle( who.pos_bub(), &who );
+    if( !was_in_control_same_pos && !who.is_mounted() ) {
+        const optional_vpart_position dest_vp = here.veh_at( who.pos_bub() );
+        if( dest_vp && dest_vp->vehicle().is_subtile() &&
+            dest_vp->vehicle().uid().get_value() == planned_subtile_vid &&
+            planned_subtile_seat >= 0 ) {
+            here.board_vehicle_part( dest_vp->vehicle(), planned_subtile_seat, &who );
+        } else if( dest_vp.part_with_feature( "BOARDABLE", true ) ) {
+            here.board_vehicle( who.pos_bub(), &who );
+        }
     }
 
     // Traps!

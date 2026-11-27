@@ -17,6 +17,8 @@
       "install": { "skills": [ [ "mechanics", 1 ] ], "time": "15 m", "using": [ [ "adhesive", 2 ] ] },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "10 m", "using": [ [ "vehicle_nail_removal", 1 ] ] }
     },
+    "sub_size": [ 2, 6 ],
+    "hardness": 6,
     "variants_bases": [ { "id": "full", "label": "Full" } ],
     "variants": [
       { "id": "horizontal", "label": "Horizontal", "symbols": "\"", "symbols_broken": "0" },
@@ -35,42 +37,12 @@
       { "id": "vertical", "label": "Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "0" },
       { "id": "vertical_left", "label": "Left Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "0" },
       { "id": "vertical_right", "label": "Right Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "0" },
-      {
-        "id": "vertical_2_left",
-        "label": "Left Thick Vertical",
-        "symbols": "│\\─/│\\─/",
-        "symbols_broken": "0"
-      },
-      {
-        "id": "vertical_2_right",
-        "label": "Right Thick Vertical",
-        "symbols": "│\\─/│\\─/",
-        "symbols_broken": "0"
-      },
-      {
-        "id": "horizontal_front",
-        "label": "Front Horizontal",
-        "symbols": "──│───│─",
-        "symbols_broken": "0"
-      },
-      {
-        "id": "horizontal_front_edge",
-        "label": "Front Edge Horizontal",
-        "symbols": "^^<vvv>^",
-        "symbols_broken": "0"
-      },
-      {
-        "id": "horizontal_rear",
-        "label": "Rear Horizontal",
-        "symbols": "──│───│─",
-        "symbols_broken": "0"
-      },
-      {
-        "id": "horizontal_rear_edge",
-        "label": "Rear Edge Horizontal",
-        "symbols": "━━┃━━━┃━",
-        "symbols_broken": "0"
-      },
+      { "id": "vertical_2_left", "label": "Left Thick Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "0" },
+      { "id": "vertical_2_right", "label": "Right Thick Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "0" },
+      { "id": "horizontal_front", "label": "Front Horizontal", "symbols": "──│───│─", "symbols_broken": "0" },
+      { "id": "horizontal_front_edge", "label": "Front Edge Horizontal", "symbols": "^^<vvv>^", "symbols_broken": "0" },
+      { "id": "horizontal_rear", "label": "Rear Horizontal", "symbols": "──│───│─", "symbols_broken": "0" },
+      { "id": "horizontal_rear_edge", "label": "Rear Edge Horizontal", "symbols": "━━┃━━━┃━", "symbols_broken": "0" },
       { "id": "wheel_left", "label": "Wheel Left", "symbols": "┌┌└┘┘┘┐┌", "symbols_broken": "0" },
       { "id": "wheel_right", "label": "Wheel Right", "symbols": "┐┐┌└└└┘┐", "symbols_broken": "0" }
     ]
@@ -90,6 +62,8 @@
       "install": { "skills": [ [ "mechanics", 4 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_2", 1 ] ] }
     },
+    "sub_size": [ 2, 6 ],
+    "hardness": 18,
     "variants_bases": [ { "id": "full", "label": "Full" } ]
   }
 ]

@@ -51,6 +51,8 @@
     "size": "40 L",
     "cargo_passable_size": "100 L",
     "type": "vehicle_part",
+    "sub_size": [ 5, 6 ],
+    "hardness": 8,
     "variants_bases": [ { "id": "windshield", "label": "Windshield" }, { "id": "swivel_chair", "label": "Swivel Chair" } ],
     "variants": [
       { "id": "front", "label": "Front", "symbols": "#", "symbols_broken": "*" },
@@ -69,6 +71,8 @@
     "item": "seat_leather",
     "description": "A soft car seat covered with leather.",
     "type": "vehicle_part",
+    "sub_size": [ 5, 6 ],
+    "hardness": 9,
     "variants_bases": [ { "id": "windshield", "label": "Windshield" } ]
   },
   {
@@ -80,6 +84,8 @@
     "size": "50 L",
     "floor_bedding_warmth": 350,
     "name": { "str": "reclining bucket seat" },
+    "sub_size": [ 5, 6 ],
+    "hardness": 8,
     "extend": { "flags": [ "BED" ] },
     "type": "vehicle_part",
     "variants_bases": [ { "id": "windshield", "label": "Windshield" } ]
@@ -92,6 +98,8 @@
     "looks_like": "seat_leather",
     "name": { "str": "reclining leather bucket seat" },
     "type": "vehicle_part",
+    "sub_size": [ 5, 6 ],
+    "hardness": 9,
     "variants_bases": [ { "id": "windshield", "label": "Windshield" } ]
   },
   {
@@ -102,6 +110,8 @@
     "floor_bedding_warmth": 500,
     "item": "seat_bench",
     "size": "50 L",
+    "sub_size": [ 5, 6 ],
+    "hardness": 8,
     "extend": { "flags": [ "BED" ] },
     "type": "vehicle_part"
   },
@@ -112,7 +122,9 @@
     "item": "seat_bench_leather",
     "description": "A wide, flat seat like you'd find in the back of a sedan, upholstered with leather.",
     "looks_like": "seat_leather",
-    "type": "vehicle_part"
+    "type": "vehicle_part",
+    "sub_size": [ 5, 6 ],
+    "hardness": 9
   },
   {
     "type": "vehicle_part",
@@ -136,6 +148,8 @@
     },
     "breaks_into": [ { "item": "leather", "prob": 50 }, { "item": "scrap", "count": [ 1, 2 ] } ],
     "size": "0 ml",
+    "sub_size": [ 5, 3 ],
+    "hardness": 8,
     "extend": { "flags": [ "NONBELTABLE" ] },
     "delete": { "flags": [ "BELTABLE", "CARGO" ] },
     "variants_bases": [  ],
@@ -156,8 +170,12 @@
     "item": "sheet",
     "folded_volume": "1000 ml",
     "location": "on_frame",
-    "requirements": { "repair": { "skills": [ [ "tailor", 2 ] ], "time": "200 s", "using": [ [ "sewing_standard", 4 ] ] } },
+    "requirements": {
+      "repair": { "skills": [ [ "tailor", 2 ] ], "time": "200 s", "using": [ [ "sewing_standard", 4 ] ] }
+    },
     "breaks_into": [ { "item": "cotton_patchwork", "count": [ 1, 6 ] } ],
+    "sub_size": [ 4, 4 ],
+    "hardness": 7,
     "extend": { "flags": [ "BELTABLE" ] },
     "delete": { "flags": [ "NONBELTABLE" ] },
     "variants": [ { "symbols": "#", "symbols_broken": "*" } ]
@@ -178,6 +196,8 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": "vehicle_weld_removal" },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "60 m", "using": [ [ "repair_welding_lc_steel", 2 ] ] }
     },
-    "type": "vehicle_part"
+    "type": "vehicle_part",
+    "sub_size": [ 5, 6 ],
+    "hardness": 16
   }
 ]

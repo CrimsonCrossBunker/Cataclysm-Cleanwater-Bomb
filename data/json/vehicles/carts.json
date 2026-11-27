@@ -3,6 +3,8 @@
     "id": "engine_crane",
     "type": "vehicle",
     "name": "Engine Crane",
+    "grid_scale": 8,
+    "curb_mass": "85 kg",
     "blueprint": [ "#" ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "folding_frame", "wheel_10", "crane_small" ] } ]
   },
@@ -10,19 +12,24 @@
     "id": "food_cart",
     "type": "vehicle",
     "name": "Food Vendor Cart",
-    "blueprint": [
-      [ "&" ],
-      [ "H" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "120 kg",
+    "blueprint": [ [ "&" ], [ "H" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "xlframe#cross", "wheel_10", "big_portable_fridge" ] },
-      { "x": 0, "y": 0, "parts": [ "controls_electronic" ] },
-      { "x": -1, "y": 0, "parts": [ "xlframe#cross", "wheel_10" ] },
-      { "x": -1, "y": 0, "parts": [ "small_storage_battery" ] },
-      { "x": -1, "y": 0, "parts": [ { "part": "veh_tools_kitchen", "tools": [ "hotplate", "pan", "pot" ] } ] }
+      { "x": 0, "y": 0, "parts": [ "xlframe#cross", "wheel_10", "big_portable_fridge", "controls_electronic" ] },
+      {
+        "x": -5,
+        "y": 0,
+        "parts": [
+          "xlframe#cross",
+          "wheel_10",
+          "small_storage_battery",
+          { "part": "veh_tools_kitchen", "tools": [ "hotplate", "pan", "pot" ] }
+        ]
+      }
     ],
     "items": [
-      { "x": -1, "y": 0, "chance": 100, "item_groups": [ "food_vendor_cart_kitchen" ] },
+      { "x": -5, "y": 0, "chance": 100, "item_groups": [ "food_vendor_cart_kitchen" ] },
       { "x": 0, "y": 0, "chance": 100, "item_groups": [ "food_vendor_cart_fridge" ] }
     ]
   },
@@ -30,60 +37,58 @@
     "id": "golf_cart",
     "type": "vehicle",
     "name": "Golf Cart",
-    "blueprint": [
-      [ "o|o" ],
-      [ "o|o" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "420 kg",
+    "blueprint": [ [ "o|o" ], [ "o|o" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "frame#vertical_T_left", "seat_back#left", "roof", "engine_electric" ] },
-      { "x": 0, "y": 0, "parts": [ "controls" ] },
-      { "x": 0, "y": 1, "parts": [ "frame#vertical_T_right", "seat_back#right", "roof" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#nw", "halfboard#nw", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_small" ] },
-      { "x": 1, "y": 1, "parts": [ "frame#ne", "halfboard#ne", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 1, "parts": [ "wheel_small" ] },
-      { "x": -1, "y": 0, "parts": [ "frame#sw", "box", "wheel_mount_light", "wheel_small" ] },
-      { "x": -1, "y": 1, "parts": [ "frame#se", "box", "wheel_mount_light", "wheel_small" ] }
+      {
+        "x": 0,
+        "y": -3,
+        "parts": [ "frame#vertical_T_left", "seat_back#left", "controls", "roof", "engine_electric" ]
+      },
+      { "x": 0, "y": 3, "parts": [ "frame#vertical_T_right", "seat_back#right", "roof", "storage_battery" ] },
+      { "x": 6, "y": -3, "parts": [ "frame#nw", "halfboard#nw", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": 6, "y": 3, "parts": [ "frame#ne", "halfboard#ne", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": -6, "y": -3, "parts": [ "frame#sw", "box", "wheel_mount_light", "wheel_small" ] },
+      { "x": -6, "y": 3, "parts": [ "frame#se", "box", "wheel_mount_light", "wheel_small" ] }
     ],
     "items": [
-      { "x": -1, "y": 0, "chance": 25, "//repeat": 2, "item_groups": [ "golf_cart" ] },
-      { "x": -1, "y": 1, "chance": 25, "//repeat": 2, "item_groups": [ "golf_cart" ] }
+      { "x": -6, "y": -3, "chance": 25, "//repeat": 2, "item_groups": [ "golf_cart" ] },
+      { "x": -6, "y": 3, "chance": 25, "//repeat": 2, "item_groups": [ "golf_cart" ] }
     ]
   },
   {
     "id": "golf_cart_4seat",
     "type": "vehicle",
     "name": "Golf Cart",
-    "blueprint": [
-      [ "o|o" ],
-      [ "o|o" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "540 kg",
+    "blueprint": [ [ "o|o" ], [ "o|o" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "frame#vertical_T_left", "seat_back#left", "roof", "engine_electric" ] },
-      { "x": 0, "y": 0, "parts": [ "controls" ] },
-      { "x": 0, "y": 1, "parts": [ "frame#vertical_T_right", "seat_back#right", "roof" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#nw", "halfboard#nw", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_small" ] },
-      { "x": 1, "y": 1, "parts": [ "frame#ne", "halfboard#ne", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 1, "parts": [ "wheel_small" ] },
-      { "x": -1, "y": 0, "parts": [ "frame#sw", "roof", "seat_back#left", "wheel_mount_light" ] },
-      { "x": -1, "y": 0, "parts": [ "wheel_small" ] },
-      { "x": -1, "y": 1, "parts": [ "frame#se", "roof", "seat_back#right", "wheel_mount_light" ] },
-      { "x": -1, "y": 1, "parts": [ "wheel_small" ] }
+      {
+        "x": 0,
+        "y": -3,
+        "parts": [ "frame#vertical_T_left", "seat_back#left", "controls", "roof", "engine_electric" ]
+      },
+      { "x": 0, "y": 3, "parts": [ "frame#vertical_T_right", "seat_back#right", "roof", "storage_battery" ] },
+      { "x": 6, "y": -3, "parts": [ "frame#nw", "halfboard#nw", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": 6, "y": 3, "parts": [ "frame#ne", "halfboard#ne", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": -6, "y": -3, "parts": [ "frame#sw", "seat_back#left", "roof", "wheel_mount_light", "wheel_small" ] },
+      { "x": -6, "y": 3, "parts": [ "frame#se", "seat_back#right", "roof", "wheel_mount_light", "wheel_small" ] }
     ],
     "items": [
-      { "x": -1, "y": 0, "chance": 20, "//repeat": 2, "item_groups": [ "golf_cart" ] },
-      { "x": -1, "y": 1, "chance": 20, "//repeat": 2, "item_groups": [ "golf_cart" ] },
-      { "x": 0, "y": 0, "chance": 20, "item_groups": [ "golf_cart" ] },
-      { "x": 0, "y": 1, "chance": 20, "item_groups": [ "golf_cart" ] }
+      { "x": -6, "y": -3, "chance": 20, "//repeat": 2, "item_groups": [ "golf_cart" ] },
+      { "x": -6, "y": 3, "chance": 20, "//repeat": 2, "item_groups": [ "golf_cart" ] },
+      { "x": 0, "y": -3, "chance": 20, "item_groups": [ "golf_cart" ] },
+      { "x": 0, "y": 3, "chance": 20, "item_groups": [ "golf_cart" ] }
     ]
   },
   {
     "id": "handjack",
     "type": "vehicle",
     "name": "Handjack",
+    "grid_scale": 8,
+    "curb_mass": "68 kg",
     "blueprint": [ "=" ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "frame_handle", "wheel_10", "crane_small" ] } ]
   },
@@ -91,6 +96,8 @@
     "id": "hand_truck",
     "type": "vehicle",
     "name": "Hand Truck",
+    "grid_scale": 8,
+    "curb_mass": "15 kg",
     "blueprint": [ "L" ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "foldxlframe", "wheel_10", "nose_plate" ] } ]
   },
@@ -98,16 +105,29 @@
     "id": "ice_cream_cart",
     "type": "vehicle",
     "name": "Ice Cream Cart",
+    "grid_scale": 8,
+    "curb_mass": "65 kg",
     "blueprint": [ "#" ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_10", "small_storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ "chest_minifreezer", "controls_electronic" ] }
+      {
+        "x": 0,
+        "y": 0,
+        "parts": [
+          "xlframe#vertical_2",
+          "wheel_10",
+          "small_storage_battery",
+          "chest_minifreezer",
+          "controls_electronic"
+        ]
+      }
     ]
   },
   {
     "id": "luggage_cart",
     "type": "vehicle",
     "name": "Luggage Cart",
+    "grid_scale": 8,
+    "curb_mass": "26 kg",
     "blueprint": [ "H" ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_caster", "trunk" ] } ],
     "items": [
@@ -121,7 +141,15 @@
         "x": 0,
         "y": 0,
         "chance": 6,
-        "item_groups": [ "bags_trip", "beauty", "dresses", "dresses", "female_underwear_bottom", "female_underwear_top", "female_underwear" ]
+        "item_groups": [
+          "bags_trip",
+          "beauty",
+          "dresses",
+          "dresses",
+          "female_underwear_bottom",
+          "female_underwear_top",
+          "female_underwear"
+        ]
       },
       { "x": 0, "y": 0, "chance": 3, "item_groups": [ "bags_trip", "jackets", "shirts", "child_items", "underwear" ] },
       {
@@ -136,6 +164,8 @@
     "id": "shopping_cart",
     "type": "vehicle",
     "name": "Shopping Cart",
+    "grid_scale": 8,
+    "curb_mass": "22 kg",
     "blueprint": [ "o" ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_caster_large", "basketlg#cart" ] } ],
     "items": [ { "x": 0, "y": 0, "chance": 35, "item_groups": [ "SUS_trash_floor_light" ] } ]
@@ -144,6 +174,8 @@
     "id": "rolling_trash_can",
     "type": "vehicle",
     "name": "Rolling Trash Can",
+    "grid_scale": 8,
+    "curb_mass": "20 kg",
     "blueprint": [ [ "o" ] ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "xlframe", "wheel_caster_large", "integrated_trashcan" ] } ],
     "items": [ { "x": 0, "y": 0, "chance": 100, "item_groups": [ "SUS_trash_rolling_trashcan" ] } ]
@@ -152,13 +184,12 @@
     "id": "grocery_cart",
     "type": "vehicle",
     "name": "Grocery Cart",
-    "blueprint": [
-      [ "o" ],
-      [ "-" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "28 kg",
+    "blueprint": [ [ "o" ], [ "-" ] ],
     "parts": [
       { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_caster_large", "basketlg#cart" ] },
-      { "x": -1, "y": 0, "parts": [ "cart_handle" ] }
+      { "x": -5, "y": 0, "parts": [ "cart_handle" ] }
     ],
     "items": [ { "x": 0, "y": 0, "chance": 35, "item_groups": [ "SUS_trash_floor_light" ] } ]
   },
@@ -166,6 +197,8 @@
     "id": "swivel_chair",
     "type": "vehicle",
     "name": "Swivel Chair",
+    "grid_scale": 8,
+    "curb_mass": "14 kg",
     "blueprint": [ "#" ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_caster", "seat#swivel_chair_front" ] } ]
   },
@@ -173,11 +206,21 @@
     "id": "water_cart",
     "type": "vehicle",
     "name": "Water Cart",
+    "grid_scale": 8,
+    "curb_mass": "35 kg",
     "blueprint": [ "o" ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_caster" ] },
-      { "x": 0, "y": 0, "parts": [ { "part": "tank_small", "fuel": "water_clean" } ] },
-      { "x": 0, "y": 0, "parts": [ "water_faucet", "basketsm" ] }
+      {
+        "x": 0,
+        "y": 0,
+        "parts": [
+          "xlframe#vertical_2",
+          "wheel_caster",
+          { "part": "tank_small", "fuel": "water_clean" },
+          "water_faucet",
+          "basketsm"
+        ]
+      }
     ],
     "items": [
       { "x": 0, "y": 0, "chance": 15, "items": [ "whistle" ] },
@@ -212,10 +255,20 @@
     "id": "welding_cart",
     "type": "vehicle",
     "name": "Welding Cart",
+    "grid_scale": 8,
+    "curb_mass": "35 kg",
     "blueprint": [ "&" ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_caster_large", "small_storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ { "part": "veh_tools_workshop", "tools": [ "welder", "soldering_iron" ] } ] }
+      {
+        "x": 0,
+        "y": 0,
+        "parts": [
+          "xlframe#vertical_2",
+          "wheel_caster_large",
+          "small_storage_battery",
+          { "part": "veh_tools_workshop", "tools": [ "welder", "soldering_iron" ] }
+        ]
+      }
     ],
     "items": [ { "x": 0, "y": 0, "chance": 30, "items": [ "goggles_welding" ] } ]
   },
@@ -223,43 +276,57 @@
     "id": "wheelbarrow",
     "type": "vehicle",
     "name": "Wheelbarrow",
+    "grid_scale": 8,
+    "curb_mass": "24 kg",
     "blueprint": [ "o" ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "frame_handle", "wheel_mount_light", "wheel_barrow" ] },
-      { "x": 0, "y": 0, "parts": [ "box#wheelbarrow" ] }
+      { "x": 0, "y": 0, "parts": [ "frame_handle", "wheel_mount_light", "wheel_barrow", "box#wheelbarrow" ] }
     ]
   },
   {
     "id": "wheelchair",
     "type": "vehicle",
     "name": "Foldable wheelchair",
+    "grid_scale": 8,
+    "curb_mass": "16 kg",
     "blueprint": [ "#" ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "folding_frame", "folding_seat", "wheel_mount_light" ] },
-      { "x": 0, "y": 0, "parts": [ "wheel_wheelchair", "hand_rims", "basketsm#wheelchair" ] }
+      {
+        "x": 0,
+        "y": 0,
+        "parts": [
+          "folding_frame",
+          "folding_seat",
+          "wheel_mount_light",
+          "wheel_wheelchair",
+          "hand_rims",
+          "basketsm#wheelchair"
+        ]
+      }
     ]
   },
   {
     "id": "hospital_bed",
     "type": "vehicle",
     "name": "hospital bed",
-    "blueprint": [
-      [ "x" ],
-      [ "o" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "115 kg",
+    "blueprint": [ [ "x" ], [ "o" ] ],
     "parts": [
       { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_10", "bed" ] },
-      { "x": -1, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_10", "bed" ] }
+      { "x": -5, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_10", "bed" ] }
     ],
     "items": [
       { "x": 0, "y": 0, "chance": 70, "item_groups": [ "hospital_bed" ] },
-      { "x": -1, "y": 0, "chance": 70, "item_groups": [ "hospital_bed" ] }
+      { "x": -5, "y": 0, "chance": 70, "item_groups": [ "hospital_bed" ] }
     ]
   },
   {
     "id": "laundry_cart",
     "type": "vehicle",
     "name": "Laundry Cart",
+    "grid_scale": 8,
+    "curb_mass": "35 kg",
     "blueprint": [ "o" ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_caster", "basketlg#cart" ] } ],
     "items": [
@@ -272,92 +339,80 @@
     "id": "cart_livestock_stall",
     "type": "vehicle",
     "name": "Large Animal Transport Cart",
-    "blueprint": [
-      [ "o|o" ],
-      [ "o|o" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "567 kg",
+    "blueprint": [ [ "o|o" ], [ "o|o" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "frame#vertical_T_left", "seat", "roof", "engine_electric" ] },
-      { "x": 0, "y": 0, "parts": [ "controls" ] },
-      { "x": 0, "y": 1, "parts": [ "frame#vertical_T_right", "seat", "roof" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#nw", "halfboard#nw", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_small" ] },
-      { "x": 1, "y": 1, "parts": [ "frame#ne", "halfboard#ne", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 1, "parts": [ "wheel_small" ] },
-      { "x": -1, "y": 0, "parts": [ "frame#sw", "livestock_stall", "wheel_mount_light", "wheel_small" ] },
-      { "x": -1, "y": 1, "parts": [ "frame#se", "livestock_stall", "wheel_mount_light", "wheel_small" ] }
+      { "x": 0, "y": -3, "parts": [ "frame#vertical_T_left", "seat", "controls", "roof", "engine_electric" ] },
+      { "x": 0, "y": 3, "parts": [ "frame#vertical_T_right", "seat", "roof", "storage_battery" ] },
+      { "x": 6, "y": -3, "parts": [ "frame#nw", "halfboard#nw", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": 6, "y": 3, "parts": [ "frame#ne", "halfboard#ne", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": -6, "y": -3, "parts": [ "frame#sw", "livestock_stall", "wheel_mount_light", "wheel_small" ] },
+      { "x": -6, "y": 3, "parts": [ "frame#se", "livestock_stall", "wheel_mount_light", "wheel_small" ] }
     ],
     "items": [
-      { "x": -1, "y": 0, "chance": 25, "//repeat": 2, "item_groups": [ "snacks" ] },
-      { "x": -1, "y": 1, "chance": 25, "//repeat": 2, "item_groups": [ "snacks" ] }
+      { "x": -6, "y": -3, "chance": 25, "//repeat": 2, "item_groups": [ "snacks" ] },
+      { "x": -6, "y": 3, "chance": 25, "//repeat": 2, "item_groups": [ "snacks" ] }
     ]
   },
   {
     "id": "cart_animal_compartment",
     "type": "vehicle",
     "name": "Animal Transport Cart",
-    "blueprint": [
-      [ "o|o" ],
-      [ "o|o" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "369 kg",
+    "blueprint": [ [ "o|o" ], [ "o|o" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "frame#vertical_T_left", "seat", "roof", "engine_electric" ] },
-      { "x": 0, "y": 0, "parts": [ "controls" ] },
-      { "x": 0, "y": 1, "parts": [ "frame#vertical_T_right", "seat", "roof" ] },
-      { "x": 0, "y": 1, "parts": [ "storage_battery" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#nw", "halfboard#nw", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_small" ] },
-      { "x": 1, "y": 1, "parts": [ "frame#ne", "halfboard#ne", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 1, "parts": [ "wheel_small" ] },
-      { "x": -1, "y": 0, "parts": [ "frame#sw", "animal_compartment", "wheel_mount_light", "wheel_small" ] },
-      { "x": -1, "y": 1, "parts": [ "frame#se", "animal_compartment", "wheel_mount_light", "wheel_small" ] }
+      { "x": 0, "y": -3, "parts": [ "frame#vertical_T_left", "seat", "controls", "roof", "engine_electric" ] },
+      { "x": 0, "y": 3, "parts": [ "frame#vertical_T_right", "seat", "roof", "storage_battery" ] },
+      { "x": 6, "y": -3, "parts": [ "frame#nw", "halfboard#nw", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": 6, "y": 3, "parts": [ "frame#ne", "halfboard#ne", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": -6, "y": -3, "parts": [ "frame#sw", "animal_compartment", "wheel_mount_light", "wheel_small" ] },
+      { "x": -6, "y": 3, "parts": [ "frame#se", "animal_compartment", "wheel_mount_light", "wheel_small" ] }
     ],
     "items": [
-      { "x": -1, "y": 0, "chance": 25, "//repeat": 2, "item_groups": [ "snacks" ] },
-      { "x": -1, "y": 1, "chance": 25, "//repeat": 2, "item_groups": [ "snacks" ] }
+      { "x": -6, "y": -3, "chance": 25, "//repeat": 2, "item_groups": [ "snacks" ] },
+      { "x": -6, "y": 3, "chance": 25, "//repeat": 2, "item_groups": [ "snacks" ] }
     ]
   },
   {
     "id": "cart_chassis",
     "type": "vehicle",
     "name": "Cart Chassis",
-    "blueprint": [
-      [ "o|o" ],
-      [ "o|o" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "151 kg",
+    "blueprint": [ [ "o|o" ], [ "o|o" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "frame#vertical_left" ] },
-      { "x": 0, "y": 1, "parts": [ "frame#vertical_right" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#nw", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 0, "parts": [ "wheel_small" ] },
-      { "x": 1, "y": 1, "parts": [ "frame#ne", "wheel_mount_light_steerable" ] },
-      { "x": 1, "y": 1, "parts": [ "wheel_small" ] },
-      { "x": -1, "y": 0, "parts": [ "frame#sw", "wheel_mount_light", "wheel_small" ] },
-      { "x": -1, "y": 1, "parts": [ "frame#se", "wheel_mount_light", "wheel_small" ] }
+      { "x": 0, "y": -3, "parts": [ "frame#vertical_left" ] },
+      { "x": 0, "y": 3, "parts": [ "frame#vertical_right" ] },
+      { "x": 6, "y": -3, "parts": [ "frame#nw", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": 6, "y": 3, "parts": [ "frame#ne", "wheel_mount_light_steerable", "wheel_small" ] },
+      { "x": -6, "y": -3, "parts": [ "frame#sw", "wheel_mount_light", "wheel_small" ] },
+      { "x": -6, "y": 3, "parts": [ "frame#se", "wheel_mount_light", "wheel_small" ] }
     ]
   },
   {
     "id": "cart_chassis_2",
     "type": "vehicle",
     "name": "Cart Chassis",
-    "blueprint": [
-      [ "o|o" ],
-      [ "o|o" ]
-    ],
+    "grid_scale": 8,
+    "curb_mass": "138 kg",
+    "blueprint": [ [ "o|o" ], [ "o|o" ] ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "frame#vertical_left" ] },
-      { "x": 0, "y": 1, "parts": [ "frame#vertical_right" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#nw" ] },
-      { "x": 1, "y": 1, "parts": [ "frame#ne" ] },
-      { "x": -1, "y": 0, "parts": [ "frame#sw" ] },
-      { "x": -1, "y": 1, "parts": [ "frame#se" ] }
+      { "x": 0, "y": -3, "parts": [ "frame#vertical_left" ] },
+      { "x": 0, "y": 3, "parts": [ "frame#vertical_right" ] },
+      { "x": 6, "y": -3, "parts": [ "frame#nw" ] },
+      { "x": 6, "y": 3, "parts": [ "frame#ne" ] },
+      { "x": -6, "y": -3, "parts": [ "frame#sw" ] },
+      { "x": -6, "y": 3, "parts": [ "frame#se" ] }
     ]
   },
   {
     "id": "hospital_bed_small",
     "type": "vehicle",
     "name": "small hospital bed",
+    "grid_scale": 8,
+    "curb_mass": "80 kg",
     "blueprint": [ [ "x" ] ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_10", "bed" ] } ]
   },
@@ -365,6 +420,8 @@
     "id": "medical_cart",
     "type": "vehicle",
     "name": "Medical Cart",
+    "grid_scale": 8,
+    "curb_mass": "32 kg",
     "blueprint": [ "#" ],
     "parts": [ { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2", "wheel_caster", "metal_tray" ] } ]
   }

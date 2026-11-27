@@ -1,14 +1,15 @@
 [
   {
     "id": "dwarf_supercompact_car",
+    "copy-from": "scompact_abstract",
     "type": "vehicle",
     "name": "Dwarven Supercompact Car",
-    "copy-from": "scompact_abstract",
+    "curb_mass": "604 kg",
     "parts": [
-      { "x": 1, "y": 0, "parts": [ { "part": "engine_vtwin" }, { "part": "alternator_motorbike" } ] },
+      { "x": 5, "y": 0, "parts": [ { "part": "engine_vtwin" }, { "part": "alternator_motorbike" } ] },
       { "x": 0, "y": 0, "parts": [ { "part": "pedal_extenders" } ] },
-      { "x": -1, "y": -1, "parts": [ { "part": "tank_medium", "fuel": "gasoline" } ] },
-      { "x": -1, "y": 0, "parts": [ { "part": "muffler" } ] }
+      { "x": -5, "y": -4, "parts": [ { "part": "tank_medium", "fuel": "gasoline" } ] },
+      { "x": -5, "y": 0, "parts": [ { "part": "muffler" } ] }
     ]
   }
 ]

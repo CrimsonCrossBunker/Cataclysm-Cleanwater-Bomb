@@ -828,17 +828,70 @@ bool vehicle::collision( map &here, std::vector<veh_collision> &colls,
     const int sign_before = sgn( velocity_before );
     bool empty = true;
     part_project_points( dp );
-    for( int p = 0; p < part_count(); p++ ) {
-        const vehicle_part &vp = parts.at( p );
-        if( vp.removed || !vp.is_real_or_active_fake() ) {
-            continue;
-        }
 
-        const vpart_info &info = vp.info();
-        if( !vp.is_fake && info.location != vpart_location_structure && !info.has_flag( VPFLAG_ROTOR ) ) {
-            continue;
+    // On 0.125-tile vehicles, multiple sub-parts can project into the same 1m world tile.
+    // Pick the single strongest/hardest overlapping structural part per destination world tile
+    // so hitting one wall/zombie/vehicle doesn't multiply damage by sub-tile density.
+    std::vector<int> coll_candidates;
+    if( is_subtile() ) {
+        std::map<tripoint_abs_ms, int> best_per_tile;
+        for( int p = 0; p < part_count(); p++ ) {
+            const vehicle_part &vp = parts.at( p );
+            if( vp.removed || vp.is_fake ) {
+                continue;
+            }
+            const vpart_info &info = vp.info();
+            if( info.location != vpart_location_structure && !info.has_flag( VPFLAG_ROTOR ) ) {
+                continue;
+            }
+            empty = false;
+            const tripoint_abs_ms dsp = vp.next_pos;
+            if( info.has_flag( VPFLAG_ROTOR ) ) {
+                coll_candidates.push_back( p );
+                continue;
+            }
+            if( !subtile_overlaps_point( dsp, dp, p ) ) {
+                continue;
+            }
+            auto it = best_per_tile.find( dsp );
+            if( it == best_per_tile.end() ) {
+                best_per_tile.emplace( dsp, p );
+            } else {
+                const int prev_p = it->second;
+                const int cur_score = effective_part_hardness( p ) +
+                                      ( part_with_feature( p, VPFLAG_ARMOR, true ) >= 0 ? 500 : 0 ) +
+                                      ( info.has_flag( "PROTRUSION" ) ? 200 : 0 );
+                const int prev_score = effective_part_hardness( prev_p ) +
+                                       ( part_with_feature( prev_p, VPFLAG_ARMOR, true ) >= 0 ? 500 : 0 ) +
+                                       ( parts.at( prev_p ).info().has_flag( "PROTRUSION" ) ? 200 : 0 );
+                if( cur_score > prev_score ) {
+                    it->second = p;
+                }
+            }
         }
-        empty = false;
+        for( const auto &[dsp, idx] : best_per_tile ) {
+            ( void )dsp;
+            coll_candidates.push_back( idx );
+        }
+    } else {
+        for( int p = 0; p < part_count(); p++ ) {
+            const vehicle_part &vp = parts.at( p );
+            if( vp.removed || !vp.is_real_or_active_fake() ) {
+                continue;
+            }
+            const vpart_info &info = vp.info();
+            if( !vp.is_fake && info.location != vpart_location_structure &&
+                !info.has_flag( VPFLAG_ROTOR ) ) {
+                continue;
+            }
+            empty = false;
+            coll_candidates.push_back( p );
+        }
+    }
+
+    for( const int p : coll_candidates ) {
+        const vehicle_part &vp = parts.at( p );
+        const vpart_info &info = vp.info();
         // Coordinates of where part will go due to movement (dx/dy/dz)
         //  and turning (precalc[1])
         const tripoint_abs_ms dsp = vp.next_pos;
@@ -994,9 +1047,12 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
         }
     }
 
-    // Damage armor before damaging any other parts
+    // Damage armor (or outer vehicle shell) before damaging any other parts
     // Actually target, not just damage - spiked plating will "hit back", for example
-    const int armor_part = part_with_feature( ret.part, VPFLAG_ARMOR, true );
+    int armor_part = part_with_feature( ret.part, VPFLAG_ARMOR, true );
+    if( armor_part < 0 ) {
+        armor_part = shell_covering_part( ret.part );
+    }
     if( armor_part >= 0 ) {
         ret.part = armor_part;
     }
@@ -1084,7 +1140,9 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
 
     //k=100 -> 100% damage on part
     //k=0 -> 100% damage on obj
-    float material_factor = ( part_dens - vpart_dens ) * 0.5f;
+    const int hardness_eff = effective_part_hardness( ret.part );
+    const float vpart_resistance = vpart_dens + static_cast<float>( hardness_eff ) * 0.45f;
+    float material_factor = ( part_dens - vpart_resistance ) * 0.45f;
     material_factor = std::max( -25.0f, std::min( 25.0f, material_factor ) );
     // factor = -25 if mass is much greater than mass2
     // factor = +25 if mass2 is much greater than mass
@@ -1146,7 +1204,10 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
         // Damage for vehicle-part
         // Always if no critters, otherwise if critter is real
         if( critter == nullptr || !critter->is_hallucination() ) {
-            part_dmg = dmg * k / 100.0f;
+            const float shell_crumple = vpi.shell_info
+                                        ? ( 1.0f - 0.15f * vpi.shell_info->crumple_absorption )
+                                        : ( 1.0f - 0.10f * static_cast<float>( shell_integrity() ) );
+            part_dmg = dmg * k / 100.0f * std::max( 0.70f, shell_crumple );
             add_msg_debug( debugmode::DF_VEHICLE_MOVE, "Part collision damage: %.2f", part_dmg );
         }
         // Damage for object
@@ -2911,6 +2972,12 @@ bool vehicle::should_enable_fake( const tripoint_rel_ms &fake_precalc,
 
 void vehicle::update_active_fakes()
 {
+    if( is_subtile() ) {
+        for( const int fake_index : fake_parts ) {
+            parts.at( fake_index ).is_active_fake = false;
+        }
+        return;
+    }
     for( const int fake_index : fake_parts ) {
         vehicle_part &part_fake = parts.at( fake_index );
         if( part_fake.removed ) {

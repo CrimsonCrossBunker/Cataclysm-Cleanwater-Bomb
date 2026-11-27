@@ -18,6 +18,8 @@
     "flags": [ "WHEEL_MOUNT_LIGHT", "NEEDS_JACKING" ],
     "breaks_into": [ { "item": "2x4", "count": [ 2, 5 ] } ],
     "damage_reduction": { "all": 8 },
+    "sub_size": [ 3, 2 ],
+    "hardness": 10,
     "variants": [ { "symbols": "-", "symbols_broken": "X" } ]
   },
   {
@@ -25,6 +27,8 @@
     "copy-from": "wheel_mount_wood",
     "type": "vehicle_part",
     "name": { "str": "wooden wheel mount (steerable)" },
+    "sub_size": [ 3, 2 ],
+    "hardness": 10,
     "extend": { "flags": [ "STEERABLE" ] }
   },
   {
@@ -46,6 +50,8 @@
     "flags": [ "WHEEL_MOUNT_LIGHT", "NEEDS_JACKING" ],
     "breaks_into": [ { "item": "scrap", "count": [ 0, 1 ] } ],
     "damage_reduction": { "all": 10 },
+    "sub_size": [ 3, 2 ],
+    "hardness": 24,
     "variants": [ { "symbols": "-", "symbols_broken": "X" } ]
   },
   {
@@ -53,6 +59,8 @@
     "copy-from": "wheel_mount_light",
     "type": "vehicle_part",
     "name": { "str": "light wheel mount (steerable)" },
+    "sub_size": [ 3, 2 ],
+    "hardness": 24,
     "extend": { "flags": [ "STEERABLE" ] }
   },
   {
@@ -81,6 +89,8 @@
     "flags": [ "WHEEL_MOUNT_MEDIUM", "NEEDS_JACKING" ],
     "breaks_into": [ { "item": "scrap", "count": [ 1, 4 ] }, { "item": "mc_steel_chunk", "count": [ 2, 5 ] } ],
     "damage_reduction": { "all": 30 },
+    "sub_size": [ 4, 3 ],
+    "hardness": 34,
     "variants": [ { "symbols": "-", "symbols_broken": "X" } ]
   },
   {
@@ -88,6 +98,8 @@
     "copy-from": "wheel_mount_medium",
     "type": "vehicle_part",
     "name": { "str": "medium wheel hub assembly (steerable)" },
+    "sub_size": [ 4, 3 ],
+    "hardness": 34,
     "extend": { "flags": [ "STEERABLE" ] }
   },
   {
@@ -116,6 +128,8 @@
     "flags": [ "WHEEL_MOUNT_HEAVY", "NEEDS_JACKING" ],
     "breaks_into": [ { "item": "scrap", "count": [ 1, 4 ] }, { "item": "mc_steel_chunk", "count": [ 3, 7 ] } ],
     "damage_reduction": { "all": 40 },
+    "sub_size": [ 5, 3 ],
+    "hardness": 50,
     "variants": [ { "symbols": "-", "symbols_broken": "X" } ]
   },
   {
@@ -123,6 +137,8 @@
     "copy-from": "wheel_mount_heavy",
     "type": "vehicle_part",
     "name": { "str": "heavy wheel hub assembly (steerable)" },
+    "sub_size": [ 5, 3 ],
+    "hardness": 50,
     "extend": { "flags": [ "STEERABLE" ] }
   },
   {
@@ -146,6 +162,8 @@
     },
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_JACKING", "RAIL" ],
     "damage_reduction": { "all": 66 },
+    "sub_size": [ 6, 3 ],
+    "hardness": 62,
     "variants": [ { "symbols": "|", "symbols_broken": "x" } ]
   },
   {
@@ -153,6 +171,8 @@
     "copy-from": "rail_wheel",
     "type": "vehicle_part",
     "name": { "str": "rail wheel (steerable)" },
+    "sub_size": [ 6, 3 ],
+    "hardness": 62,
     "extend": { "flags": [ "STEERABLE" ] }
   },
   {
@@ -170,6 +190,8 @@
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "repair_welding_standard", 2 ] ] }
     },
     "damage_reduction": { "all": 60 },
+    "sub_size": [ 4, 3 ],
+    "hardness": 54,
     "variants": [ { "symbols": "=", "symbols_broken": "x" } ]
   },
   {
@@ -199,6 +221,8 @@
     "wheel_terrain_modifiers": { "FLAT": [ 0, 6 ], "ROAD": [ 0, 10 ] },
     "contact_area": 1200,
     "damage_reduction": { "all": 20, "bash": 80, "cut": 140, "stab": 110, "bullet": 65 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 68,
     "variants": [ { "symbols": "B", "symbols_broken": "E" } ]
   },
   {
@@ -224,10 +248,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_fasten", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_fasten", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 4 ] ], "time": "10 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "10 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_JACKING", "NEEDS_WHEEL_MOUNT_MEDIUM" ],
     "damage_reduction": { "bash": 20 },
+    "sub_size": [ 5, 2 ],
+    "hardness": 22,
     "variants": [ { "symbols": "0", "symbols_broken": "x" } ]
   },
   {
@@ -239,7 +269,9 @@
     "wheel_offroad_rating": 0.3,
     "wheel_terrain_modifiers": { "FLAT": [ 0, 5 ], "ROAD": [ 0, 2 ] },
     "contact_area": 180,
-    "damage_reduction": { "bash": 12 }
+    "damage_reduction": { "bash": 12 },
+    "sub_size": [ 5, 2 ],
+    "hardness": 20
   },
   {
     "id": "wheel_armor",
@@ -263,10 +295,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "20 m", "using": [ [ "vehicle_fasten", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "20 m", "using": [ [ "vehicle_fasten", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "10 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_JACKING", "NEEDS_WHEEL_MOUNT_HEAVY", "RESIST_RUNOVER_DAMAGE" ],
     "damage_reduction": { "all": 60, "cut": 30, "stab": 16 },
+    "sub_size": [ 7, 3 ],
+    "hardness": 48,
     "variants": [ { "symbols": "0", "symbols_broken": "x" } ]
   },
   {
@@ -295,10 +333,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "NEEDS_JACKING", "STABLE", "STEERABLE", "NEEDS_WHEEL_MOUNT_LIGHT" ],
     "damage_reduction": { "bash": 10 },
+    "sub_size": [ 4, 1 ],
+    "hardness": 14,
     "variants": [ { "symbols": "o", "symbols_broken": "x" } ]
   },
   {
@@ -326,10 +370,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "5 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "5 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_JACKING", "NEEDS_WHEEL_MOUNT_LIGHT" ],
     "damage_reduction": { "bash": 6 },
+    "sub_size": [ 5, 1 ],
+    "hardness": 12,
     "variants": [
       { "id": "front", "label": "Front", "symbols": "|\\-/|\\-/", "symbols_broken": "x" },
       { "id": "rear", "label": "Rear", "symbols": "|\\-/|\\-/", "symbols_broken": "x" }
@@ -343,7 +393,9 @@
     "description": "A wide, studded bicycle wheel intended for off-road biking.",
     "contact_area": 36,
     "wheel_offroad_rating": 0.7,
-    "wheel_terrain_modifiers": { "FLAT": [ 0, 3 ], "ROAD": [ 0, 1 ] }
+    "wheel_terrain_modifiers": { "FLAT": [ 0, 3 ], "ROAD": [ 0, 1 ] },
+    "sub_size": [ 5, 1 ],
+    "hardness": 14
   },
   {
     "id": "wheel_caster",
@@ -371,6 +423,8 @@
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "soldering_standard", 15 ] ] }
     },
     "flags": [ "WHEEL", "NEEDS_JACKING", "STABLE" ],
+    "sub_size": [ 2, 1 ],
+    "hardness": 18,
     "variants": [ { "symbols": "o", "symbols_broken": "x" } ]
   },
   {
@@ -399,6 +453,8 @@
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "soldering_standard", 15 ] ] }
     },
     "flags": [ "WHEEL", "NEEDS_JACKING", "STABLE" ],
+    "sub_size": [ 2, 2 ],
+    "hardness": 22,
     "variants": [ { "symbols": "o", "symbols_broken": "x" } ]
   },
   {
@@ -427,9 +483,15 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "10 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "10 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "NEEDS_JACKING", "STABLE" ],
+    "sub_size": [ 3, 2 ],
+    "hardness": 20,
     "variants": [ { "symbols": "o", "symbols_broken": "x" } ]
   },
   {
@@ -455,6 +517,8 @@
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "1 m", "qualities": [ { "id": "WRENCH", "level": 2 } ] }
     },
     "flags": [ "WHEEL", "NEEDS_WHEEL_MOUNT_SKATEBOARD", "STABLE", "STEERABLE" ],
+    "sub_size": [ 2, 1 ],
+    "hardness": 14,
     "variants": [ { "symbols": "o", "symbols_broken": "x" } ]
   },
   {
@@ -485,6 +549,8 @@
     },
     "breaks_into": [ { "item": "scrap", "count": [ 0, 1 ] }, { "item": "scrap_aluminum", "count": [ 0, 2 ] } ],
     "damage_reduction": { "all": 10 },
+    "sub_size": [ 2, 2 ],
+    "hardness": 16,
     "variants": [ { "symbols": "-", "symbols_broken": "X" } ]
   },
   {
@@ -512,10 +578,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_fasten", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_fasten", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_JACKING", "NEEDS_WHEEL_MOUNT_LIGHT" ],
     "damage_reduction": { "bash": 10 },
+    "sub_size": [ 5, 2 ],
+    "hardness": 20,
     "variants": [
       { "id": "front", "label": "Front", "symbols": "o", "symbols_broken": "x" },
       { "id": "rear", "label": "Rear", "symbols": "o", "symbols_broken": "x" }
@@ -538,7 +610,9 @@
     ],
     "wheel_offroad_rating": 0.7,
     "wheel_terrain_modifiers": { "FLAT": [ 0, 3 ], "ROAD": [ 0, 1 ] },
-    "damage_reduction": { "bash": 10, "cut": 8, "stab": 4 }
+    "damage_reduction": { "bash": 10, "cut": 8, "stab": 4 },
+    "sub_size": [ 5, 2 ],
+    "hardness": 22
   },
   {
     "id": "wheel_small",
@@ -567,9 +641,15 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_1", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_1", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_WHEEL_MOUNT_LIGHT" ],
+    "sub_size": [ 4, 2 ],
+    "hardness": 18,
     "variants_bases": [ { "id": "scooter", "label": "Scooter" } ],
     "variants": [
       { "id": "front", "label": "Front", "symbols": "o", "symbols_broken": "x" },
@@ -597,6 +677,8 @@
     "contact_area": 10,
     "flags": [ "STABLE", "STEERABLE", "WHEEL", "NEEDS_JACKING" ],
     "damage_reduction": { "bash": 8 },
+    "sub_size": [ 4, 1 ],
+    "hardness": 10,
     "variants": [ { "symbols": "|", "symbols_broken": "x" } ]
   },
   {
@@ -625,10 +707,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "5 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "5 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "NEEDS_JACKING", "STABLE", "STEERABLE", "NEEDS_WHEEL_MOUNT_LIGHT" ],
     "damage_reduction": { "bash": 8 },
+    "sub_size": [ 4, 1 ],
+    "hardness": 12,
     "variants": [ { "symbols": "|", "symbols_broken": "x" } ]
   },
   {
@@ -659,10 +747,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "10 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 2 ] ],
+        "time": "10 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "NEEDS_JACKING", "STABLE", "STEERABLE", "NEEDS_WHEEL_MOUNT_LIGHT" ],
     "damage_reduction": { "bash": 6 },
+    "sub_size": [ 5, 1 ],
+    "hardness": 12,
     "variants": [ { "symbols": "|", "symbols_broken": "x" } ]
   },
   {
@@ -690,10 +784,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_fasten", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "15 m", "using": [ [ "vehicle_fasten", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 4 ] ], "time": "10 m", "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "10 m",
+        "using": [ [ "adhesive_rubber", 1 ], [ "tire_rubber", 1 ] ]
+      }
     },
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_JACKING", "NEEDS_WHEEL_MOUNT_MEDIUM" ],
     "damage_reduction": { "bash": 25 },
+    "sub_size": [ 7, 3 ],
+    "hardness": 28,
     "variants": [ { "symbols": "O", "symbols_broken": "x" } ]
   },
   {
@@ -705,7 +805,9 @@
     "wheel_offroad_rating": 0.7,
     "wheel_terrain_modifiers": { "FLAT": [ 0, 3 ], "ROAD": [ 0, 1 ] },
     "contact_area": 320,
-    "damage_reduction": { "bash": 20, "cut": 15, "stab": 10 }
+    "damage_reduction": { "bash": 20, "cut": 15, "stab": 10 },
+    "sub_size": [ 7, 3 ],
+    "hardness": 30
   },
   {
     "id": "wheel_wood",
@@ -730,6 +832,8 @@
     "contact_area": 60,
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_JACKING", "NEEDS_WHEEL_MOUNT_LIGHT" ],
     "damage_reduction": { "all": 14 },
+    "sub_size": [ 5, 2 ],
+    "hardness": 10,
     "variants": [ { "symbols": "|", "symbols_broken": "x" } ]
   },
   {
@@ -745,7 +849,9 @@
     ],
     "rolling_resistance": 2.05,
     "proportional": { "durability": 2, "damage_modifier": 2 },
-    "damage_reduction": { "all": 20 }
+    "damage_reduction": { "all": 20 },
+    "sub_size": [ 5, 2 ],
+    "hardness": 10
   },
   {
     "type": "vehicle_part",
@@ -760,6 +866,8 @@
     "flags": [ "WHEEL_MOUNT_CONCRETE_MIX", "NEEDS_JACKING", "NO_INSTALL_HIDDEN" ],
     "breaks_into": [ { "item": "scrap", "count": [ 1, 8 ] } ],
     "damage_reduction": { "all": 10 },
+    "sub_size": [ 5, 3 ],
+    "hardness": 42,
     "variants": [ { "symbols": "-", "symbols_broken": "X" } ]
   },
   {
@@ -774,12 +882,18 @@
     "durability": 140,
     "damage_modifier": 50,
     "folded_volume": "5500 ml",
-    "breaks_into": [ { "item": "mc_steel_lump" }, { "item": "mc_steel_chunk", "count": [ 1, 3 ] }, { "item": "scrap", "count": [ 1, 6 ] } ],
+    "breaks_into": [
+      { "item": "mc_steel_lump" },
+      { "item": "mc_steel_chunk", "count": [ 1, 3 ] },
+      { "item": "scrap", "count": [ 1, 6 ] }
+    ],
     "rolling_resistance": 1.5,
     "wheel_offroad_rating": 0.3,
     "wheel_terrain_modifiers": { "FLAT": [ 0, 5 ], "ROAD": [ 0, 2 ] },
     "contact_area": 60,
     "flags": [ "WHEEL", "UNSTABLE_WHEEL", "NEEDS_WHEEL_MOUNT_CONCRETE_MIX", "NO_INSTALL_HIDDEN" ],
+    "sub_size": [ 6, 3 ],
+    "hardness": 46,
     "variants": [ { "symbols": "o", "symbols_broken": "x" } ]
   }
 ]

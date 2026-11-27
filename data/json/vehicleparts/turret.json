@@ -8,6 +8,8 @@
     "categories": [ "warfare" ],
     "requirements": { "install": { "time": "100 s" }, "removal": { "time": "50 s" } },
     "flags": [ "TURRET" ],
+    "sub_size": [ 4, 4 ],
+    "hardness": 40,
     "variants": [ { "symbols": "t", "symbols_broken": "#" } ]
   },
   {
@@ -19,7 +21,13 @@
     "//": "This item is used as base for turrets generated at runtime. m249 is random 'safe' choice, actual item is set at runtime in vpart_info::finalize.",
     "color": "magenta",
     "broken_color": "magenta",
-    "breaks_into": [ { "item": "scrap", "count": 6 }, { "item": "ch_steel_chunk", "count": 5 }, { "item": "ch_steel_lump", "count": 2 } ],
-    "requirements": { "//": "Generated at runtime" }
+    "breaks_into": [
+      { "item": "scrap", "count": 6 },
+      { "item": "ch_steel_chunk", "count": 5 },
+      { "item": "ch_steel_lump", "count": 2 }
+    ],
+    "requirements": { "//": "Generated at runtime" },
+    "sub_size": [ 4, 4 ],
+    "hardness": 42
   }
 ]

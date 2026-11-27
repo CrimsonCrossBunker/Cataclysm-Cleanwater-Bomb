@@ -12,7 +12,9 @@
     "displacement_ml": 1498,
     "rated_rpm": 6000,
     "peak_torque_nm": 260,
-    "altitude_compensation_m": 2000
+    "altitude_compensation_m": 2000,
+    "sub_size": [ 4, 4 ],
+    "hardness": 36
   },
   {
     "id": "engine_h4_20t_road",
@@ -27,7 +29,9 @@
     "displacement_ml": 1998,
     "rated_rpm": 5600,
     "peak_torque_nm": 350,
-    "altitude_compensation_m": 2000
+    "altitude_compensation_m": 2000,
+    "sub_size": [ 4, 5 ],
+    "hardness": 36
   },
   {
     "id": "engine_h4_24t_road",
@@ -42,7 +46,9 @@
     "displacement_ml": 2387,
     "rated_rpm": 5600,
     "peak_torque_nm": 376,
-    "altitude_compensation_m": 2000
+    "altitude_compensation_m": 2000,
+    "sub_size": [ 4, 5 ],
+    "hardness": 38
   },
   {
     "id": "engine_i4_25_road",
@@ -57,7 +63,9 @@
     "displacement_ml": 2487,
     "rated_rpm": 6600,
     "peak_torque_nm": 249,
-    "peak_torque_rpm": 5000
+    "peak_torque_rpm": 5000,
+    "sub_size": [ 4, 4 ],
+    "hardness": 36
   },
   {
     "id": "engine_v6_25_road",
@@ -72,7 +80,9 @@
     "displacement_ml": 2499,
     "rated_rpm": 6400,
     "peak_torque_nm": 251,
-    "peak_torque_rpm": 4800
+    "peak_torque_rpm": 4800,
+    "sub_size": [ 4, 5 ],
+    "hardness": 38
   },
   {
     "id": "engine_i6_30tt_road",
@@ -88,7 +98,9 @@
     "rated_rpm": 5600,
     "peak_torque_nm": 427,
     "peak_torque_rpm": 4000,
-    "altitude_compensation_m": 2000
+    "altitude_compensation_m": 2000,
+    "sub_size": [ 5, 4 ],
+    "hardness": 40
   },
   {
     "id": "engine_v6_35_road",
@@ -103,7 +115,9 @@
     "displacement_ml": 3456,
     "rated_rpm": 6600,
     "peak_torque_nm": 362,
-    "peak_torque_rpm": 4700
+    "peak_torque_rpm": 4700,
+    "sub_size": [ 5, 5 ],
+    "hardness": 40
   },
   {
     "id": "engine_v6_37_road",
@@ -118,7 +132,9 @@
     "displacement_ml": 3696,
     "rated_rpm": 7000,
     "peak_torque_nm": 366,
-    "peak_torque_rpm": 5200
+    "peak_torque_rpm": 5200,
+    "sub_size": [ 5, 5 ],
+    "hardness": 42
   },
   {
     "id": "engine_v8_50_road",
@@ -133,6 +149,8 @@
     "displacement_ml": 4969,
     "rated_rpm": 7100,
     "peak_torque_nm": 536,
-    "peak_torque_rpm": 4800
+    "peak_torque_rpm": 4800,
+    "sub_size": [ 5, 5 ],
+    "hardness": 44
   }
 ]

@@ -24,6 +24,8 @@
     },
     "flags": [ "FLUIDTANK" ],
     "damage_reduction": { "all": 26, "stab": 8 },
+    "sub_size": [ 2, 2 ],
+    "hardness": 20,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -49,6 +51,8 @@
     },
     "flags": [ "FLUIDTANK" ],
     "damage_reduction": { "all": 9, "stab": 0 },
+    "sub_size": [ 3, 2 ],
+    "hardness": 22,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -79,6 +83,8 @@
     },
     "flags": [ "FLUIDTANK" ],
     "damage_reduction": { "all": 28, "stab": 10 },
+    "sub_size": [ 4, 3 ],
+    "hardness": 24,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -109,6 +115,8 @@
     },
     "flags": [ "FLUIDTANK" ],
     "damage_reduction": { "all": 28, "stab": 12 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 26,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -117,7 +125,9 @@
     "type": "vehicle_part",
     "name": { "str": "vehicle tank (100 L)" },
     "item": "metal_tank_large",
-    "looks_like": "tank"
+    "looks_like": "tank",
+    "sub_size": [ 5, 4 ],
+    "hardness": 30
   },
   {
     "id": "fridgetank",
@@ -147,6 +157,8 @@
     },
     "flags": [ "FLUIDTANK", "FRIDGE", "ENABLED_DRAINS_EPOWER" ],
     "damage_reduction": { "all": 28, "stab": 12 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 24,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -177,6 +189,8 @@
     },
     "flags": [ "FLUIDTANK", "FRIDGE", "ENABLED_DRAINS_EPOWER" ],
     "damage_reduction": { "all": 28, "stab": 12 },
+    "sub_size": [ 5, 4 ],
+    "hardness": 28,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -185,7 +199,9 @@
     "item": "heattank",
     "copy-from": "fridgetank",
     "epower": "-60 W",
-    "flags": [ "FLUIDTANK", "HEATED_TANK", "ENABLED_DRAINS_EPOWER" ]
+    "flags": [ "FLUIDTANK", "HEATED_TANK", "ENABLED_DRAINS_EPOWER" ],
+    "sub_size": [ 3, 3 ],
+    "hardness": 24
   },
   {
     "id": "external_tank_small",
@@ -210,6 +226,8 @@
     },
     "flags": [ "PROTRUSION", "UNMOUNT_ON_DAMAGE", "FLUIDTANK" ],
     "damage_reduction": { "all": 30, "stab": 12 },
+    "sub_size": [ 3, 3 ],
+    "hardness": 24,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -219,6 +237,8 @@
     "name": { "str": "roof-mounted tank (100 L)" },
     "looks_like": "afs_roof_external_tank",
     "location": "on_roof",
+    "sub_size": [ 4, 3 ],
+    "hardness": 24,
     "extend": { "flags": [ "ON_ROOF" ] }
   },
   {
@@ -227,7 +247,9 @@
     "type": "vehicle_part",
     "name": { "str": "external tank (200 L)" },
     "item": "55gal_drum",
-    "damage_reduction": { "all": 30, "stab": 12 }
+    "damage_reduction": { "all": 30, "stab": 12 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 28
   },
   {
     "id": "afs_roof_external_tank",
@@ -236,6 +258,8 @@
     "name": { "str": "roof-mounted tank (200 L)" },
     "item": "55gal_drum",
     "location": "on_roof",
+    "sub_size": [ 5, 4 ],
+    "hardness": 28,
     "extend": { "flags": [ "ON_ROOF" ] }
   },
   {
@@ -261,6 +285,8 @@
     },
     "flags": [ "FLUIDTANK" ],
     "damage_reduction": { "all": 18, "stab": 12 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 26,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -290,6 +316,8 @@
     },
     "flags": [ "FLUIDTANK" ],
     "damage_reduction": { "all": 30, "stab": 12 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 26,
     "variants": [ { "symbols": "0", "symbols_broken": "#" } ]
   },
   {
@@ -303,7 +331,9 @@
       { "item": "scrap", "count": [ 2, 10 ] }
     ],
     "flags": [ "FLUIDTANK", "OBSTACLE", "AIRCRAFT_REPAIRABLE_NOPROF" ],
-    "damage_reduction": { "all": 30, "stab": 12 }
+    "damage_reduction": { "all": 30, "stab": 12 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 28
   },
   {
     "id": "fuel_bunker",
@@ -333,6 +363,8 @@
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "8 m", "using": [ [ "repair_welding_standard", 4 ] ] }
     },
     "damage_reduction": { "all": 24, "stab": 18 },
+    "sub_size": [ 6, 5 ],
+    "hardness": 36,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -363,6 +395,8 @@
     },
     "flags": [ "GASTANK" ],
     "damage_reduction": { "all": 28, "stab": 12 },
+    "sub_size": [ 3, 3 ],
+    "hardness": 30,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -392,6 +426,8 @@
     },
     "flags": [ "GASTANK" ],
     "damage_reduction": { "all": 28, "stab": 12 },
+    "sub_size": [ 4, 3 ],
+    "hardness": 34,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -421,6 +457,8 @@
     },
     "flags": [ "GASTANK" ],
     "damage_reduction": { "all": 28, "stab": 12 },
+    "sub_size": [ 5, 4 ],
+    "hardness": 38,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -450,6 +488,8 @@
     },
     "flags": [ "GASTANK" ],
     "damage_reduction": { "all": 28, "stab": 12 },
+    "sub_size": [ 6, 5 ],
+    "hardness": 42,
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
   },
   {
@@ -459,10 +499,16 @@
     "item": "55gal_drum_aluminum",
     "breaks_into": [ { "item": "scrap_aluminum", "count": [ 4, 25 ] } ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "60 m", "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "60 m",
+        "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ]
+      },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "8 m", "using": [ [ "repair_welding_alloys", 4 ] ] }
-    }
+    },
+    "sub_size": [ 5, 5 ],
+    "hardness": 22
   },
   {
     "id": "tank_30gal_drum_aluminum",
@@ -471,10 +517,16 @@
     "item": "30gal_drum_aluminum",
     "breaks_into": [ { "item": "scrap_aluminum", "count": [ 4, 13 ] } ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "60 m", "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "60 m",
+        "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ]
+      },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "8 m", "using": [ [ "repair_welding_alloys", 4 ] ] }
-    }
+    },
+    "sub_size": [ 4, 4 ],
+    "hardness": 20
   },
   {
     "id": "external_tank_small_aluminum",
@@ -485,10 +537,16 @@
     "item": "30gal_drum_aluminum",
     "breaks_into": [ { "item": "scrap_aluminum", "count": [ 4, 13 ] } ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "60 m", "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "60 m",
+        "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ]
+      },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "8 m", "using": [ [ "repair_welding_alloys", 4 ] ] }
-    }
+    },
+    "sub_size": [ 3, 3 ],
+    "hardness": 18
   },
   {
     "id": "afs_small_roof_external_tank_aluminum",
@@ -498,10 +556,16 @@
     "item": "30gal_drum_aluminum",
     "breaks_into": [ { "item": "scrap_aluminum", "count": [ 4, 13 ] } ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "60 m", "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "60 m",
+        "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ]
+      },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "8 m", "using": [ [ "repair_welding_alloys", 4 ] ] }
-    }
+    },
+    "sub_size": [ 4, 3 ],
+    "hardness": 18
   },
   {
     "id": "external_tank_aluminum",
@@ -511,10 +575,16 @@
     "item": "55gal_drum_aluminum",
     "breaks_into": [ { "item": "scrap_aluminum", "count": [ 4, 25 ] } ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "60 m", "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "60 m",
+        "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ]
+      },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "8 m", "using": [ [ "repair_welding_alloys", 4 ] ] }
-    }
+    },
+    "sub_size": [ 4, 4 ],
+    "hardness": 22
   },
   {
     "id": "afs_roof_external_tank_aluminum",
@@ -524,9 +594,15 @@
     "item": "55gal_drum_aluminum",
     "breaks_into": [ { "item": "scrap_aluminum", "count": [ 4, 25 ] } ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "60 m", "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "60 m",
+        "using": [ [ "welding_alloys", 50 ], [ "drilling_standard", 50 ] ]
+      },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "8 m", "using": [ [ "repair_welding_alloys", 4 ] ] }
-    }
+    },
+    "sub_size": [ 5, 4 ],
+    "hardness": 22
   }
 ]

@@ -19,6 +19,8 @@
     },
     "flags": [ "VISION", "PROTRUSION", "UNMOUNT_ON_DAMAGE" ],
     "breaks_into": [ { "item": "glass_shard", "count": [ 0, 16 ] } ],
+    "sub_size": [ 1, 2 ],
+    "hardness": 6,
     "variants": [
       { "id": "left", "label": "Left", "symbols": "o", "symbols_broken": "*" },
       { "id": "right", "label": "Right", "symbols": "o", "symbols_broken": "*" }
@@ -44,6 +46,8 @@
     },
     "flags": [ "VISION" ],
     "breaks_into": [ { "item": "glass_shard", "count": [ 0, 16 ] } ],
+    "sub_size": [ 1, 2 ],
+    "hardness": 5,
     "variants": [ { "symbols": "o", "symbols_broken": "*" } ]
   }
 ]

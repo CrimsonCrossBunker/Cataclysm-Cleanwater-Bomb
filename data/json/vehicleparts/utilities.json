@@ -29,6 +29,8 @@
     },
     "size": "50 L",
     "type": "vehicle_part",
+    "sub_size": [ 5, 5 ],
+    "hardness": 36,
     "variants": [ { "symbols": "&", "symbols_broken": "x" } ]
   },
   {
@@ -61,6 +63,8 @@
     },
     "size": "50 L",
     "type": "vehicle_part",
+    "sub_size": [ 5, 5 ],
+    "hardness": 28,
     "variants": [ { "symbols": "&", "symbols_broken": "x" } ]
   },
   {
@@ -91,11 +95,17 @@
     "folded_volume": "500 ml",
     "flags": [ "ENHANCED_VISION", "SIMPLE_PART" ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "6 m", "using": [ [ "vehicle_screw", 1 ], [ "adhesive", 2 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ] ],
+        "time": "6 m",
+        "using": [ [ "vehicle_screw", 1 ], [ "adhesive", 2 ] ]
+      },
       "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "3 m", "using": [ [ "vehicle_screw", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "6 m", "using": [ [ "adhesive", 2 ] ] }
     },
     "breaks_into": [ { "item": "plastic_chunk", "count": [ 2, 5 ] } ],
+    "sub_size": [ 2, 2 ],
+    "hardness": 14,
     "variants": [ { "symbols": "8", "symbols_broken": "x" } ]
   },
   {
@@ -113,6 +123,8 @@
     "flags": [ "OBSTACLE", "NO_INSTALL_HIDDEN" ],
     "pseudo_tools": [ { "id": "concrete_mix_tool" } ],
     "breaks_into": [ { "item": "plastic_chunk", "count": [ 10, 100 ] } ],
+    "sub_size": [ 6, 5 ],
+    "hardness": 44,
     "variants": [ { "symbols": "U", "symbols_broken": "u" } ]
   },
   {
@@ -139,6 +151,8 @@
     "size": "10 ml",
     "flags": [ "CARGO", "OBSTACLE", "MWS", "ENABLED_DRAINS_EPOWER", "NO_INSTALL_HIDDEN" ],
     "pseudo_tools": [ { "id": "mws_weather_sensor_array", "hotkey": "a" } ],
+    "sub_size": [ 4, 4 ],
+    "hardness": 18,
     "variants": [ { "symbols": "T", "symbols_broken": "#" } ]
   },
   {
@@ -164,7 +178,12 @@
     "damage_reduction": { "bash": 1 },
     "size": "10 ml",
     "flags": [ "CARGO", "OBSTACLE", "MWS", "ENABLED_DRAINS_EPOWER", "ADVANCED_MWS", "NO_INSTALL_HIDDEN" ],
-    "pseudo_tools": [ { "id": "mws_advanced_weather_sensor_array", "hotkey": "a" }, { "id": "mws_HE_sensor_array", "hotkey": "b" } ],
+    "pseudo_tools": [
+      { "id": "mws_advanced_weather_sensor_array", "hotkey": "a" },
+      { "id": "mws_HE_sensor_array", "hotkey": "b" }
+    ],
+    "sub_size": [ 4, 4 ],
+    "hardness": 20,
     "variants": [ { "symbols": "T", "symbols_broken": "#" } ]
   },
   {
@@ -190,7 +209,12 @@
     "damage_reduction": { "bash": 1 },
     "size": "10 ml",
     "flags": [ "CARGO", "OBSTACLE", "MWS", "ENABLED_DRAINS_EPOWER", "ADVANCED_MWS", "NO_INSTALL_HIDDEN" ],
-    "pseudo_tools": [ { "id": "mws_advanced_weather_sensor_array", "hotkey": "a" }, { "id": "mws_HE_sensor_array", "hotkey": "b" } ],
+    "pseudo_tools": [
+      { "id": "mws_advanced_weather_sensor_array", "hotkey": "a" },
+      { "id": "mws_HE_sensor_array", "hotkey": "b" }
+    ],
+    "sub_size": [ 4, 4 ],
+    "hardness": 26,
     "variants": [ { "symbols": "T", "symbols_broken": "#" } ]
   }
 ]

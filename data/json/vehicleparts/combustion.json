@@ -13,6 +13,8 @@
     "damaged_power_factor": 0.25,
     "m2c": 50,
     "flags": [ "ENGINE", "E_COMBUSTION", "E_ALTERNATOR", "E_HIGHER_SKILL", "E_HEATER" ],
+    "sub_size": [ 4, 4 ],
+    "hardness": 36,
     "variants": [ { "symbols": "*", "symbols_broken": "#" } ],
     "//": "A combustion engine.  Burns fuel from a tank in the vehicle."
   },
@@ -24,7 +26,9 @@
     "fuel_options": [ "avgas", "gasoline" ],
     "m2c": 60,
     "//": "30% energy efficiency",
-    "//2": "A combustion engine for use on aircraft.  Burns gasoline or avgas fuel from a tank in the vehicle."
+    "//2": "A combustion engine for use on aircraft.  Burns gasoline or avgas fuel from a tank in the vehicle.",
+    "sub_size": [ 5, 5 ],
+    "hardness": 40
   },
   {
     "abstract": "diesel_engine",
@@ -33,6 +37,8 @@
     "fuel_type": "diesel",
     "fuel_options": [ "diesel", "biodiesel", "lamp_oil", "motor_oil", "jp8" ],
     "m2c": 65,
+    "sub_size": [ 5, 4 ],
+    "hardness": 42,
     "extend": { "flags": [ "E_COLD_START", "E_DIESEL_FUEL" ] },
     "//": "40% energy efficiency",
     "//2": "A combustion engine.  Burns diesel fuel from a tank in the vehicle.  Can also burn biodiesel or kerosene, though somewhat less efficiently."
@@ -44,7 +50,9 @@
     "fuel_type": "gasoline",
     "m2c": 60,
     "//": "30% energy efficiency",
-    "//2": "A combustion engine.  Burns gasoline fuel from a tank in the vehicle."
+    "//2": "A combustion engine.  Burns gasoline fuel from a tank in the vehicle.",
+    "sub_size": [ 4, 4 ],
+    "hardness": 36
   },
   {
     "abstract": "gas_turbine_engine",
@@ -55,7 +63,9 @@
     "fuel_options": [ "gasoline", "diesel", "lamp_oil", "jp8", "motor_oil", "avgas", "biodiesel" ],
     "m2c": 60,
     "//": "25% energy efficiency",
-    "//2": "An advanced combustion engine.  Burns gasoline or diesel or aviation fuel from a tank in the vehicle.  Can also burn kerosene, though somewhat less efficiently.  Better power-to-weight ratio than a traditional engine, but consumes more fuel."
+    "//2": "An advanced combustion engine.  Burns gasoline or diesel or aviation fuel from a tank in the vehicle.  Can also burn kerosene, though somewhat less efficiently.  Better power-to-weight ratio than a traditional engine, but consumes more fuel.",
+    "sub_size": [ 5, 4 ],
+    "hardness": 44
   },
   {
     "id": "diesel_engine_i6",
@@ -81,10 +91,17 @@
       "repair": {
         "skills": [ [ "mechanics", 5 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 3 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 3 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 100 }
+    "damage_reduction": { "all": 100 },
+    "sub_size": [ 6, 4 ],
+    "hardness": 46
   },
   {
     "id": "diesel_engine_inline4",
@@ -110,10 +127,17 @@
       "repair": {
         "skills": [ [ "mechanics", 4 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 3 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 3 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 50 }
+    "damage_reduction": { "all": 50 },
+    "sub_size": [ 5, 4 ],
+    "hardness": 42
   },
   {
     "id": "diesel_engine_inline1",
@@ -139,9 +163,16 @@
       "repair": {
         "skills": [ [ "mechanics", 3 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 1 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 1 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
-    }
+    },
+    "sub_size": [ 3, 3 ],
+    "hardness": 36
   },
   {
     "id": "diesel_engine_v6",
@@ -167,10 +198,17 @@
       "repair": {
         "skills": [ [ "mechanics", 5 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 3 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 3 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 100 }
+    "damage_reduction": { "all": 100 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 44
   },
   {
     "id": "diesel_engine_v8",
@@ -196,10 +234,17 @@
       "repair": {
         "skills": [ [ "mechanics", 5 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 5 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 5 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 100 }
+    "damage_reduction": { "all": 100 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 48
   },
   {
     "id": "engine_1cyl",
@@ -225,10 +270,17 @@
       "repair": {
         "skills": [ [ "mechanics", 3 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 1 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 1 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 40 }
+    "damage_reduction": { "all": 40 },
+    "sub_size": [ 3, 2 ],
+    "hardness": 28
   },
   {
     "id": "engine_1cyl_large",
@@ -254,10 +306,17 @@
       "repair": {
         "skills": [ [ "mechanics", 4 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 2 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 2 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 40 }
+    "damage_reduction": { "all": 40 },
+    "sub_size": [ 3, 3 ],
+    "hardness": 32
   },
   {
     "id": "engine_1cyl_med",
@@ -265,7 +324,9 @@
     "type": "vehicle_part",
     "typical_fuel_economy": { "mass_kg": 135, "litres_per_100km": 2.5 },
     "item": "1cyl_combustion_med",
-    "description": "A high-compression, 150 cc single-cylinder 4-stroke combustion engine, suitable for a dirt bike, scooter or generator."
+    "description": "A high-compression, 150 cc single-cylinder 4-stroke combustion engine, suitable for a dirt bike, scooter or generator.",
+    "sub_size": [ 3, 2 ],
+    "hardness": 28
   },
   {
     "id": "engine_1cyl_diesel_large",
@@ -291,10 +352,17 @@
       "repair": {
         "skills": [ [ "mechanics", 4 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 2 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 2 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 40 }
+    "damage_reduction": { "all": 40 },
+    "sub_size": [ 3, 3 ],
+    "hardness": 34
   },
   {
     "id": "engine_1cyl_small",
@@ -323,7 +391,9 @@
         "using": [ [ "repair_welding_standard", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
       }
     },
-    "damage_reduction": { "all": 40 }
+    "damage_reduction": { "all": 40 },
+    "sub_size": [ 2, 2 ],
+    "hardness": 26
   },
   {
     "id": "engine_aero_light",
@@ -348,10 +418,17 @@
       "repair": {
         "skills": [ [ "mechanics", 6 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 3 ], [ "repair_welding_alloys", 2 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 3 ],
+          [ "repair_welding_alloys", 2 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 50 }
+    "damage_reduction": { "all": 50 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 34
   },
   {
     "id": "engine_inline4",
@@ -377,10 +454,17 @@
       "repair": {
         "skills": [ [ "mechanics", 3 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 3 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 3 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 50 }
+    "damage_reduction": { "all": 50 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 36
   },
   {
     "id": "engine_v12",
@@ -406,10 +490,17 @@
       "repair": {
         "skills": [ [ "mechanics", 7 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 5 ], [ "repair_welding_alloys", 4 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 5 ],
+          [ "repair_welding_alloys", 4 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 110 }
+    "damage_reduction": { "all": 110 },
+    "sub_size": [ 6, 5 ],
+    "hardness": 46
   },
   {
     "id": "diesel_engine_v12",
@@ -435,10 +526,17 @@
       "repair": {
         "skills": [ [ "mechanics", 8 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 8 ], [ "repair_welding_alloys", 2 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 8 ],
+          [ "repair_welding_alloys", 2 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 110 }
+    "damage_reduction": { "all": 110 },
+    "sub_size": [ 6, 5 ],
+    "hardness": 54
   },
   {
     "id": "engine_v6",
@@ -464,10 +562,17 @@
       "repair": {
         "skills": [ [ "mechanics", 4 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 3 ], [ "repair_welding_alloys", 2 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 3 ],
+          [ "repair_welding_alloys", 2 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 100 }
+    "damage_reduction": { "all": 100 },
+    "sub_size": [ 4, 5 ],
+    "hardness": 38
   },
   {
     "id": "engine_v8",
@@ -493,10 +598,17 @@
       "repair": {
         "skills": [ [ "mechanics", 4 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 4 ], [ "repair_welding_alloys", 3 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 4 ],
+          [ "repair_welding_alloys", 3 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 100 }
+    "damage_reduction": { "all": 100 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 42
   },
   {
     "id": "engine_vtwin",
@@ -522,10 +634,17 @@
       "repair": {
         "skills": [ [ "mechanics", 3 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 1 ], [ "repair_welding_alloys", 1 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 1 ],
+          [ "repair_welding_alloys", 1 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 60 }
+    "damage_reduction": { "all": 60 },
+    "sub_size": [ 3, 3 ],
+    "hardness": 32
   },
   {
     "abstract": "steam_engine",
@@ -535,6 +654,8 @@
     "fuel_options": [ "coal_lump", "charcoal" ],
     "looks_like": "diesel_engine_v12",
     "m2c": 65,
+    "sub_size": [ 5, 5 ],
+    "hardness": 44,
     "extend": { "flags": [ "E_COLD_START" ] },
     "backfire_threshold": 0.7,
     "backfire_freq": 10,
@@ -566,7 +687,9 @@
         "using": [ [ "repair_welding_standard", 4 ], [ "vehicle_wrench_1", 1 ] ]
       }
     },
-    "damage_reduction": { "all": 40 }
+    "damage_reduction": { "all": 40 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 34
   },
   {
     "id": "engine_steam_small",
@@ -592,7 +715,9 @@
         "using": [ [ "repair_welding_standard", 5 ], [ "vehicle_wrench_1", 1 ] ]
       }
     },
-    "damage_reduction": { "all": 45 }
+    "damage_reduction": { "all": 45 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 38
   },
   {
     "id": "engine_steam_medium",
@@ -619,7 +744,9 @@
         "using": [ [ "repair_welding_standard", 6 ], [ "vehicle_wrench_1", 1 ] ]
       }
     },
-    "damage_reduction": { "all": 50 }
+    "damage_reduction": { "all": 50 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 44
   },
   {
     "id": "engine_turbine_small",
@@ -643,10 +770,17 @@
       "repair": {
         "skills": [ [ "mechanics", 8 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 3 ], [ "repair_welding_alloys", 2 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 3 ],
+          [ "repair_welding_alloys", 2 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 60 }
+    "damage_reduction": { "all": 60 },
+    "sub_size": [ 4, 3 ],
+    "hardness": 40
   },
   {
     "id": "engine_turbine_medium",
@@ -670,10 +804,17 @@
       "repair": {
         "skills": [ [ "mechanics", 9 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 5 ], [ "repair_welding_alloys", 3 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 5 ],
+          [ "repair_welding_alloys", 3 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 65 }
+    "damage_reduction": { "all": 65 },
+    "sub_size": [ 5, 4 ],
+    "hardness": 44
   },
   {
     "id": "engine_turbine_large",
@@ -697,10 +838,17 @@
       "repair": {
         "skills": [ [ "mechanics", 10 ] ],
         "time": "60 m",
-        "using": [ [ "repair_welding_standard", 7 ], [ "repair_welding_alloys", 5 ], [ "vehicle_wrench_2", 1 ], [ "vehicle_screw", 1 ] ]
+        "using": [
+          [ "repair_welding_standard", 7 ],
+          [ "repair_welding_alloys", 5 ],
+          [ "vehicle_wrench_2", 1 ],
+          [ "vehicle_screw", 1 ]
+        ]
       }
     },
-    "damage_reduction": { "all": 70 }
+    "damage_reduction": { "all": 70 },
+    "sub_size": [ 6, 5 ],
+    "hardness": 50
   },
   {
     "id": "xedra_genset",
@@ -712,6 +860,8 @@
     "m2c": 25,
     "energy_consumption": "100000 W",
     "description": "A spartan, prototype engine-generator made to burn all fuels.",
-    "noise_factor": 1
+    "noise_factor": 1,
+    "sub_size": [ 4, 4 ],
+    "hardness": 34
   }
 ]

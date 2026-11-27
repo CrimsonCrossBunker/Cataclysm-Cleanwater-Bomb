@@ -11,6 +11,8 @@
     "description": {
       "str": "A removable passage connecting this vehicle deck to the one above.  Both decks need a vehicle part you can stand on.",
       "//~": "Original Chinese: 连接当前车内楼层与上一层的可拆卸通道。上下两层都需要可站立的车内部件。"
-    }
+    },
+    "sub_size": [ 6, 5 ],
+    "hardness": 22
   }
 ]

@@ -28,6 +28,7 @@
 #include <complex>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <list>
 #include <memory>
 #include <numeric>
@@ -200,6 +201,7 @@ static const vpart_id vpart_power_cord( "power_cord" );
 
 static const vpart_location_id vpart_location_center( "center" );
 static const vpart_location_id vpart_location_on_roof( "on_roof" );
+static const vpart_location_id vpart_location_shell( "shell" );
 static const vpart_location_id vpart_location_structure( "structure" );
 
 static const vproto_id vehicle_prototype_none( "none" );
@@ -394,13 +396,19 @@ bool vehicle::player_in_control( const map &here, const Character &p ) const
     }
 
     const optional_vpart_position vp = here.veh_at( p.pos_bub() );
-    if( vp && &vp->vehicle() == this &&
-        p.controlling_vehicle &&
-        ( ( part_with_feature( vp->mount_pos3(), "CONTROL_ANIMAL", true ) >= 0 &&
-            has_engine_type( fuel_type_animal, false ) && get_harnessed_animal( here ) ) ||
-          ( avail_part_with_feature( vp->part_index(), VPFLAG_CONTROLS ) >= 0 ) )
-      ) {
-        return true;
+    if( vp && &vp->vehicle() == this && p.controlling_vehicle ) {
+        const int passenger_part = find_passenger_part( p );
+        const bool has_animal_ctrl =
+            ( vp->part_with_feature( "CONTROL_ANIMAL", true ).has_value() ||
+              ( passenger_part >= 0 && part_with_feature( parts[passenger_part].mount_pos3(),
+                      "CONTROL_ANIMAL", true ) >= 0 ) ) &&
+            has_engine_type( fuel_type_animal, false ) && get_harnessed_animal( here );
+        const bool has_controls =
+            vp->avail_part_with_feature( VPFLAG_CONTROLS ).has_value() ||
+            ( passenger_part >= 0 && avail_part_with_feature( passenger_part, VPFLAG_CONTROLS ) >= 0 );
+        if( has_animal_ctrl || has_controls ) {
+            return true;
+        }
     }
 
     return remote_controlled( p );
@@ -1433,8 +1441,11 @@ ret_val<void> vehicle::can_mount( const tripoint_rel_ms &dp, const vpart_info &v
             /* use_cache = */ false, /* include_fake = */ false );
 
     if( parts_in_square.empty() ) {
-        // First part in an empty square MUST be a structural part or be an appliance
-        if( vpi.location != vpart_location_structure ) {
+        // First part in an empty square MUST be a structural part, except exterior shells
+        // on 0.125-tile vehicles which can clip onto an overlapping structural frame.
+        if( vpi.location != vpart_location_structure &&
+            !( is_subtile() && vpi.location == vpart_location_shell &&
+               has_adjacent_structure( dp, vpi ) ) ) {
             return ret_val<void>::make_failure( _( "There's no structure to support it." ) );
         }
     } else {
@@ -1490,14 +1501,7 @@ ret_val<void> vehicle::can_mount( const tripoint_rel_ms &dp, const vpart_info &v
     // All parts after the first must be installed on or next to an existing part
     // the exception is when a single tile only structural object is being repaired
     if( !parts.empty() ) {
-        if( !is_structural_part_removed() &&
-            !has_structural_part( dp ) &&
-            !has_structural_part( dp + point::east ) &&
-            !has_structural_part( dp + point::south ) &&
-            !has_structural_part( dp + point::west ) &&
-            !has_structural_part( dp + point::north ) &&
-            !has_structural_part( dp + tripoint::below ) &&
-            !has_structural_part( dp + tripoint::above ) ) {
+        if( !is_structural_part_removed() && !has_adjacent_structure( dp, vpi ) ) {
             return ret_val<void>::make_failure( _( "Part needs to be adjacent to or on existing structure." ) );
         }
     }
@@ -1607,12 +1611,28 @@ ret_val<void> vehicle::can_unmount( const vehicle_part &vp_to_remove, bool allow
 
     // find all the vehicle's tiles adjacent to the one we're removing
     std::vector<vehicle_part> adjacent_parts;
-    for( const tripoint &offset : vehicle_structure_neighbors ) {
-        const std::vector<int> parts_over_there = parts_at_relative( vp_to_remove.mount_pos3() + offset,
-                false );
-        if( !parts_over_there.empty() ) {
-            //Just need one part from the square to track the x/y
-            adjacent_parts.push_back( parts[parts_over_there[0]] );
+    if( is_subtile() ) {
+        std::unordered_set<tripoint_rel_ms> seen_mounts;
+        for( const vehicle_part &other : parts ) {
+            if( other.removed || other.is_fake || other.mount_pos3() == vp_to_remove.mount_pos3() ) {
+                continue;
+            }
+            if( other.info().location != vpart_location_structure ) {
+                continue;
+            }
+            if( sub_footprints_touch( vp_to_remove, other ) &&
+                seen_mounts.insert( other.mount_pos3() ).second ) {
+                adjacent_parts.push_back( other );
+            }
+        }
+    } else {
+        for( const tripoint &offset : vehicle_structure_neighbors ) {
+            const std::vector<int> parts_over_there = parts_at_relative( vp_to_remove.mount_pos3() + offset,
+                    false );
+            if( !parts_over_there.empty() ) {
+                //Just need one part from the square to track the x/y
+                adjacent_parts.push_back( parts[parts_over_there[0]] );
+            }
         }
     }
 
@@ -1660,6 +1680,44 @@ bool vehicle::is_connected( const vehicle_part &to, const vehicle_part &from,
 {
     const tripoint_rel_ms target = to.mount_pos3();
     const tripoint_rel_ms excluded = excluded_part.mount_pos3();
+
+    if( is_subtile() ) {
+        std::vector<const vehicle_part *> structs;
+        for( const vehicle_part &vp : parts ) {
+            if( vp.removed || vp.is_fake || vp.mount_pos3() == excluded ) {
+                continue;
+            }
+            if( vp.info().location != vpart_location_structure ||
+                vp.info().has_flag( "PROTRUSION" ) ||
+                vp.has_flag( vp_flag::carried_flag ) ) {
+                continue;
+            }
+            structs.push_back( &vp );
+        }
+        std::queue<const vehicle_part *> queue;
+        std::unordered_set<tripoint_rel_ms> visited;
+        queue.push( &from );
+        visited.insert( from.mount_pos3() );
+        while( !queue.empty() ) {
+            const vehicle_part *cur = queue.front();
+            queue.pop();
+            for( const vehicle_part *cand : structs ) {
+                const tripoint_rel_ms next = cand->mount_pos3();
+                if( visited.count( next ) > 0 ) {
+                    continue;
+                }
+                if( !sub_footprints_touch( *cur, *cand ) ) {
+                    continue;
+                }
+                if( next == target ) {
+                    return true;
+                }
+                visited.insert( next );
+                queue.push( cand );
+            }
+        }
+        return false;
+    }
 
     std::queue<tripoint_rel_ms> queue;
     std::unordered_set<tripoint_rel_ms> visited;
@@ -3066,10 +3124,18 @@ std::vector<int> vehicle::parts_at_relative( const tripoint_rel_ms &dp, const bo
 
 std::optional<vpart_reference> vpart_position::obstacle_at_part() const
 {
-    for( const int idx : vehicle().parts_at_relative( mount_pos3(), false ) ) {
-        const vehicle_part &vp = vehicle().part( idx );
-        if( vp.is_broken() ) {
+    vehicle &veh = vehicle();
+    const std::vector<int> candidates = veh.is_subtile()
+                                        ? veh.parts_at_world_tile( veh.part( part_index() ).precalc[0] )
+                                        : veh.parts_at_relative( mount_pos3(), false );
+    bool has_boardable = false;
+    for( const int idx : candidates ) {
+        const vehicle_part &vp = veh.part( idx );
+        if( vp.removed || vp.is_broken() ) {
             continue;
+        }
+        if( vp.info().has_flag( VPFLAG_BOARDABLE ) ) {
+            has_boardable = true;
         }
         if( !vp.info().has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) ) {
             continue;
@@ -3081,10 +3147,37 @@ std::optional<vpart_reference> vpart_position::obstacle_at_part() const
         if( thr >= vp.info().size ) {
             continue;
         }
-        const vpart_reference ref( vehicle(), idx );
+        const vpart_reference ref( veh, idx );
         if( ref.items().stored_volume() > thr ) {
             return ref;
         }
+    }
+
+    if( veh.is_subtile() ) {
+        // On a 0.125-tile vehicle, thin perimeter doors/boards/windows/shells alongside a
+        // boardable seat or aisle act as directional edge boundaries (checked in walk_move),
+        // rather than making the interior cabin tile itself impassable.
+        int fallback_obstacle = -1;
+        for( const int idx : candidates ) {
+            const vehicle_part &vp = veh.part( idx );
+            if( vp.removed || vp.is_broken() || !vp.info().has_flag( VPFLAG_OBSTACLE ) ) {
+                continue;
+            }
+            if( vp.info().has_flag( VPFLAG_OPENABLE ) && vp.open ) {
+                continue;
+            }
+            const bool thin_edge = vp.info().sub_size.x <= 2 || vp.info().sub_size.y <= 2;
+            if( has_boardable && ( thin_edge || vp.info().has_flag( VPFLAG_OPENABLE ) ||
+                                   vp.info().has_flag( VPFLAG_SHELL ) ) ) {
+                continue;
+            }
+            fallback_obstacle = idx;
+            break;
+        }
+        if( fallback_obstacle >= 0 ) {
+            return vpart_reference( veh, fallback_obstacle );
+        }
+        return std::nullopt;
     }
 
     std::optional<vpart_reference> part = part_with_feature( VPFLAG_OBSTACLE, true, true );
@@ -3124,7 +3217,9 @@ bool vpart_position::can_climb_through_window() const
 
 std::optional<vpart_reference> vpart_position::part_displayed() const
 {
-    int part_id = vehicle().part_displayed_at( mount_pos3(), true );
+    const int part_id = vehicle().is_subtile()
+                        ? vehicle().part_displayed_at_world_tile( vehicle().part( part_index() ).precalc[0], true )
+                        : vehicle().part_displayed_at( mount_pos3(), true );
     if( part_id == -1 ) {
         return std::nullopt;
     }
@@ -3134,7 +3229,10 @@ std::optional<vpart_reference> vpart_position::part_displayed() const
 std::optional<vpart_reference> vpart_position::part_with_tool( map &here,
         const itype_id &tool_type ) const
 {
-    for( const int idx : vehicle().parts_at_relative( mount_pos3(), false ) ) {
+    const std::vector<int> candidates = vehicle().is_subtile()
+                                        ? vehicle().parts_at_world_tile( vehicle().part( part_index() ).precalc[0] )
+                                        : vehicle().parts_at_relative( mount_pos3(), false );
+    for( const int idx : candidates ) {
         const vpart_reference vp( vehicle(), idx );
         if( vp.part().is_broken() ) {
             continue;
@@ -3153,7 +3251,10 @@ std::optional<vpart_reference> vpart_position::part_with_tool( map &here,
 std::optional<vpart_reference> vpart_position::part_with_unreserved_tool( map &here,
         const itype_id &tool_type ) const
 {
-    for( const int idx : vehicle().parts_at_relative( mount_pos3(), false ) ) {
+    const std::vector<int> candidates = vehicle().is_subtile()
+                                        ? vehicle().parts_at_world_tile( vehicle().part( part_index() ).precalc[0] )
+                                        : vehicle().parts_at_relative( mount_pos3(), false );
+    for( const int idx : candidates ) {
         const vpart_reference vp( vehicle(), idx );
         if( vp.part().is_broken() ||
             get_craft_reservations().vehicle_part_reserved(
@@ -3174,7 +3275,10 @@ std::optional<vpart_reference> vpart_position::part_with_unreserved_tool( map &h
 std::vector<vpart_tool_source> vpart_position::get_tools_with_sources( map &here ) const
 {
     std::vector<vpart_tool_source> res;
-    for( const int part_idx : this->vehicle().parts_at_relative( this->mount_pos3(), false ) ) {
+    const std::vector<int> candidates = vehicle().is_subtile()
+                                        ? vehicle().parts_at_world_tile( vehicle().part( part_index() ).precalc[0] )
+                                        : vehicle().parts_at_relative( mount_pos3(), false );
+    for( const int part_idx : candidates ) {
         const vehicle_part &vp = this->vehicle().part( part_idx );
         if( vp.is_broken() ) {
             continue;
@@ -3189,7 +3293,10 @@ std::vector<vpart_tool_source> vpart_position::get_tools_with_sources( map &here
 std::map<item, int> vpart_position::get_tools( map &here ) const
 {
     std::map<item, int> res;
-    for( const int part_idx : this->vehicle().parts_at_relative( this->mount_pos3(), false ) ) {
+    const std::vector<int> candidates = vehicle().is_subtile()
+                                        ? vehicle().parts_at_world_tile( vehicle().part( part_index() ).precalc[0] )
+                                        : vehicle().parts_at_relative( mount_pos3(), false );
+    for( const int part_idx : candidates ) {
         const vehicle_part &vp = this->vehicle().part( part_idx );
         if( vp.is_broken() ) {
             continue;
@@ -3209,7 +3316,19 @@ std::optional<vpart_reference> vpart_position::cargo() const
 std::optional<vpart_reference> vpart_position::part_with_feature( const std::string &f,
         bool unbroken, bool include_fake ) const
 {
-    const int i = vehicle().part_with_feature( mount_pos3(), f, unbroken, include_fake );
+    int i = vehicle().part_with_feature( mount_pos3(), f, unbroken, include_fake );
+    if( i < 0 && vehicle().is_subtile() ) {
+        for( const int idx : vehicle().parts_at_world_tile( vehicle().part( part_index() ).precalc[0] ) ) {
+            const vehicle_part &vp = vehicle().part( idx );
+            if( vp.removed || ( !include_fake && vp.is_fake ) ) {
+                continue;
+            }
+            if( vp.info().has_flag( f ) && !( unbroken && vp.is_broken() ) ) {
+                i = idx;
+                break;
+            }
+        }
+    }
     if( i < 0 ) {
         return std::nullopt;
     }
@@ -3219,7 +3338,19 @@ std::optional<vpart_reference> vpart_position::part_with_feature( const std::str
 std::optional<vpart_reference> vpart_position::part_with_feature( const vpart_bitflags f,
         bool unbroken, bool include_fake ) const
 {
-    const int i = vehicle().part_with_feature( part_index(), f, unbroken, include_fake );
+    int i = vehicle().part_with_feature( part_index(), f, unbroken, include_fake );
+    if( i < 0 && vehicle().is_subtile() ) {
+        for( const int idx : vehicle().parts_at_world_tile( vehicle().part( part_index() ).precalc[0] ) ) {
+            const vehicle_part &vp = vehicle().part( idx );
+            if( vp.removed || ( !include_fake && vp.is_fake ) ) {
+                continue;
+            }
+            if( vp.info().has_flag( f ) && !( unbroken && vp.is_broken() ) ) {
+                i = idx;
+                break;
+            }
+        }
+    }
     if( i < 0 ) {
         return std::nullopt;
     }
@@ -3229,14 +3360,14 @@ std::optional<vpart_reference> vpart_position::part_with_feature( const vpart_bi
 std::optional<vpart_reference> vpart_position::avail_part_with_feature(
     const std::string &f ) const
 {
-    const int i = vehicle().avail_part_with_feature( mount_pos3(), f );
-    return i >= 0 ? vpart_reference( vehicle(), i ) : std::optional<vpart_reference>();
+    const std::optional<vpart_reference> found = part_with_feature( f, true, false );
+    return ( found && found->part().is_available() ) ? found : std::nullopt;
 }
 
 std::optional<vpart_reference> vpart_position::avail_part_with_feature( vpart_bitflags f ) const
 {
-    const int i = vehicle().avail_part_with_feature( part_index(), f );
-    return i >= 0 ? vpart_reference( vehicle(), i ) : std::optional<vpart_reference>();
+    const std::optional<vpart_reference> found = part_with_feature( f, true, false );
+    return ( found && found->part().is_available() ) ? found : std::nullopt;
 }
 
 std::optional<vpart_reference> optional_vpart_position::part_with_feature( const std::string &f,
@@ -3305,9 +3436,17 @@ std::vector<std::string> optional_vpart_position::extended_description() const
     }
 
     ret.emplace_back( string_format( _( "%s (%s)" ), v.name, v.owner->get_name() ) );
+    if( v.is_subtile() ) {
+        ret.emplace_back( string_format( _( "%.2fm x %.2fm | Cd %.2f | Hardness %d" ),
+                                         v.metric_length(), v.metric_width(),
+                                         v.aerodynamic_cd(), v.average_hardness() ) );
+    }
     ret.emplace_back( "--" );
 
-    for( int idx : v.parts_at_relative( value().mount_pos3(), true ) ) {
+    const std::vector<int> listed = v.is_subtile()
+                                    ? v.parts_at_world_tile( v.part( value().part_index() ).precalc[0] )
+                                    : v.parts_at_relative( value().mount_pos3(), true );
+    for( int idx : listed ) {
         ret.emplace_back( v.part( idx ).name() );
     }
 
@@ -3503,10 +3642,12 @@ void vpart_position::set_label( const std::string &text ) const
 
 int vehicle::next_part_to_close( int p, bool outside ) const
 {
-    std::vector<int> parts_here = parts_at_relative( parts[p].mount_pos3(), true, true );
+    const std::vector<int> parts_here = is_subtile()
+                                        ? parts_at_world_tile( parts[p].precalc[0] )
+                                        : parts_at_relative( parts[p].mount_pos3(), true, true );
 
     // We want reverse, since we close the innermost thing first (door), and then the outermost thing (curtains)
-    for( std::vector<int>::reverse_iterator part_it = parts_here.rbegin();
+    for( std::vector<int>::const_reverse_iterator part_it = parts_here.rbegin();
          part_it != parts_here.rend();
          ++part_it ) {
         const vehicle_part &vp = part( *part_it );
@@ -3524,8 +3665,10 @@ int vehicle::next_part_to_open( int p, bool outside ) const
 {
     const bool has_lock = part_has_lock( p );
     // We want forwards, since we open the outermost thing first (curtains), and then the innermost thing (door)
-
-    for( const int elem : parts_at_relative( parts[p].mount_pos3(), true, true ) ) {
+    const std::vector<int> parts_here = is_subtile()
+                                        ? parts_at_world_tile( parts[p].precalc[0] )
+                                        : parts_at_relative( parts[p].mount_pos3(), true, true );
+    for( const int elem : parts_here ) {
         const vehicle_part &vp = part( elem );
         const vpart_info &vpi = vp.info();
         if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) &&
@@ -3540,7 +3683,10 @@ int vehicle::next_part_to_open( int p, bool outside ) const
 
 bool vehicle::part_has_lock( int p ) const
 {
-    for( const int elem : parts_at_relative( parts[p].mount_pos3(), true, true ) ) {
+    const std::vector<int> parts_here = is_subtile()
+                                        ? parts_at_world_tile( parts[p].precalc[0] )
+                                        : parts_at_relative( parts[p].mount_pos3(), true, true );
+    for( const int elem : parts_here ) {
         const vehicle_part &vp = parts[elem];
         if( vp.info().has_flag( "DOOR_LOCKING" ) && vp.is_available() ) {
             return true;
@@ -3878,6 +4024,37 @@ int vehicle::roof_at_part( const int part ) const
     return -1;
 }
 
+namespace
+{
+std::pair<double, double> rotate_mount_exact_m( const int grid_scale, const units::angle &dir,
+        const point_rel_ms &pivot, const point_rel_ms &p )
+{
+    const double inv_scale = 1.0 / std::max( 1, grid_scale );
+    const double dx = static_cast<double>( p.x() - pivot.x() ) * inv_scale;
+    const double dy = static_cast<double>( p.y() - pivot.y() ) * inv_scale;
+    const double c = units::cos( dir );
+    const double s = units::sin( dir );
+    return { dx *c - dy * s, dx *s + dy * c };
+}
+
+int round_tile_coord( const double val )
+{
+    return val >= 0.0
+           ? static_cast<int>( std::floor( val + 0.5 + 1e-7 ) )
+           : -static_cast<int>( std::floor( -val + 0.5 + 1e-7 ) );
+}
+
+std::pair<double, double> world_dir_to_local( const units::angle &dir,
+        const point_rel_ms &world_dir )
+{
+    const double c = units::cos( dir );
+    const double s = units::sin( dir );
+    const double wx = static_cast<double>( world_dir.x() );
+    const double wy = static_cast<double>( world_dir.y() );
+    return { wx *c + wy * s, -wx *s + wy * c };
+}
+} // namespace
+
 point_rel_ms vehicle::coord_translate( const point_rel_ms &p ) const
 {
     tripoint_rel_ms q;
@@ -3889,19 +4066,22 @@ void vehicle::coord_translate( const units::angle &dir, const point_rel_ms &pivo
                                const point_rel_ms &p,
                                tripoint_rel_ms &q ) const
 {
-    tileray tdir( dir );
-    tdir.advance( p.x() - pivot.x() );
-    q.x() = tdir.dx() + tdir.ortho_dx( p.y() - pivot.y() );
-    q.y() = tdir.dy() + tdir.ortho_dy( p.y() - pivot.y() );
+    const auto [wx, wy] = rotate_mount_exact_m( grid_scale, dir, pivot, p );
+    q.x() = round_tile_coord( wx );
+    q.y() = round_tile_coord( wy );
 }
 
 void vehicle::coord_translate( tileray tdir, const point_rel_ms &pivot, const point_rel_ms &p,
                                tripoint_rel_ms &q ) const
 {
-    tdir.clear_advance();
-    tdir.advance( p.x() - pivot.x() );
-    q.x() = tdir.dx() + tdir.ortho_dx( p.y() - pivot.y() );
-    q.y() = tdir.dy() + tdir.ortho_dy( p.y() - pivot.y() );
+    coord_translate( tdir.dir(), pivot, p, q );
+}
+
+rl_vec2d vehicle::coord_translate_exact( const units::angle &dir, const point_rel_ms &pivot,
+        const point_rel_ms &p ) const
+{
+    const auto [wx, wy] = rotate_mount_exact_m( grid_scale, dir, pivot, p );
+    return rl_vec2d( static_cast<float>( wx ), static_cast<float>( wy ) );
 }
 
 tripoint_bub_ms vehicle::mount_to_tripoint( map *here, const point_rel_ms &mount ) const
@@ -3936,22 +4116,34 @@ void vehicle::precalc_mounts( int idir, const units::angle &dir,
     if( idir < 0 || idir > 1 ) {
         idir = 0;
     }
-    tileray tdir( dir );
-    std::unordered_map<tripoint_rel_ms, tripoint_rel_ms> mount_to_precalc;
+    struct cached_precalc_entry {
+        tripoint_rel_ms precalc;
+        rl_vec2d world_offset;
+    };
+    std::unordered_map<tripoint_rel_ms, cached_precalc_entry> mount_to_precalc;
     for( vehicle_part &p : parts ) {
         if( p.removed ) {
             continue;
         }
-        auto q = mount_to_precalc.find( p.mount_pos3() );
+        const auto q = mount_to_precalc.find( p.mount_pos3() );
         if( q == mount_to_precalc.end() ) {
-            coord_translate( tdir, pivot, p.mount, p.precalc[idir] );
-            mount_to_precalc.insert( { p.mount_pos3(), p.precalc[idir]} );
+            const auto [wx, wy] = rotate_mount_exact_m( grid_scale, dir, pivot, p.mount );
+            p.precalc[idir].x() = round_tile_coord( wx );
+            p.precalc[idir].y() = round_tile_coord( wy );
+            p.world_offset[idir] = rl_vec2d( static_cast<float>( wx ),
+                                             static_cast<float>( wy ) );
+            mount_to_precalc.emplace( p.mount_pos3(),
+                                      cached_precalc_entry{ p.precalc[idir], p.world_offset[idir] } );
         } else {
-            p.precalc[idir] = q->second;
+            p.precalc[idir] = q->second.precalc;
+            p.world_offset[idir] = q->second.world_offset;
         }
     }
     pivot_anchor[idir] = pivot;
     pivot_rotation[idir] = dir;
+    if( idir == 0 ) {
+        rebuild_world_tile_parts();
+    }
 }
 
 std::vector<int> vehicle::boarded_parts() const
@@ -3968,14 +4160,20 @@ std::vector<int> vehicle::boarded_parts() const
 std::vector<rider_data> vehicle::get_riders() const
 {
     std::vector<rider_data> res;
+    std::unordered_set<const Creature *> seen_riders;
+    for( const vpart_reference &vp : get_avail_parts( VPFLAG_BOARDABLE ) ) {
+        if( vp.part().has_flag( vp_flag::passenger_flag ) ) {
+            Character *psg = g->critter_by_id<Character>( vp.part().passenger_id );
+            if( psg != nullptr && seen_riders.insert( psg ).second ) {
+                res.push_back( { static_cast<int>( vp.part_index() ), psg } );
+            }
+        }
+    }
     creature_tracker &creatures = get_creature_tracker();
     for( const vpart_reference &vp : get_avail_parts( VPFLAG_BOARDABLE ) ) {
         Creature *rider = creatures.creature_at( vp.pos_abs() );
-        if( rider ) {
-            rider_data r;
-            r.prt = vp.part_index();
-            r.psg = rider;
-            res.emplace_back( r );
+        if( rider != nullptr && seen_riders.insert( rider ).second ) {
+            res.push_back( { static_cast<int>( vp.part_index() ), rider } );
         }
     }
     return res;
@@ -4111,7 +4309,895 @@ units::mass vehicle::unloaded_mass() const
         m_total += vp.part().base.weight();
 
     }
+    m_total += current_chassis_ballast();
     return enchantment_cache.modify_value( enchant_vals::mod::TOTAL_WEIGHT, m_total );
+}
+
+void vehicle::init_chassis_ballast( units::mass target_curb_mass )
+{
+    int struct_cnt = 0;
+    units::mass raw_mass = 0_gram;
+    for( const vehicle_part &vp : parts ) {
+        if( vp.removed || vp.is_fake ) {
+            continue;
+        }
+        raw_mass += vp.base.weight();
+        if( vp.info().location == vpart_location_structure &&
+            !vp.info().has_flag( "PROTRUSION" ) ) {
+            struct_cnt++;
+        }
+    }
+    initial_structure_count = std::max( 1, struct_cnt );
+    if( target_curb_mass > raw_mass ) {
+        chassis_ballast_mass = target_curb_mass - raw_mass;
+    } else {
+        chassis_ballast_mass = 0_gram;
+    }
+    invalidate_mass();
+}
+
+units::mass vehicle::current_chassis_ballast() const
+{
+    if( chassis_ballast_mass <= 0_gram || initial_structure_count <= 0 ) {
+        return 0_gram;
+    }
+    int cur_struct = 0;
+    for( const vehicle_part &vp : parts ) {
+        if( !vp.removed && !vp.is_fake &&
+            vp.info().location == vpart_location_structure &&
+            !vp.info().has_flag( "PROTRUSION" ) ) {
+            cur_struct++;
+        }
+    }
+    if( cur_struct <= 0 ) {
+        return 0_gram;
+    }
+    const double ratio = std::clamp( static_cast<double>( cur_struct ) /
+                                     static_cast<double>( initial_structure_count ),
+                                     0.0, 1.0 );
+    return units::from_gram( static_cast<int64_t>(
+                                 std::llround( units::to_gram<double>( chassis_ballast_mass ) * ratio ) ) );
+}
+
+double vehicle::metric_length() const
+{
+    const double inv_scale = 1.0 / std::max( 1, grid_scale );
+    double min_x = std::numeric_limits<double>::infinity();
+    double max_x = -std::numeric_limits<double>::infinity();
+    for( const vehicle_part &vp : parts ) {
+        if( vp.removed || vp.is_fake ) {
+            continue;
+        }
+        const double cx = static_cast<double>( vp.mount.x() ) * inv_scale;
+        const double hx = is_subtile() ? static_cast<double>( vp.info().sub_size.x ) / 16.0 : 0.5;
+        min_x = std::min( min_x, cx - hx );
+        max_x = std::max( max_x, cx + hx );
+    }
+    if( !std::isfinite( min_x ) || !std::isfinite( max_x ) ) {
+        return 1.0;
+    }
+    return std::max( 0.25, max_x - min_x );
+}
+
+double vehicle::metric_width() const
+{
+    const double inv_scale = 1.0 / std::max( 1, grid_scale );
+    double min_y = std::numeric_limits<double>::infinity();
+    double max_y = -std::numeric_limits<double>::infinity();
+    for( const vehicle_part &vp : parts ) {
+        if( vp.removed || vp.is_fake ) {
+            continue;
+        }
+        const double cy = static_cast<double>( vp.mount.y() ) * inv_scale;
+        const double hy = is_subtile() ? static_cast<double>( vp.info().sub_size.y ) / 16.0 : 0.5;
+        min_y = std::min( min_y, cy - hy );
+        max_y = std::max( max_y, cy + hy );
+    }
+    if( !std::isfinite( min_y ) || !std::isfinite( max_y ) ) {
+        return 1.0;
+    }
+    return std::max( 0.25, max_y - min_y );
+}
+
+double vehicle::shell_integrity() const
+{
+    int total_shells = 0;
+    double healthy_sum = 0.0;
+    for( const vehicle_part &vp : parts ) {
+        if( vp.removed || vp.is_fake ) {
+            continue;
+        }
+        const vpart_info &vpi = vp.info();
+        if( vpi.has_flag( VPFLAG_SHELL ) || vpi.location == vpart_location_shell ) {
+            total_shells++;
+            if( !vp.is_broken() ) {
+                healthy_sum += std::clamp( vp.health_percent(), 0.1, 1.0 );
+            }
+        }
+    }
+    if( total_shells == 0 ) {
+        return 0.0;
+    }
+    return std::clamp( healthy_sum / static_cast<double>( total_shells ), 0.0, 1.0 );
+}
+
+double vehicle::aerodynamic_cd() const
+{
+    int total_shells = 0;
+    double cd_sum = 0.0;
+    int exposed_boards = 0;
+    int fairings = 0;
+    int open_doors = 0;
+    int seat_count = 0;
+    int windshield_count = 0;
+    for( const vehicle_part &vp : parts ) {
+        if( vp.removed || vp.is_fake ) {
+            continue;
+        }
+        const vpart_info &vpi = vp.info();
+        if( vpi.has_flag( VPFLAG_SHELL ) || vpi.location == vpart_location_shell ) {
+            total_shells++;
+            const double panel_cd = vpi.shell_info ? static_cast<double>( vpi.shell_info->drag_coeff ) : 0.35;
+            cd_sum += panel_cd;
+        }
+        if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) && vp.open ) {
+            open_doors++;
+        }
+        if( vpi.has_flag( "HALF_BOARD" ) ) {
+            fairings++;
+        } else if( vpi.has_flag( "FULL_BOARD" ) ) {
+            exposed_boards++;
+        }
+        if( vpi.has_flag( "SEAT" ) || vpi.has_flag( "BED" ) ) {
+            seat_count++;
+        }
+        if( vpi.has_flag( VPFLAG_WINDOW ) && vp.is_available() ) {
+            windshield_count++;
+        }
+    }
+    const double integrity = shell_integrity();
+    double cd = 0.56;
+    if( total_shells > 0 ) {
+        const double shell_cd = cd_sum / static_cast<double>( total_shells );
+        cd = shell_cd + ( 1.0 - integrity ) * 0.42;
+    } else {
+        if( fairings > 0 && windshield_count > 0 ) {
+            cd = 0.46;
+        } else if( exposed_boards > seat_count ) {
+            cd = 0.68;
+        } else if( seat_count <= 2 && metric_width() <= 1.0 ) {
+            cd = 0.58;
+        }
+    }
+    for( const int t_idx : turret_locations ) {
+        ( void )t_idx;
+        cd += 0.05;
+    }
+    for( const int s_idx : solar_panels ) {
+        ( void )s_idx;
+        cd += 0.008;
+    }
+    cd += 0.16 * static_cast<double>( wind_turbines.size() );
+    cd += 0.20 * static_cast<double>( rotors.size() );
+    cd += 0.24 * static_cast<double>( sails.size() );
+    cd += 0.04 * static_cast<double>( open_doors );
+    return std::clamp( cd, 0.18, 1.45 );
+}
+
+int vehicle::average_hardness() const
+{
+    int64_t sum = 0;
+    int count = 0;
+    for( int i = 0; i < static_cast<int>( parts.size() ); ++i ) {
+        const vehicle_part &vp = parts[i];
+        if( vp.removed || vp.is_fake ) {
+            continue;
+        }
+        const vpart_info &vpi = vp.info();
+        if( vpi.location == vpart_location_structure ||
+            vpi.has_flag( VPFLAG_SHELL ) ||
+            vpi.location == vpart_location_shell ||
+            vpi.has_flag( VPFLAG_ARMOR ) ) {
+            sum += effective_part_hardness( i );
+            count++;
+        }
+    }
+    if( count == 0 ) {
+        return 5;
+    }
+    return static_cast<int>( std::lround( static_cast<double>( sum ) /
+                                          static_cast<double>( count ) ) );
+}
+
+void vehicle::rebuild_world_tile_parts()
+{
+    world_tile_parts.clear();
+    for( int i = 0; i < static_cast<int>( parts.size() ); ++i ) {
+        const vehicle_part &vp = parts[i];
+        if( vp.removed || ( vp.is_fake && !vp.is_active_fake ) ) {
+            continue;
+        }
+        world_tile_parts[vp.precalc[0]].push_back( i );
+    }
+    for( auto &[tile, indices] : world_tile_parts ) {
+        ( void )tile;
+        std::sort( indices.begin(), indices.end(), [this]( int a, int b ) {
+            return parts[a].info().location->list_order < parts[b].info().location->list_order;
+        } );
+    }
+}
+
+const std::vector<int> &vehicle::parts_at_world_tile( const tripoint_rel_ms &precalc_pos ) const
+{
+    static const std::vector<int> empty;
+    const auto it = world_tile_parts.find( precalc_pos );
+    return it != world_tile_parts.end() ? it->second : empty;
+}
+
+static bool subtile_boxes_touch_2x( const point_rel_ms &ma, const point &sa, const int za,
+                                    const point_rel_ms &mb, const point &sb, const int zb )
+{
+    if( std::abs( za - zb ) > 1 ) {
+        return false;
+    }
+    const int ax1 = 2 * ma.x() - sa.x;
+    const int ax2 = 2 * ma.x() + sa.x;
+    const int ay1 = 2 * ma.y() - sa.y;
+    const int ay2 = 2 * ma.y() + sa.y;
+    const int bx1 = 2 * mb.x() - sb.x;
+    const int bx2 = 2 * mb.x() + sb.x;
+    const int by1 = 2 * mb.y() - sb.y;
+    const int by2 = 2 * mb.y() + sb.y;
+    const int ox = std::min( ax2, bx2 ) - std::max( ax1, bx1 );
+    const int oy = std::min( ay2, by2 ) - std::max( ay1, by1 );
+    if( za != zb ) {
+        return ox > 0 && oy > 0;
+    }
+    return ( ox > 0 && oy >= -1 ) || ( oy > 0 && ox >= -1 );
+}
+
+bool vehicle::sub_footprints_touch( const vehicle_part &a, const vehicle_part &b ) const
+{
+    if( !is_subtile() ) {
+        return std::abs( a.mount.x() - b.mount.x() ) +
+               std::abs( a.mount.y() - b.mount.y() ) +
+               std::abs( a.mount_level - b.mount_level ) <= 1;
+    }
+    return subtile_boxes_touch_2x( a.mount, a.info().sub_size, a.mount_level,
+                                   b.mount, b.info().sub_size, b.mount_level );
+}
+
+bool vehicle::has_adjacent_structure( const tripoint_rel_ms &dp, const vpart_info &vpi ) const
+{
+    if( !is_subtile() ) {
+        for( const tripoint &offset : vehicle_structure_neighbors ) {
+            if( has_structural_part( dp + offset ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+    for( const vehicle_part &vp : parts ) {
+        if( vp.removed || vp.is_fake ) {
+            continue;
+        }
+        if( vp.info().location != vpart_location_structure ||
+            vp.has_flag( vp_flag::carried_flag ) ||
+            vp.info().has_flag( "PROTRUSION" ) ) {
+            continue;
+        }
+        if( subtile_boxes_touch_2x( dp.xy(), vpi.sub_size, dp.z(),
+                                    vp.mount, vp.info().sub_size, vp.mount_level ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int vehicle::shell_covering_part( int part_idx ) const
+{
+    if( part_idx < 0 || part_idx >= static_cast<int>( parts.size() ) ) {
+        return -1;
+    }
+    const vehicle_part &target = parts[part_idx];
+    int best_idx = -1;
+    int best_score = -1;
+    for( const int s_idx : shells ) {
+        if( s_idx < 0 || s_idx >= static_cast<int>( parts.size() ) ) {
+            continue;
+        }
+        const vehicle_part &sp = parts[s_idx];
+        if( sp.removed || sp.is_broken() || sp.mount_level != target.mount_level ) {
+            continue;
+        }
+        if( sp.mount == target.mount ||
+            ( is_subtile() && subtile_boxes_touch_2x( sp.mount, sp.info().sub_size, sp.mount_level,
+                    target.mount, target.info().sub_size, target.mount_level ) ) ) {
+            const int h = sp.info().shell_info
+                          ? sp.info().shell_info->hardness
+                          : sp.info().hardness;
+            const int score = h + ( sp.mount == target.mount ? 1000 : 0 );
+            if( score > best_score ) {
+                best_score = score;
+                best_idx = s_idx;
+            }
+        }
+    }
+    return best_idx;
+}
+
+int vehicle::effective_part_hardness( int part_idx ) const
+{
+    if( part_idx < 0 || part_idx >= static_cast<int>( parts.size() ) ) {
+        return 1;
+    }
+    const vehicle_part &vp = parts[part_idx];
+    const int base_h = std::max( 1, vp.info().hardness );
+    const double hp_factor = vp.is_broken() ? 0.35 : ( 0.60 + 0.40 * vp.health_percent() );
+    int best_h = std::max( 1, static_cast<int>( std::lround( base_h * hp_factor ) ) );
+
+    const int armor_idx = part_with_feature( vp.mount_pos3(), "ARMOR", true );
+    if( armor_idx >= 0 ) {
+        const vehicle_part &ap = parts[armor_idx];
+        const int armor_h = static_cast<int>( std::lround(
+                std::max( 1, ap.info().hardness ) * ( 0.65 + 0.35 * ap.health_percent() ) ) );
+        best_h = std::max( best_h, armor_h );
+    }
+    const int shell_idx = shell_covering_part( part_idx );
+    if( shell_idx >= 0 ) {
+        const vehicle_part &sp = parts[shell_idx];
+        const int shell_base = sp.info().shell_info
+                               ? std::max( sp.info().hardness, sp.info().shell_info->hardness )
+                               : sp.info().hardness;
+        const int shell_h = static_cast<int>( std::lround(
+                std::max( 1, shell_base ) * ( 0.60 + 0.40 * sp.health_percent() ) ) );
+        best_h = std::max( best_h, shell_h );
+    }
+    return best_h;
+}
+
+static bool obb_overlaps_obb( const rl_vec2d &ca, const double cos_a, const double sin_a,
+                              const double hxa, const double hya,
+                              const rl_vec2d &cb, const double cos_b, const double sin_b,
+                              const double hxb, const double hyb )
+{
+    const double dx = cb.x - ca.x;
+    const double dy = cb.y - ca.y;
+    const double uax = cos_a;
+    const double uay = sin_a;
+    const double vax = -sin_a;
+    const double vay = cos_a;
+    const double ubx = cos_b;
+    const double uby = sin_b;
+    const double vbx = -sin_b;
+    const double vby = cos_b;
+
+    const std::array<std::pair<double, double>, 4> axes = { {
+            { uax, uay }, { vax, vay }, { ubx, uby }, { vbx, vby }
+        }
+    };
+    for( const auto &[ax, ay] : axes ) {
+        const double dist = std::abs( dx * ax + dy * ay );
+        const double ra = hxa * std::abs( uax * ax + uay * ay ) +
+                          hya * std::abs( vax * ax + vay * ay );
+        const double rb = hxb * std::abs( ubx * ax + uby * ay ) +
+                          hyb * std::abs( vbx * ax + vby * ay );
+        if( dist > ra + rb ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool vehicle::subtile_overlaps_point( const tripoint_abs_ms &world_tile,
+                                      const tripoint_rel_ms &dp_this, int part_idx ) const
+{
+    if( !is_subtile() ) {
+        return true;
+    }
+    if( part_idx < 0 || part_idx >= static_cast<int>( parts.size() ) ) {
+        return false;
+    }
+    const vehicle_part &vp = parts[part_idx];
+    if( vp.removed ) {
+        return false;
+    }
+    if( pos_abs().z() + dp_this.z() + vp.precalc[1].z() != world_tile.z() ) {
+        return false;
+    }
+    const rl_vec2d center(
+        static_cast<float>( pos_abs().x() + dp_this.x() ) + vp.world_offset[1].x,
+        static_cast<float>( pos_abs().y() + dp_this.y() ) + vp.world_offset[1].y );
+    const rl_vec2d tile_center( static_cast<float>( world_tile.x() ),
+                                static_cast<float>( world_tile.y() ) );
+    const double hx = std::max( 0.0625, static_cast<double>( vp.info().sub_size.x ) / 16.0 );
+    const double hy = std::max( 0.0625, static_cast<double>( vp.info().sub_size.y ) / 16.0 );
+    return obb_overlaps_obb( center, units::cos( pivot_rotation[1] ), units::sin( pivot_rotation[1] ),
+                             hx, hy, tile_center, 1.0, 0.0, 0.48, 0.48 );
+}
+
+bool vehicle::subtile_overlaps_vehicle( const vehicle &other, const tripoint_rel_ms &dp_this,
+                                        const map &/*here*/ ) const
+{
+    if( !is_subtile() && !other.is_subtile() ) {
+        return true;
+    }
+    const double cos_a = units::cos( pivot_rotation[1] );
+    const double sin_a = units::sin( pivot_rotation[1] );
+    const double cos_b = units::cos( other.pivot_rotation[0] );
+    const double sin_b = units::sin( other.pivot_rotation[0] );
+    const double base_ax = static_cast<double>( pos_abs().x() + dp_this.x() );
+    const double base_ay = static_cast<double>( pos_abs().y() + dp_this.y() );
+    const double base_bx = static_cast<double>( other.pos_abs().x() );
+    const double base_by = static_cast<double>( other.pos_abs().y() );
+
+    for( const vehicle_part &va : parts ) {
+        if( va.removed || va.is_fake ) {
+            continue;
+        }
+        const vpart_info &va_info = va.info();
+        if( va_info.location != vpart_location_structure && !va_info.has_flag( VPFLAG_ROTOR ) ) {
+            continue;
+        }
+        const double hxa = is_subtile() ? std::max( 0.0625, va_info.sub_size.x / 16.0 ) : 0.49;
+        const double hya = is_subtile() ? std::max( 0.0625, va_info.sub_size.y / 16.0 ) : 0.49;
+        const rl_vec2d ca( static_cast<float>( base_ax + va.world_offset[1].x ),
+                           static_cast<float>( base_ay + va.world_offset[1].y ) );
+        const int za = pos_abs().z() + dp_this.z() + va.precalc[1].z();
+        for( const vehicle_part &vb : other.parts ) {
+            if( vb.removed || vb.is_fake ) {
+                continue;
+            }
+            const vpart_info &vb_info = vb.info();
+            if( vb_info.location != vpart_location_structure && !vb_info.has_flag( VPFLAG_ROTOR ) ) {
+                continue;
+            }
+            if( other.pos_abs().z() + vb.precalc[0].z() != za ) {
+                continue;
+            }
+            const double hxb = other.is_subtile() ? std::max( 0.0625, vb_info.sub_size.x / 16.0 ) : 0.49;
+            const double hyb = other.is_subtile() ? std::max( 0.0625, vb_info.sub_size.y / 16.0 ) : 0.49;
+            const rl_vec2d cb( static_cast<float>( base_bx + vb.world_offset[0].x ),
+                               static_cast<float>( base_by + vb.world_offset[0].y ) );
+            if( std::abs( ca.x - cb.x ) > 1.5 || std::abs( ca.y - cb.y ) > 1.5 ) {
+                continue;
+            }
+            if( obb_overlaps_obb( ca, cos_a, sin_a, hxa, hya,
+                                  cb, cos_b, sin_b, hxb, hyb ) ) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+int vehicle::find_passenger_part( const Character &who ) const
+{
+    for( int i = 0; i < static_cast<int>( parts.size() ); ++i ) {
+        const vehicle_part &vp = parts[i];
+        if( !vp.removed && !vp.is_fake && vp.has_flag( vp_flag::passenger_flag ) &&
+            vp.passenger_id == who.getID() ) {
+            return i;
+        }
+    }
+    const tripoint_abs_ms who_pos = who.pos_abs();
+    for( int i = 0; i < static_cast<int>( parts.size() ); ++i ) {
+        const vehicle_part &vp = parts[i];
+        if( !vp.removed && !vp.is_fake && vp.is_available() &&
+            vp.info().has_flag( VPFLAG_BOARDABLE ) && abs_part_pos( vp ) == who_pos ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static bool segment_hits_subtile_box( const double ax, const double ay,
+                                      const double bx, const double by,
+                                      const double cx, const double cy,
+                                      const double hx, const double hy,
+                                      double &t_hit )
+{
+    const double dx = bx - ax;
+    const double dy = by - ay;
+    double tmin = 0.05;
+    double tmax = 0.95;
+    if( std::abs( dx ) < 1e-6 ) {
+        if( ax < cx - hx || ax > cx + hx ) {
+            return false;
+        }
+    } else {
+        double t1 = ( cx - hx - ax ) / dx;
+        double t2 = ( cx + hx - ax ) / dx;
+        if( t1 > t2 ) {
+            std::swap( t1, t2 );
+        }
+        tmin = std::max( tmin, t1 );
+        tmax = std::min( tmax, t2 );
+        if( tmin > tmax ) {
+            return false;
+        }
+    }
+    if( std::abs( dy ) < 1e-6 ) {
+        if( ay < cy - hy || ay > cy + hy ) {
+            return false;
+        }
+    } else {
+        double t1 = ( cy - hy - ay ) / dy;
+        double t2 = ( cy + hy - ay ) / dy;
+        if( t1 > t2 ) {
+            std::swap( t1, t2 );
+        }
+        tmin = std::max( tmin, t1 );
+        tmax = std::min( tmax, t2 );
+        if( tmin > tmax ) {
+            return false;
+        }
+    }
+    t_hit = tmin;
+    return true;
+}
+
+int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world_dir,
+                                        int &blocking_door_part ) const
+{
+    blocking_door_part = -1;
+    if( from_part < 0 || from_part >= static_cast<int>( parts.size() ) ) {
+        return -1;
+    }
+    const double scale = static_cast<double>( std::max( 1, grid_scale ) );
+    const vehicle_part &from_vp = parts[from_part];
+    const auto [lx_raw, ly_raw] = world_dir_to_local( pivot_rotation[0], world_dir );
+    const double dir_len = std::hypot( lx_raw, ly_raw );
+    if( dir_len < 1e-4 ) {
+        return -1;
+    }
+    const double ulx = lx_raw / dir_len;
+    const double uly = ly_raw / dir_len;
+    const double fx = static_cast<double>( from_vp.mount.x() ) / scale;
+    const double fy = static_cast<double>( from_vp.mount.y() ) / scale;
+
+    int best_target = -1;
+    double best_score = -1e9;
+    int best_blocked_door = -1;
+    double best_blocked_score = -1e9;
+
+    for( int idx = 0; idx < static_cast<int>( parts.size() ); ++idx ) {
+        if( idx == from_part ) {
+            continue;
+        }
+        const vehicle_part &cand = parts[idx];
+        if( cand.removed || cand.is_fake || !cand.is_available() ||
+            cand.mount_level != from_vp.mount_level ) {
+            continue;
+        }
+        const vpart_info &vpi = cand.info();
+        if( !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
+            continue;
+        }
+        // Only treat non-solid or openable boardables as interior destinations
+        if( vpi.has_flag( VPFLAG_OBSTACLE ) && ( !vpi.has_flag( VPFLAG_OPENABLE ) || !cand.open ) ) {
+            continue;
+        }
+        const double cx = static_cast<double>( cand.mount.x() ) / scale;
+        const double cy = static_cast<double>( cand.mount.y() ) / scale;
+        const double dx = cx - fx;
+        const double dy = cy - fy;
+        const double dist = std::hypot( dx, dy );
+        if( dist < 0.08 || dist > 1.45 ) {
+            continue;
+        }
+        const double dot = ( dx * ulx + dy * uly ) / dist;
+        if( dot < 0.42 ) {
+            continue;
+        }
+        // Check partition obstacles between from_vp and cand
+        bool blocked_solid = false;
+        int door_blocker = -1;
+        double closest_t = 1e9;
+        for( int obs_idx = 0; obs_idx < static_cast<int>( parts.size() ); ++obs_idx ) {
+            if( obs_idx == from_part || obs_idx == idx ) {
+                continue;
+            }
+            const vehicle_part &ovp = parts[obs_idx];
+            if( ovp.removed || ovp.is_fake || ovp.is_broken() ||
+                ovp.mount_level != from_vp.mount_level ||
+                ovp.mount == from_vp.mount || ovp.mount == cand.mount ) {
+                continue;
+            }
+            const vpart_info &ovpi = ovp.info();
+            if( !ovpi.has_flag( VPFLAG_OBSTACLE ) ) {
+                continue;
+            }
+            if( ovpi.has_flag( VPFLAG_OPENABLE ) && ovp.open ) {
+                continue;
+            }
+            const double ox = static_cast<double>( ovp.mount.x() ) / scale;
+            const double oy = static_cast<double>( ovp.mount.y() ) / scale;
+            const double ohx = is_subtile() ? std::max( 0.04, ovpi.sub_size.x / 16.0 ) : 0.45;
+            const double ohy = is_subtile() ? std::max( 0.04, ovpi.sub_size.y / 16.0 ) : 0.45;
+            double t_hit = 0.0;
+            if( segment_hits_subtile_box( fx, fy, cx, cy, ox, oy, ohx, ohy, t_hit ) ) {
+                if( ovpi.has_flag( VPFLAG_OPENABLE ) && !ovpi.has_flag( "CABIN_WINDOW" ) ) {
+                    if( t_hit < closest_t ) {
+                        closest_t = t_hit;
+                        door_blocker = obs_idx;
+                    }
+                } else {
+                    blocked_solid = true;
+                    break;
+                }
+            }
+        }
+        double score = dot - 0.18 * dist;
+        if( cand.has_flag( vp_flag::passenger_flag ) ) {
+            score -= 0.12;
+        }
+        if( blocked_solid ) {
+            continue;
+        }
+        if( door_blocker >= 0 ) {
+            if( score > best_blocked_score ) {
+                best_blocked_score = score;
+                best_blocked_door = door_blocker;
+            }
+            continue;
+        }
+        if( score > best_score ) {
+            best_score = score;
+            best_target = idx;
+        }
+    }
+    if( best_target < 0 ) {
+        blocking_door_part = best_blocked_door;
+    }
+    return best_target;
+}
+
+int vehicle::find_exit_door_or_blocker( int from_part, const point_rel_ms &world_dir,
+                                        bool &blocked_solid ) const
+{
+    blocked_solid = false;
+    if( from_part < 0 || from_part >= static_cast<int>( parts.size() ) ) {
+        return -1;
+    }
+    const double scale = static_cast<double>( std::max( 1, grid_scale ) );
+    const vehicle_part &from_vp = parts[from_part];
+    const auto [lx_raw, ly_raw] = world_dir_to_local( pivot_rotation[0], world_dir );
+    const double dir_len = std::hypot( lx_raw, ly_raw );
+    if( dir_len < 1e-4 ) {
+        return -1;
+    }
+    const double ulx = lx_raw / dir_len;
+    const double uly = ly_raw / dir_len;
+    const double fx = static_cast<double>( from_vp.mount.x() ) / scale;
+    const double fy = static_cast<double>( from_vp.mount.y() ) / scale;
+    const double tx = fx + ulx * 1.4;
+    const double ty = fy + uly * 1.4;
+
+    bool has_open_door_on_ray = false;
+    int closest_closed_door = -1;
+    double closest_closed_t = 1e9;
+    bool hit_solid_wall = false;
+    double solid_t = 1e9;
+
+    for( int idx = 0; idx < static_cast<int>( parts.size() ); ++idx ) {
+        if( idx == from_part ) {
+            continue;
+        }
+        const vehicle_part &vp = parts[idx];
+        if( vp.removed || vp.is_fake || vp.is_broken() ||
+            vp.mount_level != from_vp.mount_level ) {
+            continue;
+        }
+        const vpart_info &vpi = vp.info();
+        const bool is_door = vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" );
+        const bool is_wall = vpi.has_flag( VPFLAG_OBSTACLE );
+        if( !is_door && !is_wall ) {
+            continue;
+        }
+        // Only check barriers situated ahead along the exit ray from from_vp
+        const double ox = static_cast<double>( vp.mount.x() ) / scale;
+        const double oy = static_cast<double>( vp.mount.y() ) / scale;
+        const double along = ( ox - fx ) * ulx + ( oy - fy ) * uly;
+        if( along <= 0.05 ) {
+            continue;
+        }
+        const double ohx = ( is_subtile() ? std::max( 0.06, vpi.sub_size.x / 16.0 ) : 0.45 ) + 0.08;
+        const double ohy = ( is_subtile() ? std::max( 0.06, vpi.sub_size.y / 16.0 ) : 0.45 ) + 0.08;
+        double t_hit = 0.0;
+        if( segment_hits_subtile_box( fx, fy, tx, ty, ox, oy, ohx, ohy, t_hit ) ) {
+            if( is_door ) {
+                if( vp.open ) {
+                    has_open_door_on_ray = true;
+                } else if( t_hit < closest_closed_t ) {
+                    closest_closed_t = t_hit;
+                    closest_closed_door = idx;
+                }
+            } else if( !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
+                if( t_hit < solid_t ) {
+                    solid_t = t_hit;
+                    hit_solid_wall = true;
+                }
+            }
+        }
+    }
+    if( closest_closed_door >= 0 ) {
+        return closest_closed_door;
+    }
+    if( has_open_door_on_ray ) {
+        return -1;
+    }
+    if( hit_solid_wall ) {
+        blocked_solid = true;
+    }
+    return -1;
+}
+
+int vehicle::find_entry_seat_and_door( const tripoint_bub_ms &from_outside, const map &here,
+                                       const tripoint_bub_ms &target_tile,
+                                       int &blocking_door_part, bool &blocked_solid ) const
+{
+    blocking_door_part = -1;
+    blocked_solid = false;
+    const double scale = static_cast<double>( std::max( 1, grid_scale ) );
+    const tripoint_bub_ms origin_bub = pos_bub( here );
+    const point_rel_ms rel_from = from_outside.xy() - origin_bub.xy();
+    const auto [fx, fy] = world_dir_to_local( pivot_rotation[0], rel_from );
+    const double from_lx = fx + static_cast<double>( pivot_anchor[0].x() ) / scale;
+    const double from_ly = fy + static_cast<double>( pivot_anchor[0].y() ) / scale;
+    const int target_level = target_tile.z() - origin_bub.z();
+
+    const tripoint_rel_ms target_rel = target_tile - origin_bub;
+    int best_seat = -1;
+    double best_score = -1e9;
+    int best_door_blocker = -1;
+    bool best_was_solid = false;
+
+    for( int idx = 0; idx < static_cast<int>( parts.size() ); ++idx ) {
+        const vehicle_part &cand = parts[idx];
+        if( cand.removed || cand.is_fake || !cand.is_available() ||
+            cand.mount_level != target_level ) {
+            continue;
+        }
+        const vpart_info &vpi = cand.info();
+        if( !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
+            continue;
+        }
+        if( vpi.has_flag( VPFLAG_OBSTACLE ) && ( !vpi.has_flag( VPFLAG_OPENABLE ) || !cand.open ) ) {
+            continue;
+        }
+        const double sx = static_cast<double>( cand.mount.x() ) / scale;
+        const double sy = static_cast<double>( cand.mount.y() ) / scale;
+        const double dist_from = std::hypot( sx - from_lx, sy - from_ly );
+        const bool same_world_tile = cand.precalc[0] == target_rel;
+        if( !same_world_tile && dist_from > 1.45 ) {
+            continue;
+        }
+
+        // Check perimeter door or wall between player outside and candidate seat
+        int closed_door = -1;
+        double closed_t = 1e9;
+        bool open_door = false;
+        bool solid_wall = false;
+        for( int obs_idx = 0; obs_idx < static_cast<int>( parts.size() ); ++obs_idx ) {
+            if( obs_idx == idx ) {
+                continue;
+            }
+            const vehicle_part &ovp = parts[obs_idx];
+            if( ovp.removed || ovp.is_fake || ovp.is_broken() ||
+                ovp.mount_level != target_level || ovp.mount == cand.mount ) {
+                continue;
+            }
+            const vpart_info &ovpi = ovp.info();
+            const bool is_door = ovpi.has_flag( VPFLAG_OPENABLE ) && !ovpi.has_flag( "CABIN_WINDOW" );
+            const bool is_wall = ovpi.has_flag( VPFLAG_OBSTACLE );
+            if( !is_door && !is_wall ) {
+                continue;
+            }
+            const double ox = static_cast<double>( ovp.mount.x() ) / scale;
+            const double oy = static_cast<double>( ovp.mount.y() ) / scale;
+            const double ohx = ( is_subtile() ? std::max( 0.06, ovpi.sub_size.x / 16.0 ) : 0.45 ) + 0.08;
+            const double ohy = ( is_subtile() ? std::max( 0.06, ovpi.sub_size.y / 16.0 ) : 0.45 ) + 0.08;
+            double t_hit = 0.0;
+            if( segment_hits_subtile_box( from_lx, from_ly, sx, sy, ox, oy, ohx, ohy, t_hit ) ) {
+                if( is_door ) {
+                    if( ovp.open ) {
+                        open_door = true;
+                    } else if( t_hit < closed_t ) {
+                        closed_t = t_hit;
+                        closed_door = obs_idx;
+                    }
+                } else if( !ovpi.has_flag( VPFLAG_BOARDABLE ) ) {
+                    solid_wall = true;
+                }
+            }
+        }
+        if( closed_door >= 0 ) {
+            if( best_door_blocker < 0 ) {
+                best_door_blocker = closed_door;
+            }
+            continue;
+        }
+        if( solid_wall && !open_door ) {
+            best_was_solid = true;
+            continue;
+        }
+        double score = ( same_world_tile ? 2.0 : 0.0 ) - dist_from;
+        if( cand.has_flag( vp_flag::passenger_flag ) ) {
+            score -= 0.8;
+        }
+        if( score > best_score ) {
+            best_score = score;
+            best_seat = idx;
+        }
+    }
+    if( best_seat < 0 ) {
+        if( best_door_blocker >= 0 ) {
+            blocking_door_part = best_door_blocker;
+        } else if( best_was_solid ) {
+            blocked_solid = true;
+        }
+    }
+    return best_seat;
+}
+
+int vehicle::find_directional_door_part( const Character &who, const point_rel_ms &world_dir,
+        bool want_open ) const
+{
+    const double scale = static_cast<double>( std::max( 1, grid_scale ) );
+    const int passenger_part = find_passenger_part( who );
+    const auto [lx_raw, ly_raw] = world_dir_to_local( pivot_rotation[0], world_dir );
+    const double dir_len = std::hypot( lx_raw, ly_raw );
+
+    double ref_x = 0.0;
+    double ref_y = 0.0;
+    int ref_level = 0;
+    if( passenger_part >= 0 ) {
+        ref_x = static_cast<double>( parts[passenger_part].mount.x() ) / scale;
+        ref_y = static_cast<double>( parts[passenger_part].mount.y() ) / scale;
+        ref_level = parts[passenger_part].mount_level;
+    } else {
+        const tripoint_abs_ms rel_who = who.pos_abs() - pos_abs();
+        const auto [wx, wy] = world_dir_to_local( pivot_rotation[0], rel_who.xy() );
+        ref_x = wx + static_cast<double>( pivot_anchor[0].x() ) / scale;
+        ref_y = wy + static_cast<double>( pivot_anchor[0].y() ) / scale;
+        ref_level = rel_who.z();
+    }
+
+    int best_part = -1;
+    double best_score = -1e9;
+    for( int idx = 0; idx < static_cast<int>( parts.size() ); ++idx ) {
+        const vehicle_part &vp = parts[idx];
+        if( vp.removed || vp.is_fake || !vp.is_available() || vp.mount_level != ref_level ) {
+            continue;
+        }
+        const vpart_info &vpi = vp.info();
+        if( !vpi.has_flag( VPFLAG_OPENABLE ) || vpi.has_flag( "CABIN_WINDOW" ) ) {
+            continue;
+        }
+        if( want_open ? ( vp.open != 0 ) : ( vp.open == 0 ) ) {
+            continue;
+        }
+        const double dx = static_cast<double>( vp.mount.x() ) / scale - ref_x;
+        const double dy = static_cast<double>( vp.mount.y() ) / scale - ref_y;
+        const double dist = std::hypot( dx, dy );
+        if( dist > 1.55 ) {
+            continue;
+        }
+        double score = -dist;
+        if( dir_len >= 1e-4 && dist >= 0.05 ) {
+            const double dot = ( dx * ( lx_raw / dir_len ) + dy * ( ly_raw / dir_len ) ) / dist;
+            if( dot < 0.25 ) {
+                continue;
+            }
+            score += dot * 2.0;
+        }
+        if( score > best_score ) {
+            best_score = score;
+            best_part = idx;
+        }
+    }
+    return best_part;
 }
 
 units::mass vehicle::weight_on_wheels( map &here ) const
@@ -4931,6 +6017,72 @@ double vehicle::coeff_air_drag() const
     if( !coeff_air_dirty ) {
         return coefficient_air_resistance;
     }
+    constexpr double air_density = 1.29; // kg/m^3
+
+    if( is_subtile() ) {
+        const double width_m = metric_width();
+        const double length_m = metric_length();
+        double shell_height_sum = 0.0;
+        int shell_height_cnt = 0;
+        bool has_aisle = false;
+        bool has_fullboard = false;
+        bool has_roof = false;
+        for( const vehicle_part &vp : parts ) {
+            if( vp.removed || vp.is_fake ) {
+                continue;
+            }
+            const vpart_info &vpi = vp.info();
+            if( ( vpi.has_flag( VPFLAG_SHELL ) || vpi.location == vpart_location_shell ) &&
+                vpi.shell_info ) {
+                shell_height_sum += static_cast<double>( vpi.shell_info->frontal_height_m );
+                shell_height_cnt++;
+            }
+            if( vpi.has_flag( "AISLE" ) ) {
+                has_aisle = true;
+            }
+            if( vpi.has_flag( "FULL_BOARD" ) ) {
+                has_fullboard = true;
+            }
+            if( vpi.has_flag( "ROOF" ) ) {
+                has_roof = true;
+            }
+        }
+        double height_m = shell_height_cnt > 0
+                          ? ( shell_height_sum / static_cast<double>( shell_height_cnt ) )
+                          : ( has_aisle || has_fullboard ? 1.85 : ( has_roof ? 1.50 : 1.25 ) );
+        if( !turret_locations.empty() ) {
+            height_m += 0.20;
+        }
+        if( !solar_panels.empty() ) {
+            height_m += 0.05;
+        }
+        if( !wind_turbines.empty() ) {
+            height_m += 0.65;
+        }
+        if( !rotors.empty() ) {
+            height_m += 0.50;
+        }
+        if( !sails.empty() ) {
+            height_m += 0.70;
+        }
+        double c_air_drag = aerodynamic_cd();
+        if( length_m >= 2.0 * width_m ) {
+            c_air_drag = std::max( 0.18, c_air_drag * 0.95 );
+        }
+        if( !balloons.empty() ) {
+            c_air_drag += coeff_balloon_drag();
+        }
+        cached_drag_coeff = c_air_drag;
+        cached_shell_integrity = shell_integrity();
+        const double cross_area = height_m * width_m;
+        add_msg_debug( debugmode::DF_VEHICLE_DRAG,
+                       "%s (subtile): height %3.2fm, width %3.2fm, c_air %3.2f, shell %3.2f\n",
+                       name, height_m, width_m, c_air_drag, cached_shell_integrity );
+        coefficient_air_resistance = std::max( 0.08, c_air_drag * cross_area * 0.5 * air_density );
+        coeff_air_dirty = false;
+        return coefficient_air_resistance;
+    }
+
     constexpr double c_air_base = 0.25;
     constexpr double c_air_mod = 0.1;
     constexpr double base_height = 1.4;
@@ -5055,10 +6207,14 @@ double vehicle::coeff_air_drag() const
         c_height += ( dc.sail > minrow ) ? sail_height : 0;
         height += c_height;
     }
-    constexpr double air_density = 1.29; // kg/m^3
     // prorate per row height and c_air_drag
     height /= width;
     c_air_drag /= width;
+    if( !shells.empty() ) {
+        c_air_drag = std::min( c_air_drag, aerodynamic_cd() );
+    }
+    cached_drag_coeff = c_air_drag;
+    cached_shell_integrity = shell_integrity();
     double cross_area = height * tile_to_width( width );
     add_msg_debug( debugmode::DF_VEHICLE_DRAG,
                    "%s: height %3.2fm, width %3.2fm (%d tiles), c_air %3.2f\n", name, height,
@@ -5172,13 +6328,13 @@ double vehicle::rotor_disk_area() const
 }
 
 double vehicle::rotor_lift_at_altitude( map &here, bool fueled, bool safe, double altitude_m,
-                                      double disk_area ) const
+                                        double disk_area ) const
 {
     if( disk_area <= 0.0 ) {
         return 0.0;
     }
     return propulsor_thrust( total_power_at_altitude( here, fueled, safe, altitude_m ), disk_area,
-                            altitude_m );
+                             altitude_m );
 }
 
 double vehicle::lift_thrust_of_rotorcraft( map &here, bool fueled, bool safe ) const
@@ -5190,7 +6346,7 @@ double vehicle::lift_thrust_of_rotorcraft( map &here, bool fueled, bool safe ) c
 }
 
 double vehicle::rotor_ground_effect( const map &here, const tripoint_bub_ms &position,
-                                    double altitude_m ) const
+                                     double altitude_m ) const
 {
     int diameter = 0;
     for( const int rotor : rotors ) {
@@ -5240,7 +6396,7 @@ double vehicle::foward_thrust_of_propellers( map &here, const bool fuelled, cons
     }
     const double altitude_m = operating_altitude( here );
     return propulsor_thrust( total_power_at_altitude( here, fuelled, safe, altitude_m ),
-                            propeller_area_in_feet, altitude_m );
+                             propeller_area_in_feet, altitude_m );
 }
 
 double vehicle::total_aircraft_thrust( map &here, const bool fuelled, const bool safe ) const
@@ -5283,7 +6439,8 @@ double vehicle::total_balloon_lift() const
 
 bool vehicle::has_sufficient_balloonlift( map &here ) const
 {
-    return total_balloon_lift() * north_america::air_density_ratio_at_height( operating_altitude( here ) ) >=
+    return total_balloon_lift() * north_america::air_density_ratio_at_height( operating_altitude(
+                here ) ) >=
            to_kilogram( total_mass( here ) ) * 9.8;
 }
 
@@ -5324,12 +6481,14 @@ std::optional<vehicle::flight_limits> vehicle::estimate_flight_limits( map &here
         return std::nullopt;
     }
     const double weight = to_kilogram( total_mass( here ) ) * 9.8;
-    const auto find_ceiling = [weight]( int limit, const auto &lift ) -> std::optional<int> {
+    const auto find_ceiling = [weight]( int limit, const auto & lift ) -> std::optional<int> {
         int low = -500;
-        if( limit < low || lift( low ) <= weight ) {
+        if( limit < low || lift( low ) <= weight )
+        {
             return std::nullopt;
         }
-        while( low < limit ) {
+        while( low < limit )
+        {
             const int mid = low + ( limit - low + 1 ) / 2;
             if( lift( mid ) > weight ) {
                 low = mid;
@@ -5662,9 +6821,14 @@ bool vehicle::sufficient_wheel_config() const
         // No wheels!
         return false;
     } else if( wheelcache.size() == 1 ) {
-        //Has to be a stable wheel, and one wheel can only support a 1-3 tile vehicle
-        if( !part( wheelcache[0] ).info().has_flag( "STABLE" ) ||
-            all_parts_at_location( vpart_location_structure ).size() > 3 ) {
+        if( !part( wheelcache[0] ).info().has_flag( "STABLE" ) ) {
+            return false;
+        }
+        if( is_subtile() ) {
+            return metric_length() * metric_width() <= 3.5;
+        }
+        // Has to be a stable wheel, and one wheel can only support a 1-3 tile vehicle
+        if( all_parts_at_location( vpart_location_structure ).size() > 3 ) {
             return false;
         }
     }
@@ -5991,7 +7155,7 @@ double liquid_fuel_input_w( const vehicle_part &part, double shaft_w, double spe
         const double aero_force = 0.5 * 1.225 * drag_area * speed * speed;
         const double shaft = ( rolling_force + aero_force + mass * start_acceleration ) * speed;
         return uncalibrated_liquid_fuel_input_w( data, std::clamp( shaft, 0.0, std::max( rated, 0.0 ) ),
-                                                speed ) * 100000.0 / speed;
+                speed ) * 100000.0 / speed;
     };
     const double energy_per_100km = combined_road_cycle(
                                         reference_cycle( city_speed_mps, city_start_acceleration ),
@@ -6761,7 +7925,7 @@ std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &her
     }
     std::map < Vehicle *, float > distances; // distance represents sum of cable losses
     std::vector < Vehicle * > queue;
-    const auto can_conduct_power = []( const vehicle &veh ) {
+    const auto can_conduct_power = []( const vehicle & veh ) {
         return !veh.is_appliance() || !veh.cable_ports.empty() || !veh.batteries.empty();
     };
 
@@ -7738,6 +8902,8 @@ void vehicle::refresh( const bool remove_fakes )
     accessories.clear();
     cable_ports.clear();
     control_req_parts.clear();
+    shells.clear();
+    world_tile_parts.clear();
 
     alternator_load = 0;
     extra_drag = 0_W;
@@ -7909,6 +9075,9 @@ void vehicle::refresh( const bool remove_fakes )
         if( vpi.has_control_req() ) {
             control_req_parts.push_back( p );
         }
+        if( vpi.has_flag( VPFLAG_SHELL ) || vpi.location == vpart_location_shell ) {
+            shells.push_back( p );
+        }
     }
 
     rail_wheel_bounding_box.p1 = point_rel_ms( railwheel_xmin, railwheel_ymin );
@@ -8011,6 +9180,7 @@ void vehicle::refresh( const bool remove_fakes )
     precalc_mounts( 0, pivot_rotation[0], pivot_anchor[0] );
     // update the fakes, and then repopulate the cache
     update_active_fakes();
+    rebuild_world_tile_parts();
     check_environmental_effects = true;
     insides_dirty = true;
     zones_dirty = true;
@@ -8622,6 +9792,7 @@ void vehicle::refresh_insides()
         return;
     }
     insides_dirty = false;
+    const bool subtile = is_subtile();
     for( const vpart_reference &vpr : get_all_parts() ) {
         vehicle_part &vp = vpr.part();
         if( vp.removed ) {
@@ -8629,31 +9800,101 @@ void vehicle::refresh_insides()
         }
         /* If there's no roof, or there is a roof but it's broken, it's outside.
          * (Use short-circuiting || so broken frames don't screw this up) */
-        if( ( part_with_feature( vp.mount_pos3(), "ROOF", true ) < 0 ) || !vp.is_available() ) {
+        const int roof_idx = part_with_feature( vp.mount_pos3(), "ROOF", true );
+        if( ( roof_idx < 0 ) || !vp.is_available() ) {
             vp.inside = false;
             continue;
         }
 
         vp.inside = true; // inside if not otherwise
-        for( const point &offset : four_adjacent_offsets ) { // let's check four neighbor parts
-            bool cover = false; // if we aren't covered from sides, the roof at p won't save us
-            for( const int near_idx : parts_at_relative( vp.mount_pos3() + offset, true ) ) {
-                const vehicle_part &vp_near = part( near_idx );
-                const vpart_info &vpi_near = vp_near.info();
-                if( !vp_near.is_available() ) {
-                    continue; // keep looking
-                }
-                if( vpi_near.has_flag( "ROOF" ) ) { // another roof -- cover
-                    cover = true;
-                    break;
-                } else if( vpi_near.has_flag( "OBSTACLE" ) ) { // obstacle, like board or windshield or door
-                    if( vp_near.inside || ( vpi_near.has_flag( "OPENABLE" ) && vp_near.open ) ) {
-                        continue; // door and it's open -- can't cover
+        if( !subtile ) {
+            for( const point &offset : four_adjacent_offsets ) { // let's check four neighbor parts
+                bool cover = false; // if we aren't covered from sides, the roof at p won't save us
+                for( const int near_idx : parts_at_relative( vp.mount_pos3() + offset, true ) ) {
+                    const vehicle_part &vp_near = part( near_idx );
+                    const vpart_info &vpi_near = vp_near.info();
+                    if( !vp_near.is_available() ) {
+                        continue; // keep looking
                     }
+                    if( vpi_near.has_flag( "ROOF" ) ) { // another roof -- cover
+                        cover = true;
+                        break;
+                    } else if( vpi_near.has_flag( "OBSTACLE" ) ) { // obstacle, like board or windshield or door
+                        if( vp_near.inside || ( vpi_near.has_flag( "OPENABLE" ) && vp_near.open ) ) {
+                            continue; // door and it's open -- can't cover
+                        }
+                        cover = true;
+                        break;
+                    }
+                    // keep looking, there might be another part in that square
+                }
+                if( !cover ) {
+                    vp.inside = false;
+                    break;
+                }
+            }
+            continue;
+        }
+
+        // Sub-tile grids place seats, windshields, boards, and perimeter doors several
+        // 0.125-tile units apart; check each cardinal outward face against neighboring footprints.
+        const vehicle_part &roof_vp = part( roof_idx );
+        const point vp_s = vp.info().sub_size;
+        const point rf_s = roof_vp.info().sub_size;
+        const int ax1 = std::min( 2 * vp.mount.x() - vp_s.x, 2 * roof_vp.mount.x() - rf_s.x );
+        const int ax2 = std::max( 2 * vp.mount.x() + vp_s.x, 2 * roof_vp.mount.x() + rf_s.x );
+        const int ay1 = std::min( 2 * vp.mount.y() - vp_s.y, 2 * roof_vp.mount.y() - rf_s.y );
+        const int ay2 = std::max( 2 * vp.mount.y() + vp_s.y, 2 * roof_vp.mount.y() + rf_s.y );
+
+        for( const point &offset : four_adjacent_offsets ) {
+            bool cover = false;
+            for( const vehicle_part &vp_near : parts ) {
+                if( vp_near.removed || vp_near.is_fake || vp_near.mount_level != vp.mount_level ||
+                    !vp_near.is_available() || vp_near.mount == vp.mount ) {
+                    continue;
+                }
+                const vpart_info &vpi_near = vp_near.info();
+                const bool is_roof = vpi_near.has_flag( "ROOF" );
+                const bool is_obs = vpi_near.has_flag( "OBSTACLE" );
+                if( !is_roof && !is_obs ) {
+                    continue;
+                }
+                const int d_proj = ( vp_near.mount.x() - vp.mount.x() ) * offset.x() +
+                                   ( vp_near.mount.y() - vp.mount.y() ) * offset.y();
+                if( d_proj <= 0 ) {
+                    continue;
+                }
+                const point ns = vpi_near.sub_size;
+                const int bx1 = 2 * vp_near.mount.x() - ns.x;
+                const int bx2 = 2 * vp_near.mount.x() + ns.x;
+                const int by1 = 2 * vp_near.mount.y() - ns.y;
+                const int by2 = 2 * vp_near.mount.y() + ns.y;
+                if( offset.x() != 0 ) {
+                    if( std::min( ay2, by2 ) <= std::max( ay1, by1 ) ) {
+                        continue;
+                    }
+                    const int gap = offset.x() > 0 ? ( bx1 - ax2 ) : ( ax1 - bx2 );
+                    if( gap > 2 ) {
+                        continue;
+                    }
+                } else {
+                    if( std::min( ax2, bx2 ) <= std::max( ax1, bx1 ) ) {
+                        continue;
+                    }
+                    const int gap = offset.y() > 0 ? ( by1 - ay2 ) : ( ay1 - by2 );
+                    if( gap > 2 ) {
+                        continue;
+                    }
+                }
+                if( is_roof ) {
                     cover = true;
                     break;
                 }
-                // keep looking, there might be another part in that square
+                if( vpi_near.has_flag( "OPENABLE" ) && vp_near.open ) {
+                    continue;
+                }
+                cover = true;
+                break;
             }
             if( !cover ) {
                 vp.inside = false;
@@ -8688,7 +9929,10 @@ int vehicle::damage( map &here, int p, int dmg, const damage_type_id &type, bool
 
     p = get_non_fake_part( p );
     const vehicle_part &vp_initial = part( p );
-    const std::vector<int> parts_here = parts_at_relative( vp_initial.mount_pos3(), true );
+    const std::vector<int> parts_at_mount = parts_at_relative( vp_initial.mount_pos3(), true );
+    const std::vector<int> &parts_here = ( !aimed && is_subtile() )
+                                         ? parts_at_world_tile( vp_initial.precalc[0] )
+                                         : parts_at_mount;
     if( parts_here.empty() ) {
         return dmg; // We ran out of non removed parts at this location already.
     }
@@ -8710,17 +9954,20 @@ int vehicle::damage( map &here, int p, int dmg, const damage_type_id &type, bool
 
     int target_part = vp_initial.info().has_flag( VPFLAG_ROTOR ) ? p : random_entry( parts_here );
 
-    // Parts integrated inside a door or board are protected by boards and closed doors
-    if( part( target_part ).info().has_flag( "BOARD_INTERNAL" ) ) {
+    // Parts integrated inside a door, shell, or board are protected by boards, shells, and closed doors
+    if( part( target_part ).info().has_flag( "BOARD_INTERNAL" ) || is_subtile() ) {
         int strongest_board_durability = INT_MIN;
-        for( const int part : parts_here ) {
-            const vehicle_part &vp_here = parts[part];
+        for( const int part_idx : parts_here ) {
+            const vehicle_part &vp_here = parts[part_idx];
             const vpart_info &vpi_here = vp_here.info();
             if( vpi_here.has_flag( "FULL_BOARD" ) || vpi_here.has_flag( "HALF_BOARD" ) ||
+                vpi_here.has_flag( VPFLAG_SHELL ) ||
                 ( vpi_here.has_flag( "OPENABLE" ) && !vp_here.open ) ) {
-                if( vpi_here.durability > strongest_board_durability ) {
-                    target_part = part;
-                    strongest_board_durability = vpi_here.durability;
+                const int eff_dur = vpi_here.durability + vpi_here.hardness * 8;
+                if( part( target_part ).info().has_flag( "BOARD_INTERNAL" ) &&
+                    eff_dur > strongest_board_durability ) {
+                    target_part = part_idx;
+                    strongest_board_durability = eff_dur;
                 }
             }
         }
@@ -8729,15 +9976,21 @@ int vehicle::damage( map &here, int p, int dmg, const damage_type_id &type, bool
     vehicle_part &vp_target = part( target_part );
     const vpart_info &vpi_target = vp_target.info();
 
-    const int armor_part = part_with_feature( vp_initial.mount_pos3(), "ARMOR", true );
-    if( armor_part < 0 ) { // Not covered by armor -- damage part
+    int armor_part = part_with_feature( vp_target.mount_pos3(), "ARMOR", true );
+    if( armor_part < 0 && !vpi_target.has_flag( VPFLAG_SHELL ) ) {
+        armor_part = shell_covering_part( target_part );
+    }
+    if( armor_part < 0 || armor_part == target_part ) {
         return damage_direct( here, vp_target, dmg, type );
     }
 
     vehicle_part &vp_armor = part( armor_part );
     const vpart_info &vpi_armor = vp_armor.info();
-    // Covered by armor -- hit both armor and part, but reduce damage by armor's reduction
-    const int protection = type->no_resist ? 0 : vpi_armor.damage_reduction.at( type );
+    // Covered by armor or shell -- hit both outer protection and inner part, attenuating by reduction/hardness
+    int protection = type->no_resist ? 0 : static_cast<int>( vpi_armor.damage_reduction.at( type ) );
+    if( vpi_armor.has_flag( VPFLAG_SHELL ) && !type->no_resist ) {
+        protection = std::max( protection, vpi_armor.hardness / 2 );
+    }
     // Parts on roof aren't protected
     const bool overhead = vpi_target.has_flag( "ROOF" ) ||
                           vpi_target.location == vpart_location_on_roof;
@@ -8746,11 +9999,11 @@ int vehicle::damage( map &here, int p, int dmg, const damage_type_id &type, bool
     // Damaging the part with the higher index first is safe, as removing a part
     // only changes indices after the removed part.
     if( armor_part < target_part ) {
-        damage_direct( here, vp_target, overhead ? dmg : dmg - protection, type );
+        damage_direct( here, vp_target, overhead ? dmg : std::max( 0, dmg - protection ), type );
         return damage_direct( here, vp_armor, dmg, type );
     } else {
         const int damage_dealt = damage_direct( here, vp_armor, dmg, type );
-        damage_direct( here, vp_target, overhead ? dmg : dmg - protection, type );
+        damage_direct( here, vp_target, overhead ? dmg : std::max( 0, dmg - protection ), type );
         return damage_dealt;
     }
 }
@@ -8766,12 +10019,20 @@ void vehicle::damage_all( map &here, int dmg1, int dmg2, const damage_type_id &t
         return;
     }
 
+    const double scale = static_cast<double>( std::max( 1, grid_scale ) );
+    const double crumple_factor = 1.0 - 0.25 * shell_integrity();
+
     for( const vpart_reference &vpr : get_all_parts() ) {
         vehicle_part &vp = vpr.part();
         const vpart_info &vpi = vp.info();
-        const int distance = 1 + square_dist( vp.mount, impact );
+        const double dist_m = is_subtile()
+                              ? ( std::hypot( static_cast<double>( vp.mount.x() - impact.x() ),
+                                              static_cast<double>( vp.mount.y() - impact.y() ) ) / scale )
+                              : static_cast<double>( square_dist( vp.mount, impact ) );
+        const int distance = 1 + static_cast<int>( std::floor( dist_m ) );
         if( distance > 1 ) {
-            int net_dmg = rng( dmg1, dmg2 ) / ( distance * distance );
+            int net_dmg = static_cast<int>( std::lround(
+                                                ( rng( dmg1, dmg2 ) * crumple_factor ) / ( distance * distance ) ) );
             if( vpi.location != vpart_location_structure || !vpi.has_flag( "PROTRUSION" ) ||
                 vpi.has_flag( "SHOCK_IMMUNE" ) || vpi.has_flag( "SHOCK_RESISTANT" ) ) {
                 if( vpi.has_flag( "SHOCK_IMMUNE" ) ) {
@@ -9946,6 +11207,17 @@ void vehicle::calc_mass_center( map &here, bool use_precalc ) const
         m_total += m_part;
     }
 
+    const units::mass ballast = current_chassis_ballast();
+    if( ballast > 0_gram ) {
+        if( m_total > 0_gram ) {
+            const float cx = xf / m_total;
+            const float cy = yf / m_total;
+            xf += cx * ballast;
+            yf += cy * ballast;
+        }
+        m_total += ballast;
+    }
+
     mass_cache = m_total;
     mass_dirty = false;
 
@@ -10117,6 +11389,7 @@ std::set < int > vehicle::advance_precalc_mounts( const point_sm_ms &new_pos,
         // no parts means this is a normal horizontal or vertical move
         if( parts_to_move.empty() ) {
             prt.precalc[0] = prt.precalc[1];
+            prt.world_offset[0] = prt.world_offset[1];
             // partial part movement means we're zero-ing out after missing a ramp
         } else if( adjust_pos && parts_to_move.find( index ) == parts_to_move.end() ) {
             prt.precalc[0].z() -= dp.z();
@@ -10142,6 +11415,7 @@ std::set < int > vehicle::advance_precalc_mounts( const point_sm_ms &new_pos,
         pos = new_pos;
     }
     occupied_cache_pos = tripoint_abs_ms::invalid;
+    rebuild_world_tile_parts();
     return smzs;
 }
 

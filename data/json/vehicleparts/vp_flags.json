@@ -863,5 +863,10 @@
     "id": "LADDER",
     "type": "json_flag",
     "info": "This part is a ladder, letting you climb down from the vehicle."
+  },
+  {
+    "id": "VEHICLE_SHELL",
+    "type": "json_flag",
+    "info": "Outer aerodynamic body shell or fairing that lowers vehicle air drag and helps shield enclosed parts."
   }
 ]

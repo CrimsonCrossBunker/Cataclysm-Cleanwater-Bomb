@@ -3,162 +3,188 @@
     "id": "car_hybrid",
     "copy-from": "car_luxury",
     "type": "vehicle",
-    "name": "Luxury Station Wagon"
+    "name": "Luxury Station Wagon",
+    "curb_mass": "1620 kg"
   },
   {
     "id": "car_micro_hybrid",
     "copy-from": "car_micro",
     "type": "vehicle",
-    "name": "Microcar"
+    "name": "Microcar",
+    "curb_mass": "1090 kg"
   },
   {
     "id": "car_micro_electric",
     "copy-from": "car_micro",
     "type": "vehicle",
-    "name": "Microcar"
+    "name": "Microcar",
+    "curb_mass": "1180 kg"
   },
   {
     "id": "scompact_hybrid",
     "copy-from": "scompact",
     "type": "vehicle",
-    "name": "Supercompact Car"
+    "name": "Supercompact Car",
+    "curb_mass": "960 kg"
   },
   {
     "id": "scompact_electric",
     "copy-from": "scompact",
     "type": "vehicle",
-    "name": "Supercompact Car"
+    "name": "Supercompact Car",
+    "curb_mass": "1020 kg"
   },
   {
     "id": "scompact_tandem_electric_stow",
     "copy-from": "scompact_tandem_stow",
     "type": "vehicle",
-    "name": "Supercompact Tandem Car"
+    "name": "Supercompact Tandem Car",
+    "curb_mass": "620 kg"
   },
   {
     "id": "scompact_tandem_electric_hboard",
     "copy-from": "scompact_tandem_hboard",
     "type": "vehicle",
-    "name": "Supercompact Tandem Car"
+    "name": "Supercompact Tandem Car",
+    "curb_mass": "640 kg"
   },
   {
     "id": "scompact_tandem_electric_2wheel_stow",
     "copy-from": "scompact_tandem_2wheel_stow",
     "type": "vehicle",
-    "name": "Tandem Cabin Motorcycle"
+    "name": "Tandem Cabin Motorcycle",
+    "curb_mass": "530 kg"
   },
   {
     "id": "scompact_tandem_electric_2wheel_hboard",
     "copy-from": "scompact_tandem_2wheel_hboard",
     "type": "vehicle",
-    "name": "Tandem Cabin Motorcycle"
+    "name": "Tandem Cabin Motorcycle",
+    "curb_mass": "530 kg"
   },
   {
     "id": "scompact_tandem_electric_3wheel_stow",
     "copy-from": "scompact_tandem_3wheel_stow",
     "type": "vehicle",
-    "name": "Tandem Three-Wheeled Supercompact Car"
+    "name": "Tandem Three-Wheeled Supercompact Car",
+    "curb_mass": "580 kg"
   },
   {
     "id": "scompact_tandem_electric_3wheel_hboard",
     "copy-from": "scompact_tandem_3wheel_hboard",
     "type": "vehicle",
-    "name": "Tandem Three-Wheeled Supercompact Car"
+    "name": "Tandem Three-Wheeled Supercompact Car",
+    "curb_mass": "600 kg"
   },
   {
     "id": "car_shootingbrake_electric",
     "copy-from": "car_shootingbrake_v12",
     "type": "vehicle",
-    "name": "Premium Shooting Brake"
+    "name": "Premium Shooting Brake",
+    "curb_mass": "1980 kg"
   },
   {
     "id": "car_shootingbrake_long_electric",
     "copy-from": "car_shootingbrake_long_v12",
     "type": "vehicle",
-    "name": "Premium Shooting Brake"
+    "name": "Premium Shooting Brake",
+    "curb_mass": "2100 kg"
   },
   {
     "id": "car_sedan_electric",
     "copy-from": "car_sedan_luxury_v6",
     "type": "vehicle",
-    "name": "Luxury Sedan"
+    "name": "Luxury Sedan",
+    "curb_mass": "1920 kg"
   },
   {
     "id": "car_sedan_luxury_electric",
     "copy-from": "car_sedan_luxury_v6",
     "type": "vehicle",
-    "name": "Luxury Sedan"
+    "name": "Luxury Sedan",
+    "curb_mass": "2120 kg"
   },
   {
     "id": "car_sedan_sports_electric",
     "copy-from": "car_sedan_luxury_v6",
     "type": "vehicle",
-    "name": "Luxury Sedan"
+    "name": "Luxury Sedan",
+    "curb_mass": "2050 kg"
   },
   {
     "id": "car_coupe_electric",
     "copy-from": "car_coupe_sports_v6",
     "type": "vehicle",
-    "name": "V6 Sports Coupe"
+    "name": "V6 Sports Coupe",
+    "curb_mass": "1820 kg"
   },
   {
     "id": "car_coupe_luxury_electric",
     "copy-from": "car_coupe_luxury_v6",
     "type": "vehicle",
-    "name": "Luxury Coupe"
+    "name": "Luxury Coupe",
+    "curb_mass": "1950 kg"
   },
   {
     "id": "car_coupe_sports_electric",
     "copy-from": "car_coupe_sports_v12",
     "type": "vehicle",
-    "name": "V12 Sports Coupe"
+    "name": "V12 Sports Coupe",
+    "curb_mass": "1890 kg"
   },
   {
     "id": "car_super_electric",
     "copy-from": "car_super_v12",
     "type": "vehicle",
-    "name": "V12 Super Car"
+    "name": "V12 Super Car",
+    "curb_mass": "1790 kg"
   },
   {
     "id": "car_super_electric_alt",
     "copy-from": "car_super_v12",
     "type": "vehicle",
-    "name": "V12 Super Car"
+    "name": "V12 Super Car",
+    "curb_mass": "1820 kg"
   },
   {
     "id": "car_sports_electric",
     "copy-from": "car_super_v12",
     "type": "vehicle",
-    "name": "Sports Car"
+    "name": "Sports Car",
+    "curb_mass": "1680 kg"
   },
   {
     "id": "car_racing_electric",
     "copy-from": "car_super_v12",
     "type": "vehicle",
-    "name": "Sports Car"
+    "name": "Sports Car",
+    "curb_mass": "1420 kg"
   },
   {
     "id": "electric_car",
     "copy-from": "car_luxury",
     "type": "vehicle",
-    "name": "Luxury Station Wagon"
+    "name": "Luxury Station Wagon",
+    "curb_mass": "1850 kg"
   },
   {
     "id": "suv_electric",
     "copy-from": "suv",
     "type": "vehicle",
-    "name": "SUV"
+    "name": "SUV",
+    "curb_mass": "2580 kg"
   },
   {
     "id": "suv_electric_rack",
-    "type": "vehicle",
     "copy-from": "suv",
+    "type": "vehicle",
     "name": "SUV with Bike Rack",
+    "curb_mass": "2605 kg",
     "parts": [
-      { "x": -4, "y": -1, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 0, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 1, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 2, "parts": [ "bike_rack" ] }
+      { "x": -24, "y": -6, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": -4, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": 4, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": 6, "parts": [ "bike_rack" ] }
     ]
   }
 ]

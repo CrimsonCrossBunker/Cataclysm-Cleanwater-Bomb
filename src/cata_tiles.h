@@ -1476,6 +1476,10 @@ class cata_tiles
         // part sprite gets recolored with the part's paint color; nullopt
         // otherwise. Consumed when building tile_render_params.
         std::optional<RGBColor> pending_part_tint_ = std::nullopt;
+        std::optional<double> pending_part_exact_angle_deg_ = std::nullopt;
+        point pending_part_offset_ = point::zero;
+        float pending_part_scale_x_ = 1.0f;
+        float pending_part_scale_y_ = 1.0f;
         // Shape-exact gray overlay applied to the next drawn sprite (overmap ground
         // shown through open air); set by draw_om around the draw call so multitile
         // and fallback sprites inherit it, then cleared.

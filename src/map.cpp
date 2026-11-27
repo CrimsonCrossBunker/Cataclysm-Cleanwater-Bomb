@@ -688,7 +688,9 @@ void memorize_vpart_at( map &here, avatar &you, const tripoint_bub_ms &p,
         return;
     }
     const vehicle &veh = ovp->vehicle();
-    const vpart_display vd = veh.get_display_of_tile( ovp->mount_pos3() );
+    const vpart_display vd = veh.is_subtile()
+                             ? veh.get_display_of_world_tile( veh.part( ovp->part_index() ).precalc[0] )
+                             : veh.get_display_of_tile( ovp->mount_pos3() );
     if( vd.id.is_null() ) {
         return;
     }
@@ -988,8 +990,10 @@ void map::add_vehicle_to_cache( vehicle *veh )
 void map::cache_vehicle_parts( vehicle &veh )
 {
     erase_cached_vehicle_ladders( cached_veh_ladders, &veh );
+    veh.rebuild_world_tile_parts();
 
     std::set<int> occupied_levels;
+    std::set<tripoint_bub_ms> cached_tiles;
     // Get parts
     for( const vpart_reference &vpr : veh.get_all_parts_with_fakes() ) {
         if( vpr.part().removed ) {
@@ -1000,11 +1004,20 @@ void map::cache_vehicle_parts( vehicle &veh )
             continue;
         }
         occupied_levels.insert( p.z() );
-        level_cache &ch = get_cache( p.z() );
-        ch.set_veh_cached_parts( p, veh, static_cast<int>( vpr.part_index() ) );
-        if( inbounds( p ) ) {
-            ch.set_veh_exists_at( p, true );
-            set_transparency_cache_dirty( p );
+        if( cached_tiles.insert( p ).second ) {
+            level_cache &ch = get_cache( p.z() );
+            int rep_idx = static_cast<int>( vpr.part_index() );
+            if( veh.is_subtile() ) {
+                const int disp_idx = veh.part_displayed_at_world_tile( vpr.part().precalc[0], true );
+                if( disp_idx >= 0 ) {
+                    rep_idx = disp_idx;
+                }
+            }
+            ch.set_veh_cached_parts( p, veh, rep_idx );
+            if( inbounds( p ) ) {
+                ch.set_veh_exists_at( p, true );
+                set_transparency_cache_dirty( p );
+            }
         }
         const int part = veh.avail_part_with_feature( static_cast<int>( vpr.part_index() ),
                          VPFLAG_LADDER );
@@ -1717,10 +1730,15 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
             if( coll.type != veh_coll_veh ) {
                 continue;
             }
+            vehicle *other_veh = static_cast<vehicle *>( coll.target );
+            if( other_veh != nullptr && ( veh.is_subtile() || other_veh->is_subtile() ) &&
+                !veh.subtile_overlaps_vehicle( *other_veh, dp1, *this ) ) {
+                continue;
+            }
 
             veh_veh_coll_flag = true;
             // Only collide with each vehicle once
-            veh_collisions[static_cast<vehicle *>( coll.target )].push_back( coll );
+            veh_collisions[other_veh].push_back( coll );
         }
 
         for( auto &pair : veh_collisions ) {
@@ -2100,18 +2118,31 @@ float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
 
         int coll_parm = veh.part_with_feature( coll_part, VPFLAG_ARMOR, true );
         if( coll_parm < 0 ) {
+            coll_parm = veh.shell_covering_part( coll_part );
+        }
+        if( coll_parm < 0 ) {
             coll_parm = coll_part;
         }
         int target_parm = veh2.part_with_feature( target_part, VPFLAG_ARMOR, true );
         if( target_parm < 0 ) {
+            target_parm = veh2.shell_covering_part( target_part );
+        }
+        if( target_parm < 0 ) {
             target_parm = target_part;
         }
 
+        const int h1 = std::max( 1, veh.effective_part_hardness( coll_parm ) );
+        const int h2 = std::max( 1, veh2.effective_part_hardness( target_parm ) );
+        const float h_ratio_1 = std::clamp(
+                                    static_cast<float>( h2 ) / static_cast<float>( h1 + h2 ) * 2.0f,
+                                    0.35f, 1.65f );
+        const float h_ratio_2 = 2.0f - h_ratio_1;
+
         epicenter1 += veh.part( coll_parm ).mount;
-        veh.damage( *this, coll_parm, dmg1_part, damage_bash );
+        veh.damage( *this, coll_parm, dmg1_part * h_ratio_1, damage_bash );
 
         epicenter2 += veh2.part( target_parm ).mount;
-        veh2.damage( *this, target_parm, dmg2_part, damage_bash );
+        veh2.damage( *this, target_parm, dmg2_part * h_ratio_2, damage_bash );
     }
 
     epicenter2.x() /= coll_parts_cnt;
@@ -2351,6 +2382,48 @@ vehicle *map::veh_at_internal( const tripoint_bub_ms &p, int &part_num )
     return const_cast<vehicle *>( const_cast<const map *>( this )->veh_at_internal( p, part_num ) );
 }
 
+void map::board_vehicle_part( vehicle &veh, const int part_idx, Character *p )
+{
+    if( p == nullptr ) {
+        debugmsg( "map::board_vehicle_part: null player" );
+        return;
+    }
+    if( part_idx < 0 || part_idx >= veh.part_count() ) {
+        debugmsg( "map::board_vehicle_part: invalid part index %d", part_idx );
+        return;
+    }
+    vehicle_part &part = veh.part( part_idx );
+    if( part.removed || part.is_broken() || !part.info().has_flag( VPFLAG_BOARDABLE ) ) {
+        debugmsg( "map::board_vehicle_part: part %d is not an available BOARDABLE part", part_idx );
+        return;
+    }
+    const tripoint_bub_ms part_pos = veh.bub_part_pos( *this, part_idx );
+    if( part.has_flag( vp_flag::passenger_flag ) ) {
+        Character *psg = veh.get_passenger( part_idx );
+        if( psg == p && p->pos_abs() == veh.abs_part_pos( part_idx ) ) {
+            p->in_vehicle = true;
+            return;
+        }
+        if( psg != nullptr ) {
+            debugmsg( "map::board_vehicle_part: %s failed to board passenger (%s) is already there",
+                      p->get_name(), psg->get_name() );
+            unboard_vehicle( vpart_reference( veh, part_idx ), psg );
+        } else {
+            part.remove_flag( vp_flag::passenger_flag );
+            part.passenger_id = character_id();
+        }
+    }
+    part.set_flag( vp_flag::passenger_flag );
+    part.passenger_id = p->getID();
+    veh.invalidate_mass();
+
+    p->in_vehicle = true;
+    p->setpos( *this, part_pos );
+    if( p->is_avatar() ) {
+        g->update_map( *p->as_avatar() );
+    }
+}
+
 void map::board_vehicle( const tripoint_bub_ms &pos, Character *p )
 {
     if( p == nullptr ) {
@@ -2358,8 +2431,35 @@ void map::board_vehicle( const tripoint_bub_ms &pos, Character *p )
         return;
     }
 
-    const std::optional<vpart_reference> vp = veh_at( pos ).part_with_feature( VPFLAG_BOARDABLE,
-            true );
+    const optional_vpart_position ovp = veh_at( pos );
+    if( ovp && ovp->vehicle().is_subtile() ) {
+        vehicle &veh = ovp->vehicle();
+        const int existing = veh.find_passenger_part( *p );
+        if( existing >= 0 && veh.bub_part_pos( *this, existing ) == pos ) {
+            board_vehicle_part( veh, existing, p );
+            return;
+        }
+        int best_idx = -1;
+        for( const int idx : veh.parts_at_world_tile( veh.part( ovp->part_index() ).precalc[0] ) ) {
+            const vehicle_part &cand = veh.part( idx );
+            if( cand.removed || cand.is_broken() || !cand.info().has_flag( VPFLAG_BOARDABLE ) ) {
+                continue;
+            }
+            if( !cand.has_flag( vp_flag::passenger_flag ) ) {
+                best_idx = idx;
+                break;
+            }
+            if( best_idx < 0 ) {
+                best_idx = idx;
+            }
+        }
+        if( best_idx >= 0 ) {
+            board_vehicle_part( veh, best_idx, p );
+            return;
+        }
+    }
+
+    const std::optional<vpart_reference> vp = ovp.part_with_feature( VPFLAG_BOARDABLE, true );
     if( !vp ) {
         avatar *player_character = p->as_avatar();
         if( player_character != nullptr &&
@@ -2368,26 +2468,7 @@ void map::board_vehicle( const tripoint_bub_ms &pos, Character *p )
         }
         return;
     }
-    if( vp->part().has_flag( vp_flag::passenger_flag ) ) {
-        Character *psg = vp->vehicle().get_passenger( vp->part_index() );
-        if( psg == p && p->pos_abs() == get_abs( pos ) ) {
-            p->in_vehicle = true;
-            return;
-        }
-        debugmsg( "map::board_vehicle: %s failed to board passenger (%s) is already there",
-                  p ? p->get_name() : "<null_boarder>",
-                  psg ? psg->get_name() : "<null_passenger>" );
-        unboard_vehicle( pos );
-    }
-    vp->part().set_flag( vp_flag::passenger_flag );
-    vp->part().passenger_id = p->getID();
-    vp->vehicle().invalidate_mass();
-
-    p->in_vehicle = true;
-    p->setpos( *this, pos );
-    if( p->is_avatar() ) {
-        g->update_map( *p->as_avatar() );
-    }
+    board_vehicle_part( vp->vehicle(), vp->part_index(), p );
 }
 
 void map::unboard_vehicle( const vpart_reference &vp, Character *passenger, bool dead_passenger )
@@ -2415,8 +2496,16 @@ void map::unboard_vehicle( const vpart_reference &vp, Character *passenger, bool
 
 void map::unboard_vehicle( const tripoint_bub_ms &p, bool dead_passenger )
 {
-    const std::optional<vpart_reference> vp = veh_at( p ).part_with_feature( VPFLAG_BOARDABLE, false );
+    const optional_vpart_position ovp = veh_at( p );
     Character *occupant = get_creature_tracker().creature_at<Character>( p );
+    if( ovp && occupant != nullptr ) {
+        const int psg_part = ovp->vehicle().find_passenger_part( *occupant );
+        if( psg_part >= 0 ) {
+            unboard_vehicle( vpart_reference( ovp->vehicle(), psg_part ), occupant, dead_passenger );
+            return;
+        }
+    }
+    const std::optional<vpart_reference> vp = ovp.part_with_feature( VPFLAG_BOARDABLE, false );
     if( !vp ) {
         if( occupant && occupant->in_vehicle ) {
             DebugLog( D_WARNING, D_MAP ) << "Clearing stale passenger state without a vehicle at " << p;
@@ -2568,10 +2657,17 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
 
             // Place passenger on the new part location
             tripoint_bub_ms psgp( dst + next_pos + tripoint( 0, 0, psg_offset_z ) );
-            // someone is in the way so try again
-            if( creatures.creature_at( psgp ) ) {
-                complete = false;
-                continue;
+            // Someone is in the way so try again (unless this is our own unchanged world tile
+            // or a final co-rider overlap on a 0.125-tile compact cabin)
+            Creature *blocking = creatures.creature_at( psgp );
+            if( blocking != nullptr && blocking != psg ) {
+                const bool allow_colocated_char = veh.is_subtile() && i + 1 == riders.size() &&
+                                                  psg->as_character() != nullptr &&
+                                                  blocking->as_character() != nullptr;
+                if( !allow_colocated_char ) {
+                    complete = false;
+                    continue;
+                }
             }
             if( psg->is_avatar() ) {
                 // If passenger is you, we need to update the map
@@ -5587,7 +5683,10 @@ bool map::terrain_moppable( const tripoint_bub_ms &p )
     // Moppable vehicles ( blood splatter )
     if( const optional_vpart_position ovp = veh_at( p ) ) {
         vehicle *const veh = &ovp->vehicle();
-        for( const int elem : veh->parts_at_relative( ovp->mount_pos3(), true ) ) {
+        const std::vector<int> candidates = veh->is_subtile()
+                                            ? veh->parts_at_world_tile( veh->part( ovp->part_index() ).precalc[0] )
+                                            : veh->parts_at_relative( ovp->mount_pos3(), true );
+        for( const int elem : candidates ) {
             const vehicle_part &vp = veh->part( elem );
             if( vp.blood > 0 ) {
                 return true;
@@ -5632,7 +5731,10 @@ bool map::mop_spills( const tripoint_bub_ms &p )
 
     if( const optional_vpart_position ovp = veh_at( p ) ) {
         vehicle *const veh = &ovp->vehicle();
-        for( const int elem : veh->parts_at_relative( ovp->mount_pos3(), true ) ) {
+        const std::vector<int> candidates = veh->is_subtile()
+                                            ? veh->parts_at_world_tile( veh->part( ovp->part_index() ).precalc[0] )
+                                            : veh->parts_at_relative( ovp->mount_pos3(), true );
+        for( const int elem : candidates ) {
             vehicle_part &vp = veh->part( elem );
             if( vp.blood > 0 ) {
                 vp.blood = 0;
@@ -9588,7 +9690,9 @@ void map::add_splatter( const field_type_id &type, const tripoint_bub_ms &where,
         if( const optional_vpart_position vp = veh_at( where ) ) {
             vehicle *const veh = &vp->vehicle();
             // Might be -1 if all the vehicle's parts at where are marked for removal
-            const int part = veh->part_displayed_at( vp->mount_pos3(), true );
+            const int part = veh->is_subtile()
+                             ? veh->part_displayed_at_world_tile( veh->part( vp->part_index() ).precalc[0], true )
+                             : veh->part_displayed_at( vp->mount_pos3(), true );
             if( part != -1 ) {
                 veh->part( part ).blood += 200 * std::min( intensity, 3 ) / 3;
                 return;
@@ -10175,7 +10279,9 @@ bool map::draw_maptile( const catacurses::window &w, const tripoint_bub_ms &p,
     int veh_part = 0;
     const vehicle *veh = veh_at_internal( p, veh_part );
     if( veh != nullptr ) {
-        const vpart_display vd = veh->get_display_of_tile( veh->part( veh_part ).mount_pos3() );
+        const vpart_display vd = veh->is_subtile()
+                                 ? veh->get_display_of_world_tile( veh->part( veh_part ).precalc[0] )
+                                 : veh->get_display_of_tile( veh->part( veh_part ).mount_pos3() );
         sym = vd.symbol_curses;
         tercol = vd.color;
         item_sym.clear(); // clear the item symbol so `sym` is used instead.
@@ -10264,7 +10370,9 @@ void map::draw_from_above( const catacurses::window &w, const tripoint_bub_ms &p
         tercol = curr_furn->color();
     } else if( ( veh = veh_at_internal( p, part_below ) ) != nullptr ) {
         const vpart_position vpp( const_cast<vehicle &>( *veh ), part_below );
-        const vpart_display vd = veh->get_display_of_tile( vpp.mount_pos3(), true, true, true );
+        const vpart_display vd = veh->is_subtile()
+                                 ? veh->get_display_of_world_tile( veh->part( part_below ).precalc[0], true, true, true )
+                                 : veh->get_display_of_tile( vpp.mount_pos3(), true, true, true );
         const int roof = veh->roof_at_part( part_below );
         sym = vd.symbol_curses;
         tercol = roof >= 0 || vpp.obstacle_at_part() ? c_light_gray : c_light_gray_cyan;

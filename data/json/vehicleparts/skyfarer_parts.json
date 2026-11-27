@@ -23,6 +23,8 @@
       { "item": "splinter", "count": [ 10, 20 ] },
       { "item": "sheet", "count": [ 1, 2 ] }
     ],
+    "sub_size": [ 6, 6 ],
+    "hardness": 6,
     "delete": { "flags": [ "UNMOUNT_ON_DAMAGE" ] }
   },
   {
@@ -43,6 +45,8 @@
       }
     },
     "breaks_into": [ { "item": "splinter", "count": [ 3, 5 ] }, { "item": "string_36", "count": [ 10, 15 ] } ],
-    "damage_reduction": { "all": 6 }
+    "damage_reduction": { "all": 6 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 6
   }
 ]

@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <list>
 #include <memory>
 #include <numeric>
@@ -138,6 +139,7 @@ static const std::unordered_map<std::string, vpart_bitflags> vpart_bitflag_map =
     { "PROPELLER", VPFLAG_PROPELLER },
     { "LADDER", VPFLAG_LADDER },
     { "TRAP_PROOF", VPFLAG_TRAP_PROOF },
+    { "VEHICLE_SHELL", VPFLAG_SHELL },
     { "FLOATS", VPFLAG_FLOATS },
 
     { "NO_LEAK", VPFLAG_NO_LEAK },
@@ -278,6 +280,17 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
     optional( jo, was_loaded, "remove_as", removed_item );
     optional( jo, was_loaded, "location", location );
     optional( jo, was_loaded, "durability", durability, 0 );
+    optional( jo, was_loaded, "hardness", hardness, 0 );
+    if( jo.has_array( "sub_size" ) ) {
+        JsonArray sarr = jo.get_array( "sub_size" );
+        if( sarr.size() == 2 ) {
+            sub_size.x = std::max( 1, sarr.get_int( 0 ) );
+            sub_size.y = std::max( 1, sarr.get_int( 1 ) );
+        } else {
+            jo.throw_error_at( "sub_size",
+                               "sub_size must be a 2-element array [length, width] in 0.125-tile units" );
+        }
+    }
     optional( jo, was_loaded, "damage_modifier", dmg_mod, 100 );
     optional( jo, was_loaded, "energy_consumption", energy_consumption, 0_W );
     optional( jo, was_loaded, "power", power, 0_W );
@@ -426,6 +439,16 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
         optional( jo, was_loaded, "length", ladder_info->length, 0 );
     }
 
+    if( jo.has_member( "shell" ) ) {
+        if( !shell_info ) {
+            shell_info.emplace();
+        }
+        shell_info->deserialize( jo.get_object( "shell" ) );
+        flags.insert( "VEHICLE_SHELL" );
+    } else if( has_flag( "VEHICLE_SHELL" ) && !shell_info ) {
+        shell_info.emplace();
+    }
+
     if( has_flag( "WORKBENCH" ) ) {
 
         mandatory( jo, was_loaded, "workbench", workbench_info );
@@ -504,6 +527,20 @@ void vpslot_wheel::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "wheel_offroad_rating", offroad_rating, 0.5f );
     optional( jo, was_loaded, "wheel_terrain_modifiers", terrain_modifiers,
               json_read_reader<veh_ter_mod> {} );
+
+    was_loaded = true;
+}
+
+void vpslot_shell::deserialize( const JsonObject &jo )
+{
+    optional( jo, was_loaded, "drag_coeff", drag_coeff, 0.35f );
+    optional( jo, was_loaded, "frontal_height_m", frontal_height_m, 1.45f );
+    optional( jo, was_loaded, "crumple_absorption", crumple_absorption, 0.25f );
+    optional( jo, was_loaded, "hardness", hardness, 16 );
+    drag_coeff = std::clamp( drag_coeff, 0.12f, 1.50f );
+    frontal_height_m = std::clamp( frontal_height_m, 0.5f, 5.0f );
+    crumple_absorption = std::clamp( crumple_absorption, 0.0f, 0.85f );
+    hardness = std::clamp( hardness, 1, 120 );
 
     was_loaded = true;
 }
@@ -805,6 +842,19 @@ void vpart_info::finalize()
     }
 
     finalize_damage_map( damage_reduction );
+
+    if( hardness <= 0 ) {
+        if( shell_info ) {
+            hardness = shell_info->hardness;
+        } else {
+            float bash_dr = 0.0f;
+            const auto bash_it = damage_reduction.find( damage_type_id( "bash" ) );
+            if( bash_it != damage_reduction.end() ) {
+                bash_dr = bash_it->second;
+            }
+            hardness = std::clamp( static_cast<int>( std::lround( bash_dr + durability / 35.0 ) ), 2, 100 );
+        }
+    }
 
     std::set<std::pair<itype_id, int>> &pt = pseudo_tools;
     for( auto it = pt.begin(); it != pt.end(); /* blank */ ) {
@@ -1129,6 +1179,14 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
     };
 
     append_desc( description.translated() );
+    append_desc( string_format( _( "Footprint: %1$.3gm x %2$.3gm  Hardness: %3$d." ),
+                                sub_size.x * 0.125, sub_size.y * 0.125, hardness ) );
+    if( shell_info ) {
+        append_desc( string_format(
+                         _( "Body shell Cd: %1$.2f  Profile height: %2$.2fm  Crumple absorption: %3$d%%." ),
+                         shell_info->drag_coeff, shell_info->frontal_height_m,
+                         static_cast<int>( std::lround( shell_info->crumple_absorption * 100.0f ) ) ) );
+    }
     if( engine_info && engine_info->peak_torque_nm > 0 ) {
         append_desc( string_format( _( "Rated power: %.1f kW." ), units::to_watt( power ) / 1000.0 ) );
         if( engine_info->peak_torque_rpm > 0 ) {
@@ -1528,6 +1586,9 @@ void vehicle_prototype::load( const JsonObject &jo, std::string_view )
 {
     vgroups[vgroup_id( id.str() )].add_vehicle( id, 100 );
     optional( jo, was_loaded, "name", name );
+    optional( jo, was_loaded, "grid_scale", grid_scale, 1 );
+    grid_scale = std::clamp( grid_scale, 1, 8 );
+    optional( jo, was_loaded, "curb_mass", target_curb_mass, 0_gram );
 
     if( jo.has_member( "blueprint" ) ) {
         // currently unused, read to suppress unvisited members warning
@@ -1590,9 +1651,16 @@ void vehicle_prototype::save_vehicle_as_prototype( const vehicle &veh,
     json.member( "id", "/TO_BE_REPLACED/" );
     json.member( "type", "vehicle" );
     json.member( "name", "/TO_BE_REPLACED/" );
+    if( veh.grid_scale != 1 ) {
+        json.member( "grid_scale", veh.grid_scale );
+    }
+    if( veh.chassis_ballast_mass > 0_gram ) {
+        json.member( "curb_mass", string_format( "%d kg",
+                     static_cast<int>( std::lround( units::to_kilogram( veh.unloaded_mass() ) ) ) ) );
+    }
     std::map<tripoint_rel_ms, std::list<const vehicle_part *>> vp_map;
-    int mount_min_y = 123;
-    int mount_max_y = -123;
+    int mount_min_y = std::numeric_limits<int>::max();
+    int mount_max_y = std::numeric_limits<int>::min();
     // Form a map of existing real parts
     // get_all_parts() gets all non-fake parts
     // The parts are already in installation order
@@ -1750,6 +1818,7 @@ void vehicles::finalize_prototypes()
         vehicle &blueprint = *proto.blueprint;
         blueprint.type = proto.id;
         blueprint.name = proto.name.translated();
+        blueprint.grid_scale = proto.grid_scale;
 
         blueprint.suspend_refresh();
         for( vehicle_prototype::part_def &pt : proto.parts ) {
@@ -1864,6 +1933,7 @@ void vehicles::finalize_prototypes()
             }
         }
         blueprint.enable_refresh();
+        blueprint.init_chassis_ballast( proto.target_curb_mass );
 
         for( vehicle_item_spawn &i : proto.item_spawns ) {
             if( cargo_spots.count( tripoint_rel_ms( i.pos, i.mount_level ) ) == 0 ) {

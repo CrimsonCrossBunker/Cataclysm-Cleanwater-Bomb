@@ -239,13 +239,29 @@ int highway_half_width( unsigned lanes )
 }
 
 ter_id highway_lane_surface( unsigned lanes, int stripe, bool dashed, bool controlled,
-                             bool elevated = false, int half_width = 0, bool ramp = false )
+                             bool elevated = false, int half_width = 0, bool ramp = false,
+                             bool auxiliary = false )
 {
     if( half_width == 0 ) {
         half_width = highway_half_width( lanes );
     }
+    if( auxiliary ) {
+        if( stripe == half_width - 1 ) {
+            return ( elevated ? ter_t_atlas_bridge_white : ter_t_atlas_pavement_white ).id();
+        }
+        if( stripe == 0 && dashed ) {
+            return ( elevated ? ter_t_atlas_bridge_white : ter_t_atlas_pavement_white ).id();
+        }
+        return ( elevated ? ter_t_pavement_hw_air : ter_t_pavement ).id();
+    }
     if( ramp ) {
-        return stripe >= half_width - 1 ? ter_t_atlas_pavement_white.id() : ter_t_pavement.id();
+        if( stripe >= half_width - 1 ) {
+            return ( elevated ? ter_t_atlas_bridge_white : ter_t_atlas_pavement_white ).id();
+        }
+        if( half_width >= 5 && stripe == 0 && dashed ) {
+            return ( elevated ? ter_t_atlas_bridge_white : ter_t_atlas_pavement_white ).id();
+        }
+        return ( elevated ? ter_t_pavement_hw_air : ter_t_pavement ).id();
     }
     const int median = controlled ? 2 : 0;
     if( stripe < median ) {
@@ -272,6 +288,7 @@ struct wide_route {
     int half_width = 0;
     bool ramp = false;
     bool local_access = false;
+    bool auxiliary = false;
 };
 
 struct highway_stroke {
@@ -719,19 +736,21 @@ struct wide_bridge_span {
     }
 
     double height_at( point p, double ground ) const {
+        const auto smooth = []( double t ) {
+            const double c = std::clamp( t, 0.0, 1.0 );
+            return c * c * ( 3.0 - 2.0 * c );
+        };
         const double along = station( p );
         double height = deck_at( along );
         if( along < low ) {
-            const double fraction = std::clamp( ( along - low + low_approach ) / low_approach,
-                                                0.0, 1.0 );
+            const double fraction = smooth( ( along - low + low_approach ) / low_approach );
             height = ground + fraction * ( deck_at( low ) - ground );
         } else if( along > high ) {
-            const double fraction = std::clamp( ( high + high_approach - along ) / high_approach,
-                                                0.0, 1.0 );
+            const double fraction = smooth( ( high + high_approach - along ) / high_approach );
             height = ground + fraction * ( deck_at( high ) - ground );
         }
         if( !overpass && side_distance( p ) < 0 ) {
-            const double fraction = std::clamp( 1 + side_distance( p ) / road_span, 0.0, 1.0 );
+            const double fraction = smooth( 1 + side_distance( p ) / road_span );
             height = ground + fraction * ( height - ground );
         }
         return height;
@@ -984,6 +1003,7 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
     };
     std::vector<point> placed;
     std::vector<std::pair<wide_route, wide_route>> axes;
+    std::vector<int> local_side_masks;
     for( std::size_t i = 0; i < mapped_count; ++i ) {
         if( !routes[i].controlled_access ) {
             continue;
@@ -1037,34 +1057,162 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
             span.across_low = normal - upper.half_width - highway_shoulder;
             span.across_high = normal + upper.half_width + highway_shoulder;
             span.deck_height = surface_elevation( point_abs_ms( center ) ) + 5;
-            span.low_approach = span.high_approach = 5 / 0.06;
+            constexpr double overpass_grade = 0.055;
+            span.low_approach = span.high_approach = 5.0 / overpass_grade;
             for( int pass = 0; pass < 3; ++pass ) {
                 span.low_height = surface_elevation( point_abs_ms( span.at( span.low - span.low_approach ) ) );
                 span.high_height = surface_elevation( point_abs_ms( span.at( span.high + span.high_approach ) ) );
                 span.low_approach = std::max( span.low_approach,
-                                              ( span.deck_at( span.low ) - span.low_height ) / 0.06 );
+                                              ( span.deck_at( span.low ) - span.low_height ) / overpass_grade );
                 span.high_approach = std::max( span.high_approach,
-                                               ( span.deck_at( span.high ) - span.high_height ) / 0.06 );
+                                               ( span.deck_at( span.high ) - span.high_height ) / overpass_grade );
             }
             span.low_height = surface_elevation( point_abs_ms( span.at( span.low - span.low_approach ) ) );
             span.high_height = surface_elevation( point_abs_ms( span.at( span.high + span.high_approach ) ) );
             if( !routes[j].controlled_access ) {
-                span.connections.push_back( { span.at( span.low - span.low_approach - 2 * road_span ),
-                                              span.at( span.high + span.high_approach + 2 * road_span ),
+                const double low_end = ( span.services || ( local_sides & 1 ) != 0 )
+                                       ? span.low - span.low_approach - 2 * road_span : span.low;
+                const double high_end = ( span.services || ( local_sides & 2 ) != 0 )
+                                        ? span.high + span.high_approach + 2 * road_span : span.high;
+                span.connections.push_back( { span.at( low_end ), span.at( high_end ),
                                               routes[j].lanes, false, upper.half_width } );
             }
             spans.push_back( std::move( span ) );
             axes.emplace_back( routes[i], routes[j] );
+            local_side_masks.push_back( local_sides );
             placed.push_back( center );
         }
     }
+    const auto append_bezier_ramp = []( std::vector<wide_route> &out, const point & p0,
+                                        const point & p1, const point & p2, const point & p3,
+    int half_width, int segments ) {
+        point previous = p0;
+        for( int step = 1; step <= segments; ++step ) {
+            const double t = static_cast<double>( step ) / segments;
+            const double u = 1.0 - t;
+            const point next(
+                std::lround( u * u * u * p0.x + 3.0 * u * u * t * p1.x +
+                             3.0 * u * t * t * p2.x + t * t * t * p3.x ),
+                std::lround( u * u * u * p0.y + 3.0 * u * u * t * p1.y +
+                             3.0 * u * t * t * p2.y + t * t * t * p3.y ) );
+            if( previous != next ) {
+                out.push_back( { previous, next, 2, false, half_width, true, false, false } );
+            }
+            previous = next;
+        }
+    };
+    const auto append_auxiliary_taper = []( std::vector<wide_route> &out, const point & center,
+                                            const highway_stroke & axis, double station_anchor,
+                                            int along, int normal_side, int aux_half_width,
+    double parallel_len, double taper_len ) {
+        const auto pt = [&]( double along_s, double across_n ) {
+            return center + point(
+                       std::lround( along_s * axis.east - across_n * axis.south ),
+                       std::lround( along_s * axis.south + across_n * axis.east ) );
+        };
+        // Smooth outer acceleration / deceleration auxiliary lane hugging the mainline edge.
+        const double outer_offset = normal_side * ( axis.half_width + aux_half_width - 2 );
+        const double inner_offset = normal_side * std::max( 3, axis.half_width - 2 );
+        const point nose = pt( station_anchor, outer_offset );
+        const point parallel_end = pt( station_anchor + along * parallel_len, outer_offset );
+        const point taper_end = pt( station_anchor + along * ( parallel_len + taper_len ),
+                                    inner_offset );
+        if( nose != parallel_end ) {
+            out.push_back( { nose, parallel_end, 2, false, aux_half_width, true, false, true } );
+        }
+        if( parallel_end != taper_end ) {
+            out.push_back( { parallel_end, taper_end, 2, false, std::max( 3, aux_half_width - 1 ),
+                             true, false, true } );
+        }
+        return nose;
+    };
     for( std::size_t i = 0; i < spans.size(); ++i ) {
         wide_bridge_span &span = spans[i];
+        const point center = placed[i];
         if( axes[i].second.controlled_access ) {
+            // System interchange between two n*24 controlled-access freeways:
+            // build four sweeping outer directional slip ramps plus inner cloverleaf loops
+            // with acceleration/deceleration auxiliary lanes on both freeways.
+            const highway_stroke main_a = make_highway_stroke( axes[i].first );
+            const highway_stroke main_b = make_highway_stroke( axes[i].second );
+            const double cross_ab = main_a.east * main_b.south - main_a.south * main_b.east;
+            if( std::abs( cross_ab ) < 0.35 ) {
+                continue;
+            }
+            const double overpass_clear = std::max( span.low_approach, span.high_approach ) +
+                                          ( span.high - span.low ) / 2.0 + 28.0;
+            const double slip_anchor = std::max( 165.0, overpass_clear );
+            const double loop_anchor = std::max( 95.0,
+                                                 ( span.high - span.low ) / 2.0 +
+                                                 std::max( main_a.half_width, main_b.half_width ) + 32.0 );
+            for( const int sa : {
+                     -1, 1
+                     } ) {
+                for( const int sb : {
+                         -1, 1
+                         } ) {
+                    // Normal side of axis A facing toward +sb * main_b
+                    const double b_on_a_normal = sb * ( main_b.south * main_a.east -
+                                                        main_b.east * main_a.south );
+                    const int na = b_on_a_normal < 0 ? -1 : 1;
+                    // Normal side of axis B facing toward +sa * main_a
+                    const double a_on_b_normal = sa * ( main_a.south * main_b.east -
+                                                        main_a.east * main_b.south );
+                    const int nb = a_on_b_normal < 0 ? -1 : 1;
+                    const point nose_a = append_auxiliary_taper(
+                                             span.connections, center, main_a, sa * slip_anchor, sa, na, 5, 48.0, 36.0 );
+                    const point nose_b = append_auxiliary_taper(
+                                             span.connections, center, main_b, sb * slip_anchor, sb, nb, 5, 48.0, 36.0 );
+                    const point ctrl_a = nose_a - point( std::lround( sa * 85.0 * main_a.east ),
+                                                         std::lround( sa * 85.0 * main_a.south ) );
+                    const point ctrl_b = nose_b - point( std::lround( sb * 85.0 * main_b.east ),
+                                                         std::lround( sb * 85.0 * main_b.south ) );
+                    const point mid( ( nose_a.x + ctrl_a.x + ctrl_b.x + nose_b.x ) / 4,
+                                     ( nose_a.y + ctrl_a.y + ctrl_b.y + nose_b.y ) / 4 );
+                    if( dry( mid ) ) {
+                        append_bezier_ramp( span.connections, nose_a, ctrl_a, ctrl_b, nose_b, 5, 24 );
+                    }
+
+                    // Inner cloverleaf loop in alternate quadrants for full left-turn transitions.
+                    if( sa * sb > 0 ) {
+                        const double loop_r = 56.0;
+                        const point lp_a = center + point(
+                                               std::lround( sa * loop_anchor * main_a.east -
+                                                            na * ( main_a.half_width + 3 ) * main_a.south ),
+                                               std::lround( sa * loop_anchor * main_a.south +
+                                                            na * ( main_a.half_width + 3 ) * main_a.east ) );
+                        const point lp_b = center + point(
+                                               std::lround( sb * loop_anchor * main_b.east -
+                                                            nb * ( main_b.half_width + 3 ) * main_b.south ),
+                                               std::lround( sb * loop_anchor * main_b.south +
+                                                            nb * ( main_b.half_width + 3 ) * main_b.east ) );
+                        const point apex = center + point(
+                                               std::lround( sa * ( loop_anchor + loop_r ) * main_a.east +
+                                                            sb * ( loop_anchor + loop_r ) * main_b.east ),
+                                               std::lround( sa * ( loop_anchor + loop_r ) * main_a.south +
+                                                            sb * ( loop_anchor + loop_r ) * main_b.south ) );
+                        if( dry( apex ) ) {
+                            const point l_ctrl1 = lp_a + point(
+                                                      std::lround( sa * 44.0 * main_a.east - na * 24.0 * main_a.south ),
+                                                      std::lround( sa * 44.0 * main_a.south + na * 24.0 * main_a.east ) );
+                            const point l_ctrl2 = apex + point(
+                                                      std::lround( sb * 28.0 * main_b.east ),
+                                                      std::lround( sb * 28.0 * main_b.south ) );
+                            const point l_ctrl3 = apex + point(
+                                                      std::lround( sa * 28.0 * main_a.east ),
+                                                      std::lround( sa * 28.0 * main_a.south ) );
+                            const point l_ctrl4 = lp_b + point(
+                                                      std::lround( sb * 44.0 * main_b.east - nb * 24.0 * main_b.south ),
+                                                      std::lround( sb * 44.0 * main_b.south + nb * 24.0 * main_b.east ) );
+                            append_bezier_ramp( span.connections, lp_a, l_ctrl1, l_ctrl2, apex, 4, 16 );
+                            append_bezier_ramp( span.connections, apex, l_ctrl3, l_ctrl4, lp_b, 4, 16 );
+                        }
+                    }
+                }
+            }
             continue;
         }
         const highway_stroke main = make_highway_stroke( axes[i].first );
-        const point center = placed[i];
         const bool urban = in_urban_footprint( project_to<coords::omt>( point_abs_ms( center ) ) );
         const int spacing = urban ? 64 : 128;
         const point tile = project_to<coords::omt>( point_abs_ms( center ) ).raw();
@@ -1092,11 +1240,15 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
         if( !ramps ) {
             continue;
         }
+        const int sides_mask = local_side_masks[i];
         for( const int side : {
                  -1, 1
                  } ) {
+            if( !span.services && ( side < 0 ? ( sides_mask & 1 ) == 0 : ( sides_mask & 2 ) == 0 ) ) {
+                continue;
+            }
             const double local_distance = ( span.high - span.low ) / 2 +
-                                          ( side < 0 ? span.low_approach : span.high_approach ) + 30;
+                                          ( side < 0 ? span.low_approach : span.high_approach ) + 34;
             const point local = span.at( ( span.low + span.high ) / 2 + side * local_distance );
             const int normal_side = ( ( local.y - center.y ) * main.east - ( local.x - center.x ) * main.south )
                                     < 0 ? -1 : 1;
@@ -1105,27 +1257,21 @@ void append_highway_overpasses( std::vector<wide_bridge_span> &spans, point_abs_
             for( const int along : {
                      -1, 1
                      } ) {
-                const point merge = center + point( std::lround( ( local_station + along * 170 ) * main.east -
-                                                    normal_side * ( main.half_width - 4 ) * main.south ),
-                                                    std::lround( ( local_station + along * 170 ) * main.south + normal_side *
-                                                            ( main.half_width - 4 ) * main.east ) );
-                const point control_a = merge - point( std::lround( along * 90 * main.east ),
-                                                       std::lround( along * 90 * main.south ) );
-                const point control_b = local + point( std::lround( along * 50 * main.east ),
-                                                       std::lround( along * 50 * main.south ) );
-                point previous = merge;
-                for( int step = 1; step <= 16; ++step ) {
-                    const double t = step / 16.0;
-                    const double u = 1 - t;
-                    const point next( std::lround( u * u * u * merge.x + 3 * u * u * t * control_a.x + 3 * u * t * t *
-                                                   control_b.x + t * t * t * local.x ),
-                                      std::lround( u * u * u * merge.y + 3 * u * u * t * control_a.y + 3 * u * t * t * control_b.y + t * t
-                                                   * t * local.y ) );
-                    if( previous != next ) {
-                        span.connections.push_back( { previous, next, 2, false, 3, true } );
-                    }
-                    previous = next;
-                }
+                const point nose = append_auxiliary_taper(
+                                       span.connections, center, main, local_station + along * 165.0,
+                                       along, normal_side, 4, 48.0, 32.0 );
+                // Offset ramp terminal slightly along the mainline axis and flare smoothly
+                // into the crossing local road so incoming and outgoing ramps don't pinch head-on.
+                const point terminal = local + point( std::lround( along * 5.0 * main.east ),
+                                                      std::lround( along * 5.0 * main.south ) );
+                const point control_a = nose - point( std::lround( along * 72.0 * main.east ),
+                                                      std::lround( along * 72.0 * main.south ) );
+                const point control_b = terminal + point(
+                                            std::lround( along * 46.0 * main.east + normal_side * 12.0 * main.south ),
+                                            std::lround( along * 46.0 * main.south - normal_side * 12.0 * main.east ) );
+                append_bezier_ramp( span.connections, nose, control_a, control_b, terminal, 4, 24 );
+                // Flared junction apron joining the ramp terminal cleanly into the local road.
+                span.connections.push_back( { terminal, local, 2, false, 5, true, false, false } );
             }
             if( span.services ) {
                 const point site = local + point( std::lround( main.east * 2 * road_span ),
@@ -1249,10 +1395,10 @@ static std::vector<wide_route> highway_connection_routes( point_abs_omt origin, 
         bool city_streets )
 {
     std::vector<wide_route> result;
-    std::set<std::tuple<point, point, int, bool>> seen;
-    const point first = divide_xy_round_to_minus_infinity( origin.raw() - point( 16, 16 ), 64 ) * 64;
-    const point last = divide_xy_round_to_minus_infinity( origin.raw() + point( width + 16,
-                       height + 16 ), 64 ) * 64;
+    std::set<std::tuple<point, point, int, bool, bool>> seen;
+    const point first = divide_xy_round_to_minus_infinity( origin.raw() - point( 20, 20 ), 64 ) * 64;
+    const point last = divide_xy_round_to_minus_infinity( origin.raw() + point( width + 20,
+                       height + 20 ), 64 ) * 64;
     const point low = origin.raw() * road_span - point( 12, 12 );
     const point high = ( origin.raw() + point( width, height ) ) * road_span + point( 12, 12 );
     for( int y = first.y; y <= last.y; y += 64 ) {
@@ -1264,7 +1410,8 @@ static std::vector<wide_route> highway_connection_routes( point_abs_omt origin, 
                         std::min( route.begin.x, route.end.x ) <= high.x &&
                         std::max( route.begin.y, route.end.y ) >= low.y &&
                         std::min( route.begin.y, route.end.y ) <= high.y &&
-                        seen.emplace( route.begin, route.end, route.half_width, route.ramp ).second ) {
+                        seen.emplace( route.begin, route.end, route.half_width, route.ramp,
+                                      route.auxiliary ).second ) {
                         result.push_back( route );
                     }
                 }
@@ -1715,6 +1862,7 @@ void place_wide_highway_surface( mapgendata &dat )
         point_abs_ms center;
         bool controlled_access = false;
         bool ramp = false;
+        bool auxiliary = false;
         std::size_t route_index = 0;
     };
     std::array<lane_sample, road_span *road_span> surface{};
@@ -1804,7 +1952,8 @@ void place_wide_highway_surface( mapgendata &dat )
                         const double station = east * stroke.east + south * stroke.south;
                         cell = { route.lanes, stroke.half_width, distance,
                                  station + route.begin.x *stroke.east + route.begin.y * stroke.south,
-                                 point_abs_ms( center ), route.controlled_access, route.ramp, corridors.size() - 1
+                                 point_abs_ms( center ), route.controlled_access, route.ramp,
+                                 route.auxiliary, corridors.size() - 1
                                };
                     }
                     found = true;
@@ -1872,7 +2021,16 @@ void place_wide_highway_surface( mapgendata &dat )
                 four_cardinal_directions.end(), [&inside, origin, pos]( point step ) {
                     return !inside( origin + pos.raw() + step );
                 } );
-                dat.m.ter_set( pos, ( rail ? ter_t_guardrail : ter_t_pavement ).id() );
+                // Never drop a guardrail into a merge/diverge gore throat surrounded by pavement.
+                int open_sides = 0;
+                for( const point &step : four_cardinal_directions ) {
+                    if( !inside( origin + pos.raw() + step ) ) {
+                        ++open_sides;
+                    }
+                }
+                const bool place_rail = rail && ( open_sides >= 1 ) &&
+                                        !( sample.auxiliary && open_sides == 1 && stripe == half_width );
+                dat.m.ter_set( pos, ( place_rail ? ter_t_guardrail : ter_t_pavement ).id() );
                 if( dat.m.has_furn( pos ) ) {
                     dat.m.furn_set( pos, furn_str_id::NULL_ID().id() );
                 }
@@ -1909,7 +2067,7 @@ void place_wide_highway_surface( mapgendata &dat )
                                     crossing == crosswalk_tile::stop_line ? ter_t_pavement_y.id() :
                                     crossing != crosswalk_tile::none ? ter_t_pavement.id() :
                                     highway_lane_surface( sample.lanes, stripe, dashed, sample.controlled_access,
-                                            false, sample.half_width, sample.ramp );
+                                            false, sample.half_width, sample.ramp, sample.auxiliary );
             if( sample.controlled_access ? dat.m.has_furn( pos ) :
                 dat.m.furn( pos ) == furn_f_street_light ) {
                 dat.m.furn_set( pos, furn_str_id::NULL_ID().id() );
@@ -2441,7 +2599,8 @@ static bool draw_wide_bridge( mapgendata &dat )
                             !roadway ? ( highway ? ( elevated ? ter_t_pavement_hw_air : ter_t_pavement ) :
                                          ( elevated ? ter_t_sidewalk_hw_air : ter_t_sidewalk ) ).id() :
                             highway_lane_surface( chosen->lanes, stripe, station % 6 < 3,
-                                                  chosen->controlled_access, elevated, stroke.half_width, chosen->ramp );
+                                                  chosen->controlled_access, elevated, stroke.half_width,
+                                                  chosen->ramp, chosen->auxiliary );
             if( ramp >= 0 && ramp < 2 && !rail &&
                 !( chosen->controlled_access && stripe < 2 ) ) {
                 const bool low = ramp < 1;

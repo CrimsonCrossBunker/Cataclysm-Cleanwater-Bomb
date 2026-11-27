@@ -18,6 +18,8 @@
     },
     "flags": [ "CARGO", "BOARDABLE", "COVERED", "CARGO_PASSABLE" ],
     "breaks_into": "ig_vp_cloth",
+    "sub_size": [ 3, 3 ],
+    "hardness": 4,
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
   {
@@ -32,12 +34,22 @@
     "item": "sheet_metal",
     "location": "center",
     "requirements": {
-      "install": { "skills": [ [ "fabrication", 1 ] ], "time": "5 m", "using": [ [ "vehicle_bolt_install_simple", 1 ] ] },
+      "install": {
+        "skills": [ [ "fabrication", 1 ] ],
+        "time": "5 m",
+        "using": [ [ "vehicle_bolt_install_simple", 1 ] ]
+      },
       "removal": { "skills": [ [ "fabrication", 1 ] ], "time": "5 m", "using": [ [ "vehicle_wrench_1", 1 ] ] },
-      "repair": { "skills": [ [ "fabrication", 2 ], [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "repair_welding_lc_steel", 5 ] ] }
+      "repair": {
+        "skills": [ [ "fabrication", 2 ], [ "mechanics", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "repair_welding_lc_steel", 5 ] ]
+      }
     },
     "flags": [ "CARGO", "BOARDABLE", "CARGO_PASSABLE", "FLAT_SURF" ],
     "breaks_into": "ig_vp_sheet_metal",
+    "sub_size": [ 3, 3 ],
+    "hardness": 16,
     "variants": [ { "symbols": "T", "symbols_broken": "#" } ]
   },
   {
@@ -60,10 +72,16 @@
         "using": [ [ "welding_standard", 120 ], [ "vehicle_bolt_install", 1 ] ]
       },
       "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "5 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 1 ], [ "fabrication", 2 ] ], "time": "5 m", "using": [ [ "repair_welding_standard", 3 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 1 ], [ "fabrication", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "repair_welding_standard", 3 ] ]
+      }
     },
     "flags": [ "CARGO" ],
     "damage_reduction": { "all": 6 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 16,
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
   {
@@ -71,6 +89,8 @@
     "id": "basketlg",
     "type": "vehicle_part",
     "description": "A large wire basket from a shopping cart.",
+    "sub_size": [ 4, 4 ],
+    "hardness": 16,
     "variants_bases": [ { "id": "cart", "label": "Cart" } ],
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
@@ -96,6 +116,8 @@
     },
     "flags": [ "UNMOUNT_ON_DAMAGE", "CARGO", "PROTRUSION", "CARGO_PASSABLE" ],
     "damage_reduction": { "all": 6 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 16,
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
   {
@@ -116,10 +138,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 1 ] ], "time": "20 m", "using": [ [ "welding_standard", 120 ] ] },
       "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "5 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 1 ], [ "fabrication", 2 ] ], "time": "5 m", "using": [ [ "repair_welding_standard", 3 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 1 ], [ "fabrication", 2 ] ],
+        "time": "5 m",
+        "using": [ [ "repair_welding_standard", 3 ] ]
+      }
     },
     "flags": [ "CARGO" ],
     "damage_reduction": { "all": 4 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 12,
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
   {
@@ -139,10 +167,16 @@
     "requirements": {
       "install": { "skills": [ [ "mechanics", 1 ] ], "time": "150 s", "using": [ [ "vehicle_screw", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "150 s", "using": [ [ "vehicle_screw", 1 ] ] },
-      "repair": { "skills": [ [ "mechanics", 1 ], [ "fabrication", 1 ] ], "time": "2 m", "using": [ [ "repair_welding_standard", 1 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 1 ], [ "fabrication", 1 ] ],
+        "time": "2 m",
+        "using": [ [ "repair_welding_standard", 1 ] ]
+      }
     },
     "flags": [ "CARGO", "CARGO_PASSABLE" ],
     "damage_reduction": { "all": 6 },
+    "sub_size": [ 3, 3 ],
+    "hardness": 14,
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
   {
@@ -150,6 +184,8 @@
     "id": "basketsm",
     "type": "vehicle_part",
     "description": "A simple bike basket.  It is small and foldable.",
+    "sub_size": [ 3, 3 ],
+    "hardness": 14,
     "variants_bases": [ { "id": "bike_rear", "label": "Bike Rear" }, { "id": "wheelchair", "label": "Wheelchair" } ],
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
@@ -175,6 +211,8 @@
     },
     "flags": [ "UNMOUNT_ON_DAMAGE", "CARGO", "PROTRUSION", "CARGO_PASSABLE" ],
     "damage_reduction": { "all": 6 },
+    "sub_size": [ 3, 3 ],
+    "hardness": 14,
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
   {
@@ -198,12 +236,16 @@
     "flags": [ "CARGO", "BOARDABLE", "COVERED", "LOCKABLE_CARGO", "CARGO_PASSABLE" ],
     "breaks_into": "ig_vp_frame",
     "damage_reduction": { "all": 28 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 22,
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
   {
     "copy-from": "box_abstract",
     "id": "box",
     "type": "vehicle_part",
+    "sub_size": [ 5, 5 ],
+    "hardness": 22,
     "variants_bases": [ { "id": "wheelbarrow", "label": "Wheelbarrow" } ],
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
@@ -220,6 +262,8 @@
     "broken_color": "light_gray",
     "size": "359614 ml",
     "item": "trashcan_large",
+    "sub_size": [ 3, 3 ],
+    "hardness": 12,
     "extend": { "flags": [ "NO_INSTALL_HIDDEN" ] },
     "delete": { "flags": [ "CARGO_PASSABLE" ] },
     "variants_bases": [ { "id": "trash can", "label": "Trash Can" } ],
@@ -249,6 +293,8 @@
     },
     "flags": [ "UNMOUNT_ON_DAMAGE", "CARGO", "PROTRUSION", "COVERED", "BOARDABLE", "HUGE_OK", "CARGO_PASSABLE" ],
     "damage_reduction": { "all": 26 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 20,
     "variants": [ { "symbols": "=", "symbols_broken": "#" } ]
   },
   {
@@ -273,6 +319,8 @@
     },
     "flags": [ "BIKE_RACK_VEH", "MULTISQUARE" ],
     "damage_reduction": { "all": 10 },
+    "sub_size": [ 2, 5 ],
+    "hardness": 20,
     "variants": [ { "symbols": "=", "symbols_broken": "#" } ]
   },
   {
@@ -291,6 +339,8 @@
     },
     "flags": [ "UNMOUNT_ON_DAMAGE", "PROTRUSION", "CARGO_PASSABLE" ],
     "damage_reduction": { "all": 10 },
+    "sub_size": [ 5, 2 ],
+    "hardness": 22,
     "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   },
   {
@@ -301,6 +351,8 @@
     "looks_like": "forklift_fork",
     "item": "nose_plate",
     "color": "light_gray",
+    "sub_size": [ 4, 4 ],
+    "hardness": 42,
     "variants": [ { "symbols": "L", "symbols_broken": "#" } ],
     "flags": [ "BOARDABLE", "CARGO", "CARGO_PASSABLE", "FURNITURE_TIEDOWN", "FURNITURE_LIFT_ASSIST" ],
     "//": "https://www.magliner.com/extruded-aluminum-nose-flush-mount-300248",
