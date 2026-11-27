@@ -29,6 +29,7 @@
 #include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
+#include "vehicle_part_location.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -275,11 +276,7 @@ vpart_display vehicle::get_display_of_world_tile( const tripoint_rel_ms &precalc
         const vpart_info &tvpi = tp.info();
         max_blood = std::max( max_blood, tp.blood );
         if( !in_vehicle && !tp.open && tvpi.has_flag( VPFLAG_SHELL ) && !tp.is_broken() ) {
-            if( tp.has_custom_color() ) {
-                ret.color = tp.get_color().fg;
-            } else {
-                ret.color = tvpi.color;
-            }
+            ret.color = tvpi.color;
         }
         if( tvpi.has_flag( VPFLAG_CARGO ) && !tp.is_broken() && !get_items( tp ).empty() ) {
             ret.has_cargo = true;

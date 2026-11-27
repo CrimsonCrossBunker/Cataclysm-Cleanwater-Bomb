@@ -3124,7 +3124,7 @@ std::vector<int> vehicle::parts_at_relative( const tripoint_rel_ms &dp, const bo
 
 std::optional<vpart_reference> vpart_position::obstacle_at_part() const
 {
-    vehicle &veh = vehicle();
+    ::vehicle &veh = this->vehicle();
     const std::vector<int> candidates = veh.is_subtile()
                                         ? veh.parts_at_world_tile( veh.part( part_index() ).precalc[0] )
                                         : veh.parts_at_relative( mount_pos3(), false );
@@ -4165,7 +4165,7 @@ std::vector<rider_data> vehicle::get_riders() const
         if( vp.part().has_flag( vp_flag::passenger_flag ) ) {
             Character *psg = g->critter_by_id<Character>( vp.part().passenger_id );
             if( psg != nullptr && seen_riders.insert( psg ).second ) {
-                res.push_back( { static_cast<int>( vp.part_index() ), psg } );
+                res.push_back( { psg, static_cast<int>( vp.part_index() ) } );
             }
         }
     }
@@ -4173,7 +4173,7 @@ std::vector<rider_data> vehicle::get_riders() const
     for( const vpart_reference &vp : get_avail_parts( VPFLAG_BOARDABLE ) ) {
         Creature *rider = creatures.creature_at( vp.pos_abs() );
         if( rider != nullptr && seen_riders.insert( rider ).second ) {
-            res.push_back( { static_cast<int>( vp.part_index() ), rider } );
+            res.push_back( { rider, static_cast<int>( vp.part_index() ) } );
         }
     }
     return res;
@@ -5157,7 +5157,7 @@ int vehicle::find_directional_door_part( const Character &who, const point_rel_m
         ref_y = static_cast<double>( parts[passenger_part].mount.y() ) / scale;
         ref_level = parts[passenger_part].mount_level;
     } else {
-        const tripoint_abs_ms rel_who = who.pos_abs() - pos_abs();
+        const tripoint_rel_ms rel_who = who.pos_abs() - pos_abs();
         const auto [wx, wy] = world_dir_to_local( pivot_rotation[0], rel_who.xy() );
         ref_x = wx + static_cast<double>( pivot_anchor[0].x() ) / scale;
         ref_y = wy + static_cast<double>( pivot_anchor[0].y() ) / scale;
@@ -9859,8 +9859,8 @@ void vehicle::refresh_insides()
                 if( !is_roof && !is_obs ) {
                     continue;
                 }
-                const int d_proj = ( vp_near.mount.x() - vp.mount.x() ) * offset.x() +
-                                   ( vp_near.mount.y() - vp.mount.y() ) * offset.y();
+                const int d_proj = ( vp_near.mount.x() - vp.mount.x() ) * offset.x +
+                                   ( vp_near.mount.y() - vp.mount.y() ) * offset.y;
                 if( d_proj <= 0 ) {
                     continue;
                 }
@@ -9869,11 +9869,11 @@ void vehicle::refresh_insides()
                 const int bx2 = 2 * vp_near.mount.x() + ns.x;
                 const int by1 = 2 * vp_near.mount.y() - ns.y;
                 const int by2 = 2 * vp_near.mount.y() + ns.y;
-                if( offset.x() != 0 ) {
+                if( offset.x != 0 ) {
                     if( std::min( ay2, by2 ) <= std::max( ay1, by1 ) ) {
                         continue;
                     }
-                    const int gap = offset.x() > 0 ? ( bx1 - ax2 ) : ( ax1 - bx2 );
+                    const int gap = offset.x > 0 ? ( bx1 - ax2 ) : ( ax1 - bx2 );
                     if( gap > 2 ) {
                         continue;
                     }
@@ -9881,7 +9881,7 @@ void vehicle::refresh_insides()
                     if( std::min( ax2, bx2 ) <= std::max( ax1, bx1 ) ) {
                         continue;
                     }
-                    const int gap = offset.y() > 0 ? ( by1 - ay2 ) : ( ay1 - by2 );
+                    const int gap = offset.y > 0 ? ( by1 - ay2 ) : ( ay1 - by2 );
                     if( gap > 2 ) {
                         continue;
                     }

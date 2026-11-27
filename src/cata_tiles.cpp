@@ -116,6 +116,7 @@
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_part_location.h"
 #include "viewer.h"
 #include "vpart_position.h"
 #include "weather.h"

@@ -9485,13 +9485,13 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
     // Pre-resolve preferred sub-tile entry seat before update_map shifts dest_loc
     int planned_subtile_seat = -1;
     int64_t planned_subtile_vid = 0;
-    if( !was_in_control_same_pos && vp_there && vp_there->vehicle().is_subtile() &&
+    if( !was_in_control_same_pos && vp1 && vp1->vehicle().is_subtile() &&
         !who.is_mounted() ) {
         int tmp_door = -1;
         bool tmp_solid = false;
-        planned_subtile_seat = vp_there->vehicle().find_entry_seat_and_door(
-                                   pos, here, dest_loc, tmp_door, tmp_solid );
-        planned_subtile_vid = vp_there->vehicle().uid().get_value();
+        planned_subtile_seat = vp1->vehicle().find_entry_seat_and_door(
+                                   who.pos_bub(), here, dest_loc, tmp_door, tmp_solid );
+        planned_subtile_vid = vp1->vehicle().uid().get_value();
     }
 
     who.setpos( here, dest_loc );
