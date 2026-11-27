@@ -54,13 +54,13 @@ crop_climate_profile crop_climate_profile::load( const JsonObject &jo )
         jo.get_float( "min_c" ), jo.get_float( "max_c" ),
         jo.get_float( "degree_days" ), jo.get_float( "water_mm" ), jo.get_int( "growing_days" ),
         jo.get_float( "water_peak", 0.5 ), jo.get_int( "vernalization_days", 0 ),
-        jo.get_float( "root_zone_water_mm", 0.0 )
+        jo.get_float( "root_zone_water_mm", 0.0 ), jo.get_float( "harvest_yield_g_per_m2", 0.0 )
     };
     if( result.min_c > result.base_c || result.base_c >= result.optimum_c ||
         result.optimum_c >= result.max_c || result.degree_days <= 0 ||
         result.water_mm <= 0 || result.growing_days <= 0 ||
         result.water_peak < 0 || result.water_peak > 1 || result.vernalization_days < 0 ||
-        result.root_zone_water_mm < 0 ) {
+        result.root_zone_water_mm < 0 || result.harvest_yield_g_per_m2 < 0 ) {
         jo.throw_error( "Invalid crop climate profile" );
     }
     return result;
@@ -737,6 +737,25 @@ double crop_harvest_multiplier( const item &seed )
     return std::clamp( 1.0 - 1.1 * ( 1.0 - supplied / demand ), 0.0, 1.0 );
 }
 
+int crop_harvest_count( const item &seed, int count )
+{
+    if( count <= 0 ) {
+        return 0;
+    }
+    const islot_seed &slot = *seed.type->seed;
+    if( slot.climate && slot.climate->harvest_yield_g_per_m2 > 0 ) {
+        const item fruit( slot.fruit_id, calendar::turn );
+        const double grams = static_cast<double>( units::to_gram( fruit.weight() ) );
+        if( grams > 0 ) {
+            count = std::max( 1, static_cast<int>( std::round( slot.climate->harvest_yield_g_per_m2 /
+                                                   grams * get_option<float>( "CROP_HARVEST_MULTIPLIER" ) ) ) );
+        }
+    }
+    // A harvestable standing crop retains a minimum primary yield; dead crops pass zero.
+    return std::max( 1, static_cast<int>( std::round(
+            count * crop_harvest_multiplier( seed ) ) ) );
+}
+
 time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, item &seed,
                                    const furn_t &furniture, float growth_speed, float water_use,
                                    bool finish_interval )
@@ -892,8 +911,8 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
             water_supplied += std::min( available, need );
         }
         moisture = std::clamp( available - need, 0.0, capacity );
-        moisture -= std::max( 0.0, moisture - 0.5 * capacity ) *
-                    ( 1 - std::pow( 1 - soil.drainage, days ) );
+        // Capacity is plant-available water at field capacity, not saturation.
+        // Rain above it has already drained at the storage clamp.
 
         const double rate = stage_furniture->plant ?
                             growth_speed * stage_furniture->plant->growth_multiplier : growth_speed;

@@ -15,6 +15,7 @@ Celsius and millimetres of water.
 | `water_peak` | Stage of highest water demand, from 0 at sowing to 1 at ripeness |
 | `vernalization_days` | Optional cold exposure needed for winter crops to head |
 | `root_zone_water_mm` | Optional plant-available soil water before applying terrain modifiers |
+| `harvest_yield_g_per_m2` | Optional primary harvest mass per one-square-metre plot, before water stress and the harvest option |
 
 The game samples the local weather history, including its regional rainfall
 timing, and keeps a root-zone soil-water store using existing seed item variables.
@@ -36,6 +37,35 @@ thermal development and minimum growing days without repeatedly losing
 both counters to the same moisture deficit. A seasonal water deficit reduces
 manual, mechanical and camp harvests with an approximate yield-response
 coefficient of 1.1.
+
+The harvest multiplier uses accumulated demand already scaled by local daily
+ET, not annual precipitation totals. A cool northern site and a warmer site
+with the same annual rainfall therefore do not share a fixed demand budget.
+Terrain water capacity and infiltration apply to the root-zone store;
+excess rain drains above that plant-available capacity. The available store
+is no longer drained toward half capacity on every day. One millimetre of
+water is one litre per square metre. This remains a
+temperature-based ET estimate rather than a full radiation/humidity/wind model.
+
+Soybean seeds, raw soybeans and dried soybeans all produce mature soybean
+grain at the harvest stage. Green edamame can instead be picked during the
+last quarter of the preceding mature stage; this harvest ends the crop and
+cannot also yield mature grain. Automatic harvesting waits for grain.
+This models the green R6 harvest described by
+[SDSU Extension](https://extension.sdstate.edu/edamame-harvest-and-storage).
+The stage fraction is a model approximation rather than a separate R-stage simulator.
+
+Soybeans use 340 g of primary grain per square metre before water stress,
+approximately the 50.7 bu/acre soybean yield in the
+[USDA 2024 annual summary](https://www.nass.usda.gov/Newsroom/archive/2025/01-10-2025.php),
+using a 60 lb soybean bushel. The item mass determines the number of portions:
+16 g portions give about 21 mature soybean items, rather than 21 kilograms.
+Green pods retain the corresponding portion count and their existing 24 g
+item weight. Existing profiles without a mass yield retain native quantities.
+Manual, vehicle and camp harvests use the same count conversion and water
+multiplier. Harvestable crops retain a minimum primary portion instead of
+rounding a small positive yield down to only a withered byproduct; overgrown
+dead crops still yield no grain.
 
 The explicit root-zone capacities are model estimates, calculated as
 effective rooting depth times a reference 120 mm of plant-available water
