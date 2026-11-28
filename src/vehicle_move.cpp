@@ -509,7 +509,9 @@ void vehicle::thrust( map &here, int thd, int z )
     }
 
     // TODO: Pass this as an argument to avoid recalculating
-    float traction = k_traction( here, here.vehicle_wheel_traction( *this ) );
+    float traction = ( is_aircraft( here ) && ( z != 0 || is_flying ) )
+                     ? 1.0f
+                     : k_traction( here, here.vehicle_wheel_traction( *this ) );
 
     // If vehicle has wheels on thick ice, increase chance to start skidding
     if( !skidding && !wheelcache.empty() ) {
@@ -533,7 +535,9 @@ void vehicle::thrust( map &here, int thd, int z )
         smart_controller_handle_turn( here, traction );
     }
 
-    int accel = current_acceleration( here ) * traction;
+    int accel = ( is_aircraft( here ) && ( z != 0 || is_flying )
+                  ? rotor_acceleration( here, true, std::abs( velocity ) )
+                  : current_acceleration( here ) ) * traction;
     // A balloon craft can glide on its buoyancy: without propellers or rotors
     // the engine cannot provide horizontal thrust, even though it stays aloft.
     if( is_flying && has_part( "BALLOON" ) &&
@@ -557,16 +561,20 @@ void vehicle::thrust( map &here, int thd, int z )
         } else if( is_airship( here ) ) {
             return;
         }
-        if( operator_character ) {
-            if( has_engine_type( fuel_type_muscle, true ) ) {
-                operator_character->add_msg_if_player( _( "The %s is too heavy to move!" ), name );
-            } else {
-                operator_character->add_msg_if_player( n_gettext( "The %s is too heavy for its engine!",
-                                                       "The %s is too heavy for its engines!",
-                                                       engines.size() ), name );
+        // Rotorcraft taking off or hovering vertically should still climb even if
+        // forward horizontal thrust computes to 0 on the ground.
+        if( !( z != 0 && is_aircraft( here ) && engine_on && total_power( here ) > 0_W ) ) {
+            if( operator_character ) {
+                if( has_engine_type( fuel_type_muscle, true ) ) {
+                    operator_character->add_msg_if_player( _( "The %s is too heavy to move!" ), name );
+                } else {
+                    operator_character->add_msg_if_player( n_gettext( "The %s is too heavy for its engine!",
+                                                           "The %s is too heavy for its engines!",
+                                                           engines.size() ), name );
+                }
             }
+            return;
         }
-        return;
     }
     const int max_vel = traction * max_velocity( here );
     // maximum braking is 20 mph/s, assumes high friction tires; reduce on thick ice
@@ -1695,7 +1703,7 @@ bool vehicle::check_heli_descend( map &here, Character &p ) const
 
 bool vehicle::check_heli_ascend( map &here, Character &p ) const
 {
-    if( velocity > 0 && !is_flying_in_air() ) {
+    if( velocity != 0 && !is_flying_in_air() ) {
         p.add_msg_if_player( m_bad, _( "It would be unsafe to try and take off while you are moving." ) );
         return false;
     }

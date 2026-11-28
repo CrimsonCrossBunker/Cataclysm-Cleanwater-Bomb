@@ -4283,8 +4283,7 @@ bool cata_tiles::draw_sprite_at(
     // fragment shader. On unsupported variant (untinted NORMAL, custom MEMORY
     // preset, clean session-disable) try_begin reports use_atlas; abort_frame
     // means undefined shader state -- latch recovery and throw.
-    const bool use_subtile_angle = rotate_sprite && pending_part_exact_angle_deg_.has_value() &&
-                                   !rp.anchor.has_value();
+    const bool use_subtile_angle = rotate_sprite && pending_part_exact_angle_deg_.has_value();
     const bool scene_lit = smooth_lighting::lit_path_for( smooth_lighting_active,
                            rp.light == draw_light::scene, lit_extent.covers( rp.pos ) ) &&
                            !rp.tint && !allow_diagonal_rota && !use_subtile_angle;

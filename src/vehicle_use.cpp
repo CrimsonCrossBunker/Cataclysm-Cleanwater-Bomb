@@ -51,6 +51,7 @@
 #include "color.h"
 #include "craft_reservation.h"
 #include "creature.h"
+#include "creature_tracker.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "effect_on_condition.h"
@@ -1218,11 +1219,19 @@ bool vehicle::can_close( int part_index, Character &who )
         base_element.push_back( part_index );
         openable_parts.emplace_back( base_element );
     }
+    const int pass_part = is_subtile() ? find_passenger_part( who ) : -1;
+    const creature_tracker &creatures = get_creature_tracker();
     for( const std::vector<int> &vec : openable_parts ) {
         for( int partID : vec ) {
             // Check the part for collisions, then if there's a fake part present check that too.
             while( partID >= 0 ) {
-                if( doors::check_mon_blocking_door( who, abs_part_pos( parts[partID] ) ) ) {
+                const tripoint_abs_ms part_pos = abs_part_pos( parts[partID] );
+                // On 0.125-tile cabins a seated occupant can share the rounded 1m world tile
+                // with an adjacent perimeter door mounted on a different sub-tile coordinate.
+                const bool self_in_separate_seat = is_subtile() && pass_part >= 0 &&
+                                                   parts[pass_part].mount != parts[partID].mount &&
+                                                   creatures.creature_at( part_pos ) == &who;
+                if( !self_in_separate_seat && doors::check_mon_blocking_door( who, part_pos ) ) {
                     return false;
                 }
                 if( parts[partID].has_fake &&

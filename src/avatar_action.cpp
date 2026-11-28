@@ -780,7 +780,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
                     }
                     return true;
                 }
-                if( veh1 == veh0 ) {
+                if( veh1 == veh0 && vp1.part_with_feature( VPFLAG_BOARDABLE, true ) ) {
                     you.add_msg_if_player( m_info, _( "Something is blocking your movement inside the %s." ),
                                            veh0->name );
                     return false;

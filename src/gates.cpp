@@ -366,20 +366,23 @@ bool doors::finish_open( map &here, Character &who, const tripoint_bub_ms &targe
         return false;
     }
     optional_vpart_position vp = here.veh_at( target );
-    if( !vp ) {
-        const optional_vpart_position vp_who = here.veh_at( who.pos_bub( here ) );
-        if( vp_who && vp_who->vehicle().is_subtile() &&
-            started.vehicle_part >= 0 && started.vehicle_part < vp_who->vehicle().part_count() ) {
-            vehicle &veh = vp_who->vehicle();
-            const vehicle_part &door_vp = veh.part( started.vehicle_part );
-            if( !door_vp.removed && !door_vp.is_fake && door_vp.is_available() &&
-                door_vp.info().has_flag( VPFLAG_OPENABLE ) && door_vp.open == 0 &&
-                !door_vp.locked ) {
-                who.add_msg_if_player( _( "You open the %1$s's %2$s." ), veh.name, door_vp.name() );
-                veh.open( here, started.vehicle_part );
-                return true;
-            }
+    const optional_vpart_position vp_who = here.veh_at( who.pos_bub( here ) );
+    if( vp_who && vp_who->vehicle().is_subtile() &&
+        started.result == open_tile_result::OPEN_VEHICLE_SINGLE &&
+        ( !vp || &vp->vehicle() == &vp_who->vehicle() ) &&
+        started.vehicle_part >= 0 && started.vehicle_part < vp_who->vehicle().part_count() ) {
+        vehicle &veh = vp_who->vehicle();
+        const vehicle_part &door_vp = veh.part( started.vehicle_part );
+        if( !door_vp.removed && !door_vp.is_fake && door_vp.is_available() &&
+            door_vp.info().has_flag( VPFLAG_OPENABLE ) && door_vp.open == 0 &&
+            !door_vp.locked ) {
+            who.add_msg_if_player( _( "You open the %1$s's %2$s." ), veh.name, door_vp.name() );
+            veh.open( here, started.vehicle_part );
+            return true;
         }
+        return false;
+    }
+    if( !vp ) {
         return false;
     }
     vehicle &veh = vp->vehicle();

@@ -5732,7 +5732,7 @@ int vehicle::acceleration( map &here, const bool fueled, int at_vel_in_vmi ) con
 {
     if( is_watercraft() ) {
         return water_acceleration( here, fueled, at_vel_in_vmi );
-    } else if( is_aircraft( here ) && is_flying ) {
+    } else if( is_aircraft( here ) && ( is_flying || requested_z_change > 0 ) ) {
         return rotor_acceleration( here, fueled, at_vel_in_vmi );
     }
     return ground_acceleration( here, fueled, at_vel_in_vmi );
@@ -6836,8 +6836,12 @@ float vehicle::k_traction( map &here, float wheel_traction_area, units::mass mas
     if( is_watercraft() && can_float( here ) ) {
         return 1.0f;
     }
+    const int area = wheel_area();
+    if( area <= 0 ) {
+        return is_aircraft( here ) ? 1.0f : 0.1f;
+    }
 
-    const float fraction_without_traction = 1.0f - wheel_traction_area / wheel_area();
+    const float fraction_without_traction = 1.0f - wheel_traction_area / area;
     if( fraction_without_traction == 0 ) {
         return 1.0f;
     }
@@ -8871,9 +8875,8 @@ void vehicle::gain_moves( map &here )
     // Cruise control follows the actual seated or remote operator.
     if( ( pl_control || is_following || is_patrolling ) && cruise_velocity != velocity ) {
         thrust( here, cruise_velocity > velocity ? 1 : -1 );
-    } else if( is_rotorcraft( here ) && velocity == 0 ) {
+    } else if( is_rotorcraft( here ) && is_flying && requested_z_change == 0 && velocity == 0 ) {
         // rotorcraft uses fuel for hover
-        // whether it's flying or not is checked inside thrust function
         thrust( here, 0 );
     }
 

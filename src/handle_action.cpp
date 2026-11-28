@@ -645,15 +645,13 @@ static void close( const std::optional<tripoint_bub_ms> &p = std::nullopt )
                 }
                 const optional_vpart_position cvp = here.veh_at( cand );
                 int cpart = -1;
-                if( cvp ) {
-                    if( &cvp->vehicle() != &veh ) {
-                        multiple_targets = true;
-                        break;
-                    }
-                    cpart = veh.next_part_to_close( cvp->part_index(), false );
+                if( cvp && &cvp->vehicle() != &veh ) {
+                    multiple_targets = true;
+                    break;
                 }
-                if( cpart < 0 ) {
-                    cpart = veh.find_directional_door_part( who, cand.xy() - u_pos.xy(), false );
+                cpart = veh.find_directional_door_part( who, cand.xy() - u_pos.xy(), false );
+                if( cpart < 0 && cvp ) {
+                    cpart = veh.next_part_to_close( cvp->part_index(), false );
                 }
                 if( cpart < 0 ) {
                     multiple_targets = true;
