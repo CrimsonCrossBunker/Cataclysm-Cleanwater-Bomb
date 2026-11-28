@@ -159,6 +159,25 @@ struct tile_render_info {
         bool vpart_has_cargo = false;    // for cargo highlight
         std::optional<RGBColor> vpart_tint;  // custom paint color
 
+        struct subtile_vpart_entry {
+            vpart_id id;
+            int subtile = 0;
+            int rotation = 0;
+            int z_order = 0;
+            double exact_angle_deg = 0.0;
+            float offset_x = 0.0f;
+            float offset_y = 0.0f;
+            float sort_y = 0.0f;
+            float scale_x = 1.0f;
+            float scale_y = 1.0f;
+            bool is_roof = false;
+            bool has_cargo = false;
+            std::string variant;
+            std::string carried_furn;
+            std::optional<RGBColor> tint;
+        };
+        std::vector<subtile_vpart_entry> subtile_vparts;
+
         sprite( const lit_level ll, const std::array<bool, 5> &inv )
             : ll( ll ), invisible( inv ) {}
 
@@ -206,6 +225,7 @@ struct tile_render_info {
             vpart_carried_furn = carried_furn;
             vpart_has_cargo = has_cargo;
             vpart_tint = tint;
+            subtile_vparts.clear();
         }
     };
 

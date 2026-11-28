@@ -14,50 +14,22 @@
     "flags": [ "MOUNTABLE", "INITIAL_PART" ],
     "categories": [ "hull" ],
     "damage_reduction": { "all": 20 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 30,
     "variants": [
       { "id": "horizontal", "label": "Horizontal", "symbols": "──│───│─", "symbols_broken": "#" },
-      {
-        "id": "horizontal_front",
-        "label": "Front Horizontal",
-        "symbols": "──│───│─",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "horizontal_rear",
-        "label": "Rear Horizontal",
-        "symbols": "──│───│─",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "horizontal_2",
-        "label": "Thick Horizontal",
-        "symbols": "━━┃━━━┃━",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "horizontal_2_front",
-        "label": "Front Thick Horizontal",
-        "symbols": "━━┃━━━┃━",
-        "symbols_broken": "#"
-      },
+      { "id": "horizontal_front", "label": "Front Horizontal", "symbols": "──│───│─", "symbols_broken": "#" },
+      { "id": "horizontal_rear", "label": "Rear Horizontal", "symbols": "──│───│─", "symbols_broken": "#" },
+      { "id": "horizontal_2", "label": "Thick Horizontal", "symbols": "━━┃━━━┃━", "symbols_broken": "#" },
+      { "id": "horizontal_2_front", "label": "Front Thick Horizontal", "symbols": "━━┃━━━┃━", "symbols_broken": "#" },
       { "id": "vertical", "label": "Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "vertical_left", "label": "Left Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "vertical_right", "label": "Right Vertical", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "vertical_T_left", "label": "Left T Joint", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "vertical_T_right", "label": "Right T Joint", "symbols": "│\\─/│\\─/", "symbols_broken": "#" },
       { "id": "vertical_2", "label": "Thick Vertical", "symbols": "┃┃━┃┃┃━┃", "symbols_broken": "#" },
-      {
-        "id": "vertical_2_left",
-        "label": "Left Thick Vertical",
-        "symbols": "┃┃━┃┃┃━┃",
-        "symbols_broken": "#"
-      },
-      {
-        "id": "vertical_2_right",
-        "label": "Right Thick Vertical",
-        "symbols": "┃┃━┃┃┃━┃",
-        "symbols_broken": "#"
-      },
+      { "id": "vertical_2_left", "label": "Left Thick Vertical", "symbols": "┃┃━┃┃┃━┃", "symbols_broken": "#" },
+      { "id": "vertical_2_right", "label": "Right Thick Vertical", "symbols": "┃┃━┃┃┃━┃", "symbols_broken": "#" },
       { "id": "cover", "label": "Cover", "symbols": "^^<vvv>^", "symbols_broken": "#" },
       { "id": "cross", "label": "Cross", "symbols": "┼X┼X┼X┼X", "symbols_broken": "#" },
       { "id": "ne", "label": "Front Right", "symbols": "┐┐┌└└└┘┐", "symbols_broken": "#" },
@@ -83,7 +55,9 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "10 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "10 m", "using": [ [ "repair_welding_standard", 6 ] ] }
     },
-    "damage_reduction": { "all": 10 }
+    "damage_reduction": { "all": 10 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 16
   },
   {
     "id": "folding_wooden_frame",
@@ -103,7 +77,9 @@
       "removal": { "skills": [ [ "fabrication", 1 ] ], "time": "15 m", "using": [ [ "vehicle_nail_removal", 1 ] ] },
       "repair": { "skills": [ [ "fabrication", 2 ] ], "time": "30 m", "using": [ [ "adhesive", 2 ] ] }
     },
-    "damage_reduction": { "all": 3 }
+    "damage_reduction": { "all": 3 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 8
   },
   {
     "id": "frame",
@@ -123,7 +99,9 @@
         "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
       },
       "repair": { "skills": [ [ "mechanics", 1 ] ], "time": "9 m", "using": [ [ "repair_welding_lc_steel", 5 ] ] }
-    }
+    },
+    "sub_size": [ 6, 6 ],
+    "hardness": 30
   },
   {
     "id": "frame_wood",
@@ -140,7 +118,9 @@
       "removal": { "skills": [ [ "fabrication", 1 ] ], "time": "15 m", "using": [ [ "vehicle_nail_removal", 1 ] ] },
       "repair": { "skills": [ [ "fabrication", 2 ] ], "time": "30 m", "using": [ [ "adhesive", 2 ] ] }
     },
-    "damage_reduction": { "all": 5 }
+    "damage_reduction": { "all": 5 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 12
   },
   {
     "id": "frame_wood_deck",
@@ -164,6 +144,8 @@
       "removal": { "skills": [ [ "fabrication", 0 ] ], "time": "0 m" },
       "repair": { "skills": [ [ "fabrication", 0 ] ], "time": "5 m", "using": [ [ "adhesive", 1 ] ] }
     },
+    "sub_size": [ 6, 6 ],
+    "hardness": 12,
     "extend": {
       "flags": [
         "MOUNTABLE",
@@ -195,7 +177,9 @@
       "repair": { "skills": [ [ "fabrication", 0 ] ], "time": "5 m", "using": [ [ "adhesive", 1 ] ] },
       "removal": { "time": "5 m" }
     },
-    "damage_reduction": { "all": 4 }
+    "damage_reduction": { "all": 4 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 8
   },
   {
     "id": "hdframe",
@@ -220,7 +204,9 @@
       },
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "18 m", "using": [ [ "repair_welding_lc_steel", 10 ] ] }
     },
-    "damage_reduction": { "all": 30 }
+    "damage_reduction": { "all": 30 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 52
   },
   {
     "id": "xlframe",
@@ -229,7 +215,10 @@
     "item": "xlframe",
     "durability": 150,
     "description": "A small, lightweight frame made from pipework.  Other vehicle components can be mounted on it, and it can be attached to other frames to increase the vehicle's size.",
-    "breaks_into": [ { "item": "material_aluminium_ingot", "count": [ 1, 4 ] }, { "item": "scrap_aluminum", "count": [ 3, 10 ] } ],
+    "breaks_into": [
+      { "item": "material_aluminium_ingot", "count": [ 1, 4 ] },
+      { "item": "scrap_aluminum", "count": [ 3, 10 ] }
+    ],
     "//": "assuming about 50 cm square for a frame's welds",
     "requirements": {
       "install": {
@@ -244,7 +233,9 @@
       },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "9 m", "using": [ [ "repair_welding_alloys", 5 ] ] }
     },
-    "damage_reduction": { "all": 7 }
+    "damage_reduction": { "all": 7 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 22
   },
   {
     "id": "foldxlframe",
@@ -255,7 +246,10 @@
     "durability": 150,
     "description": "A small, lightweight frame made from pipework.  Other vehicle components can be mounted on it, and it can be attached to other frames to increase the vehicle's size.  If all the frames and components of a vehicle are foldable, the vehicle can be folding into a small package and picked up as a normal item.",
     "folded_volume": "2500 ml",
-    "breaks_into": [ { "item": "material_aluminium_ingot", "count": [ 1, 4 ] }, { "item": "scrap_aluminum", "count": [ 3, 10 ] } ],
+    "breaks_into": [
+      { "item": "material_aluminium_ingot", "count": [ 1, 4 ] },
+      { "item": "scrap_aluminum", "count": [ 3, 10 ] }
+    ],
     "//": "assuming about 50 cm square for a frame's welds",
     "requirements": {
       "install": {
@@ -270,7 +264,9 @@
       },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "9 m", "using": [ [ "repair_welding_alloys", 5 ] ] }
     },
-    "damage_reduction": { "all": 7 }
+    "damage_reduction": { "all": 7 },
+    "sub_size": [ 6, 6 ],
+    "hardness": 20
   },
   {
     "id": "frame_concrete_mix",
@@ -280,6 +276,8 @@
     "durability": 150,
     "folded_volume": "10 L",
     "breaks_into": [ { "item": "lc_steel_chunk", "count": [ 1, 4 ] }, { "item": "scrap", "count": [ 5, 25 ] } ],
+    "sub_size": [ 6, 6 ],
+    "hardness": 42,
     "extend": { "flags": [ "NO_INSTALL_HIDDEN", "CABLE_PORTS" ] },
     "damage_reduction": { "all": 7 }
   }

@@ -155,10 +155,10 @@
     "copy-from": "suv",
     "name": "SUV with Bike Rack",
     "parts": [
-      { "x": -4, "y": -1, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 0, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 1, "parts": [ "bike_rack" ] },
-      { "x": -4, "y": 2, "parts": [ "bike_rack" ] }
+      { "x": -24, "y": -6, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": -4, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": 4, "parts": [ "bike_rack" ] },
+      { "x": -24, "y": 6, "parts": [ "bike_rack" ] }
     ]
   }
 ]

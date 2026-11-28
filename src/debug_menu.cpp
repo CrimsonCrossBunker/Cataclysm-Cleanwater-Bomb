@@ -3468,7 +3468,27 @@ static void debug_menu_spawn_vehicle()
                                    selected_opt, dest, -90_degrees, 100, static_cast<veh_spawn_status>( veh_cond_menu.ret - 1 ), true,
                                    true );
                 if( veh != nullptr ) {
-                    here.board_vehicle( dest, &player_character );
+                    if( here.veh_at( dest ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
+                        here.board_vehicle( dest, &player_character );
+                    } else {
+                        int board_part = -1;
+                        for( const vpart_reference &vp : veh->get_avail_parts( "CONTROLS" ) ) {
+                            const int idx = veh->part_with_feature( vp.mount_pos3(), VPFLAG_BOARDABLE, true );
+                            if( idx >= 0 ) {
+                                board_part = idx;
+                                break;
+                            }
+                        }
+                        if( board_part < 0 ) {
+                            for( const vpart_reference &vp : veh->get_avail_parts( "BOARDABLE" ) ) {
+                                board_part = vp.part_index();
+                                break;
+                            }
+                        }
+                        if( board_part >= 0 ) {
+                            here.board_vehicle_part( *veh, board_part, &player_character );
+                        }
+                    }
                 }
             }
         }

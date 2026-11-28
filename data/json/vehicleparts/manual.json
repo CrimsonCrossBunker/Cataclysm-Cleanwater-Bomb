@@ -11,6 +11,8 @@
     "m2c": 45,
     "exclusions": [ "manual" ],
     "flags": [ "ENGINE", "E_STARTS_INSTANTLY", "E_ALTERNATOR" ],
+    "sub_size": [ 2, 2 ],
+    "hardness": 14,
     "variants": [ { "symbols": "*", "symbols_broken": "#" } ]
   },
   {
@@ -29,6 +31,8 @@
       "repair": { "skills": [ [ "mechanics", 0 ] ], "time": "4 m", "using": [ [ "repair_welding_standard", 2 ] ] }
     },
     "breaks_into": [ { "item": "mc_steel_chunk", "count": [ 1, 2 ] }, { "item": "scrap", "count": [ 0, 2 ] } ],
+    "sub_size": [ 2, 2 ],
+    "hardness": 14,
     "extend": { "flags": [ "MUSCLE_LEGS", "CONTROLS" ] },
     "damage_reduction": { "all": 4 }
   },
@@ -49,6 +53,8 @@
       "repair": { "skills": [ [ "mechanics", 0 ] ], "time": "4 m", "using": [ [ "repair_welding_standard", 2 ] ] }
     },
     "breaks_into": [ { "item": "mc_steel_chunk", "count": [ 1, 2 ] }, { "item": "scrap", "count": [ 0, 2 ] } ],
+    "sub_size": [ 2, 2 ],
+    "hardness": 12,
     "extend": { "flags": [ "MUSCLE_ARMS", "CONTROLS" ] },
     "damage_reduction": { "all": 4 }
   },
@@ -70,6 +76,8 @@
     "flags": [ "ENGINE", "CONTROLS", "MUSCLE_ARMS", "E_STARTS_INSTANTLY" ],
     "breaks_into": [ { "item": "splinter", "count": [ 2, 4 ] } ],
     "damage_reduction": { "all": 5 },
+    "sub_size": [ 3, 2 ],
+    "hardness": 10,
     "variants": [ { "symbols": "*", "symbols_broken": "#" } ]
   },
   {
@@ -90,6 +98,8 @@
     },
     "flags": [ "CONTROL_ANIMAL" ],
     "breaks_into": [ { "item": "leather", "count": [ 1, 2 ] } ],
+    "sub_size": [ 2, 3 ],
+    "hardness": 6,
     "variants": [ { "symbols": "W", "symbols_broken": "X" } ]
   }
 ]

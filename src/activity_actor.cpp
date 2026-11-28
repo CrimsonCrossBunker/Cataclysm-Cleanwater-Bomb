@@ -6993,17 +6993,22 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
         return;
     }
 
-    if( doors::check_mon_blocking_door( who, here.get_abs( closep ) ) ) {
-        act.set_to_null();
-        return;
-    }
-
-    if( optional_vpart_position vp = here.veh_at( closep ) ) {
-        // There is a vehicle part here; see if it has anything that can be closed
-        vehicle *const veh = &vp->vehicle();
-        const int vpart = vp->part_index();
-        closed_vehicle_part = veh->next_part_to_close( vpart,
-                              veh_pointer_or_null( here.veh_at( who.pos_bub() ) ) != veh );
+    const optional_vpart_position vp = here.veh_at( closep );
+    const optional_vpart_position vp_who = here.veh_at( who.pos_bub() );
+    if( vp || ( vp_who && vp_who->vehicle().is_subtile() &&
+                vp_who->vehicle().find_directional_door_part(
+                    who, closep.xy() - who.pos_bub().xy(), false ) >= 0 ) ) {
+        // There is a vehicle part here (or an adjacent directional sub-tile door); see if it has anything that can be closed
+        vehicle *const veh = vp ? &vp->vehicle() : &vp_who->vehicle();
+        const int vpart = vp ? vp->part_index() : vp_who->part_index();
+        const bool outside = veh_pointer_or_null( here.veh_at( who.pos_bub() ) ) != veh;
+        if( !outside && veh->is_subtile() ) {
+            closed_vehicle_part = veh->find_directional_door_part(
+                                      who, closep.xy() - who.pos_bub().xy(), false );
+        }
+        if( closed_vehicle_part < 0 && vp ) {
+            closed_vehicle_part = veh->next_part_to_close( vpart, outside );
+        }
         const int inside_closable = veh->next_part_to_close( vpart );
         const int openable = veh->next_part_to_open( vpart );
         if( closed_vehicle_part >= 0 ) {
@@ -7027,6 +7032,9 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
         } else {
             who.add_msg_if_player( m_info, _( "You cannot close the %s." ), veh->part( vpart ).name() );
         }
+        act.set_to_null();
+        return;
+    } else if( doors::check_mon_blocking_door( who, here.get_abs( closep ) ) ) {
         act.set_to_null();
         return;
     } else if( here.furn( closep ) == furn_f_crate_o ) {
@@ -7092,6 +7100,9 @@ void close_tile_activity_actor::finish( player_activity &act, Character &who )
 
     if( close_success == close_tile_result::CLOSE_VEHICLE ) {
         optional_vpart_position vp = here.veh_at( closep );
+        if( !vp || vp->vehicle().uid().get_value() != vehicle_uid ) {
+            vp = here.veh_at( who.pos_bub() );
+        }
         if( !vp || vehicle_uid <= 0 || part_uid <= 0 ||
             vp->vehicle().uid().get_value() != vehicle_uid ) {
             act.set_to_null();
@@ -7107,7 +7118,10 @@ void close_tile_activity_actor::finish( player_activity &act, Character &who )
             }
         }
         const bool outside = veh_pointer_or_null( here.veh_at( who.pos_bub() ) ) != veh;
-        const int closing_part = veh->next_part_to_close( vp->part_index(), outside );
+        int closing_part = target_part;
+        if( !veh->is_subtile() ) {
+            closing_part = veh->next_part_to_close( vp->part_index(), outside );
+        }
         if( target_part < 0 || closing_part < 0 ||
             veh->get_non_fake_part( closing_part ) != target_part || !veh->can_close( closing_part, who ) ) {
             act.set_to_null();

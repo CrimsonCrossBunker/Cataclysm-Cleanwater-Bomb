@@ -11,6 +11,8 @@
     "color": "yellow",
     "broken_color": "red",
     "flags": [ "ENGINE", "E_HIGHER_SKILL", "E_HEATER" ],
+    "sub_size": [ 4, 4 ],
+    "hardness": 34,
     "variants": [ { "symbols": "*", "symbols_broken": "#" } ]
   },
   {
@@ -34,7 +36,9 @@
         "using": [ [ "adhesive", 1 ], [ "soldering_standard", 3 ], [ "vehicle_screw", 1 ] ]
       }
     },
-    "breaks_into": [ { "item": "scrap", "count": [ 1, 4 ] }, { "item": "cable", "count": [ 1, 2 ] } ]
+    "breaks_into": [ { "item": "scrap", "count": [ 1, 4 ] }, { "item": "cable", "count": [ 1, 2 ] } ],
+    "sub_size": [ 2, 2 ],
+    "hardness": 24
   },
   {
     "id": "engine_electric_small",
@@ -61,7 +65,9 @@
       { "item": "mc_steel_chunk", "count": [ 1, 3 ] },
       { "item": "cable", "count": [ 1, 2 ] }
     ],
-    "damage_reduction": { "all": 6 }
+    "damage_reduction": { "all": 6 },
+    "sub_size": [ 3, 2 ],
+    "hardness": 28
   },
   {
     "id": "engine_electric",
@@ -97,7 +103,9 @@
       { "item": "bearing", "charges": [ 5, 10 ] },
       { "item": "cable", "count": [ 4, 7 ] }
     ],
-    "damage_reduction": { "all": 32 }
+    "damage_reduction": { "all": 32 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 34
   },
   {
     "id": "engine_electric_large",
@@ -133,7 +141,9 @@
       { "item": "bearing", "charges": [ 20, 40 ] },
       { "item": "cable", "count": [ 5, 15 ] }
     ],
-    "damage_reduction": { "all": 43 }
+    "damage_reduction": { "all": 43 },
+    "sub_size": [ 5, 4 ],
+    "hardness": 38
   },
   {
     "id": "engine_electric_enhanced",
@@ -169,7 +179,9 @@
       { "item": "bearing", "charges": [ 20, 50 ] },
       { "item": "cable", "count": [ 3, 5 ] }
     ],
-    "damage_reduction": { "all": 50 }
+    "damage_reduction": { "all": 50 },
+    "sub_size": [ 4, 4 ],
+    "hardness": 38
   },
   {
     "id": "engine_electric_super",
@@ -205,7 +217,9 @@
       { "item": "bearing", "charges": [ 25, 60 ] },
       { "item": "cable", "count": [ 6, 10 ] }
     ],
-    "damage_reduction": { "all": 60 }
+    "damage_reduction": { "all": 60 },
+    "sub_size": [ 5, 5 ],
+    "hardness": 42
   },
   {
     "id": "engine_electric_train",
@@ -241,6 +255,8 @@
       { "item": "bearing", "charges": [ 100, 240 ] },
       { "item": "cable", "count": [ 26, 40 ] }
     ],
-    "damage_reduction": { "all": 60 }
+    "damage_reduction": { "all": 60 },
+    "sub_size": [ 6, 5 ],
+    "hardness": 52
   }
 ]

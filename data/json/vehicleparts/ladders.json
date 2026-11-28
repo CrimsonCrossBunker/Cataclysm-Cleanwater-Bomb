@@ -6,6 +6,8 @@
     "color": "brown",
     "categories": [ "utility" ],
     "looks_like": "f_rope_up",
+    "sub_size": [ 2, 3 ],
+    "hardness": 22,
     "variants": [ { "symbols": "<", "symbols_broken": "O" } ],
     "flags": [ "LADDER", "SHOCK_IMMUNE", "BOARDABLE" ],
     "description": "A ladder that lets you down from heights."
@@ -22,6 +24,8 @@
     "durability": 60,
     "damage_modifier": 80,
     "breaks_into": [ { "item": "string_6", "count": [ 10, 20 ] } ],
-    "damage_reduction": { "bash": 10 }
+    "damage_reduction": { "bash": 10 },
+    "sub_size": [ 2, 3 ],
+    "hardness": 24
   }
 ]

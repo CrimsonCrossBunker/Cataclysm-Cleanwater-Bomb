@@ -821,14 +821,34 @@ bool can_interact_at( action_id action, map &here, const tripoint_bub_ms &p )
     }
     tripoint_bub_ms player_pos = get_player_character().pos_bub();
     switch( action ) {
-        case ACTION_OPEN:
-            return here.open_door( get_avatar(), p, !here.is_outside( player_pos ), true );
+        case ACTION_OPEN: {
+            const optional_vpart_position vp = here.veh_at( p );
+            if( vp && vp->vehicle().next_part_to_open( vp->part_index(),
+                    veh_pointer_or_null( here.veh_at( player_pos ) ) != &vp->vehicle() ) >= 0 ) {
+                return true;
+            }
+            if( here.open_door( get_avatar(), p, !here.is_outside( player_pos ), true ) ) {
+                return true;
+            }
+            const optional_vpart_position vp_player = here.veh_at( player_pos );
+            return vp_player && vp_player->vehicle().is_subtile() &&
+                   vp_player->vehicle().find_directional_door_part(
+                       get_player_character(), p.xy() - player_pos.xy(), true ) >= 0;
+        }
         case ACTION_CLOSE: {
             const optional_vpart_position vp = here.veh_at( p );
-            return ( vp &&
-                     vp->vehicle().next_part_to_close( vp->part_index(),
-                             veh_pointer_or_null( here.veh_at( player_pos ) ) != &vp->vehicle() ) >= 0 ) ||
-                   here.close_door( p, !here.is_outside( player_pos ), true );
+            if( vp &&
+                vp->vehicle().next_part_to_close( vp->part_index(),
+                                                  veh_pointer_or_null( here.veh_at( player_pos ) ) != &vp->vehicle() ) >= 0 ) {
+                return true;
+            }
+            if( here.close_door( p, !here.is_outside( player_pos ), true ) ) {
+                return true;
+            }
+            const optional_vpart_position vp_player = here.veh_at( player_pos );
+            return vp_player && vp_player->vehicle().is_subtile() &&
+                   vp_player->vehicle().find_directional_door_part(
+                       get_player_character(), p.xy() - player_pos.xy(), false ) >= 0;
         }
         case ACTION_BUTCHER:
             return can_butcher_at( here, p );

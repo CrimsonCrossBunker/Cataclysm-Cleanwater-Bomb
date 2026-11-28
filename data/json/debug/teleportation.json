@@ -46,24 +46,22 @@
   },
   {
     "id": "dimensional_bathyscape",
-    "//": "Test vehicle for dimensional travel",
     "type": "vehicle",
     "name": "Sir Pemberton Smythe's Dimensional Bathyscape",
-    "blueprint": [
-      [ "---" ],
-      [ "+#|" ],
-      [ "---" ]
-    ],
+    "//": "Test vehicle for dimensional travel",
+    "grid_scale": 8,
+    "curb_mass": "1850 kg",
+    "blueprint": [ [ "---" ], [ "+#|" ], [ "---" ] ],
     "parts": [
-      { "x": -1, "y": -1, "parts": [ "hdframe", "board", "roof" ] },
-      { "x": -1, "y": 0, "parts": [ "hdframe", { "part": "tank", "fuel": "gasoline" }, "roof" ] },
-      { "x": -1, "y": 1, "parts": [ "hdframe", "engine_v6", "alternator_car", "roof" ] },
-      { "x": 0, "y": -1, "parts": [ "hdframe", "door", "roof", "battery_car" ] },
-      { "x": 0, "y": 0, "parts": [ "hdframe", "seat", "controls" ] },
-      { "x": 0, "y": 1, "parts": [ "hdframe", "roof", "dimensional_perambulator" ] },
-      { "x": 1, "y": -1, "parts": [ "hdframe", "board", "roof" ] },
-      { "x": 1, "y": 0, "parts": [ "hdframe", "board", "roof" ] },
-      { "x": 1, "y": 1, "parts": [ "hdframe", "board", "roof" ] }
+      { "x": 0, "y": 0, "parts": [ "hdframe", "seat", "controls", "shell_micro" ] },
+      { "x": -5, "y": -4, "parts": [ "frame_narrow#vertical", "board", "roof" ] },
+      { "x": -5, "y": 0, "parts": [ "hdframe", { "part": "tank", "fuel": "gasoline" }, "roof" ] },
+      { "x": -5, "y": 4, "parts": [ "frame_narrow#vertical", "engine_v6", "alternator_car", "roof" ] },
+      { "x": 0, "y": -4, "parts": [ "frame_narrow#vertical", "door_subtile", "roof", "battery_car" ] },
+      { "x": 0, "y": 4, "parts": [ "frame_narrow#vertical", "roof", "dimensional_perambulator" ] },
+      { "x": 5, "y": -4, "parts": [ "frame_narrow#vertical", "board", "roof" ] },
+      { "x": 5, "y": 0, "parts": [ "hdframe", "board", "roof" ] },
+      { "x": 5, "y": 4, "parts": [ "frame_narrow#vertical", "board", "roof" ] }
     ]
   }
 ]

@@ -8,16 +8,24 @@
     ]
   },
   {
-    "type": "vehicle",
     "id": "oa_work_light",
+    "type": "vehicle",
     "name": "work light",
+    "grid_scale": 8,
+    "curb_mass": "42 kg",
     "blueprint": [ "^" ],
     "parts": [
-      { "x": 0, "y": 0, "parts": [ "xlframe#vertical_2" ] },
-      { "x": 0, "y": 0, "parts": [ "wheel_caster" ] },
-      { "x": 0, "y": 0, "parts": [ "small_storage_battery" ] },
-      { "x": 0, "y": 0, "parts": [ "floodlight" ] },
-      { "x": 0, "y": 0, "parts": [ "controls_electronic" ] }
+      {
+        "x": 0,
+        "y": 0,
+        "parts": [
+          "xlframe#vertical_2",
+          "wheel_caster",
+          "small_storage_battery",
+          "floodlight",
+          "controls_electronic"
+        ]
+      }
     ]
   },
   {
@@ -182,7 +190,13 @@
         "########################",
         "########################"
       ],
-      "terrain": { "#": "t_soil", "~": "t_sewage", "1": "t_earth_ramp_up_low", "2": "t_earth_ramp_up_high", "o": "t_sewage_pipe" }
+      "terrain": {
+        "#": "t_soil",
+        "~": "t_sewage",
+        "1": "t_earth_ramp_up_low",
+        "2": "t_earth_ramp_up_high",
+        "o": "t_sewage_pipe"
+      }
     }
   },
   {

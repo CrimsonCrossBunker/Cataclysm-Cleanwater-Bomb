@@ -446,19 +446,21 @@ void map::build_sunlight_cache( int pzlev )
             std::fill_n( &lm[0][0], MAPSIZE_X * MAPSIZE_Y, four_quadrants( outside_light_level ) );
 
             const auto &this_floor_cache = map_cache.floor_cache;
+            const auto &this_vehicle_roof_cache = map_cache.vehicle_roof_cache;
             const auto &this_transparency_cache = map_cache.transparency_cache;
             fully_inside = true; // recalculate
 
             for( int x = 0; x < MAPSIZE_X; ++x ) {
                 for( int y = 0; y < MAPSIZE_Y; ++y ) {
                     // && semantics below is important, we want to skip the evaluation if possible, do not replace with &=
+                    const bool has_roof = this_floor_cache[x][y] || this_vehicle_roof_cache[x][y];
 
                     // fully_outside stays true if tile is transparent and there is no floor
                     fully_outside = fully_outside && this_transparency_cache[x][y] >= LIGHT_TRANSPARENCY_OPEN_AIR
-                                    && !this_floor_cache[x][y];
+                                    && !has_roof;
                     // fully_inside stays true if tile is opaque OR there is floor
                     fully_inside = fully_inside && ( this_transparency_cache[x][y] <= LIGHT_TRANSPARENCY_SOLID ||
-                                                     this_floor_cache[x][y] );
+                                                     has_roof );
                 }
             }
             continue;
@@ -471,6 +473,7 @@ void map::build_sunlight_cache( int pzlev )
         const auto &prev_lm = prev_map_cache.lm;
         const auto &prev_transparency_cache = prev_map_cache.transparency_cache;
         const auto &prev_floor_cache = prev_map_cache.floor_cache;
+        const auto &prev_vehicle_roof_cache = prev_map_cache.vehicle_roof_cache;
         const auto &outside_cache = map_cache.outside_cache;
         const float sight_penalty = get_weather().weather_id->sight_penalty;
         // TODO: Replace these with a lookup inside the four_quadrants class.
@@ -513,6 +516,7 @@ void map::build_sunlight_cache( int pzlev )
 
                     if( prev_transparency > LIGHT_TRANSPARENCY_SOLID &&
                         !prev_floor_cache[prev.x][prev.y] &&
+                        !prev_vehicle_roof_cache[prev.x][prev.y] &&
                         ( prev_light_max = prev_lm[prev.x][prev.y].max() ) > 0.0 ) {
                         const float light_level = clamp( prev_light_max * LIGHT_TRANSPARENCY_OPEN_AIR / prev_transparency,
                                                          inside_light_level, prev_light_max );
@@ -548,7 +552,9 @@ void map::generate_lightmap( const int zlev )
     auto &lm = map_cache.lm;
     auto &sm = map_cache.sm;
     auto &outside_cache = map_cache.outside_cache;
-    auto &prev_floor_cache = get_cache( clamp( zlev + 1, min_z(), max_z() ) ).floor_cache;
+    const level_cache &prev_map_cache = get_cache( clamp( zlev + 1, min_z(), max_z() ) );
+    const auto &prev_floor_cache = prev_map_cache.floor_cache;
+    const auto &prev_vehicle_roof_cache = prev_map_cache.vehicle_roof_cache;
     bool top_floor = zlev == max_z();
     lm.fill( four_quadrants{} );
     sm.fill( 0 );
@@ -638,13 +644,15 @@ void map::generate_lightmap( const int zlev )
                     const point_bub_ms p2( sx + smx * SEEX, sy + smy * SEEY );
                     const tripoint_bub_ms p( p2, zlev );
                     // Project light into any openings into buildings.
-                    if( !outside_cache[p.x()][p.y()] || ( !top_floor && prev_floor_cache[p.x()][p.y()] ) ) {
+                    if( !outside_cache[p.x()][p.y()] ||
+                        ( !top_floor && ( prev_floor_cache[p.x()][p.y()] || prev_vehicle_roof_cache[p.x()][p.y()] ) ) ) {
                         // Apply light sources for external/internal divide
                         for( int i = 0; i < 4; ++i ) {
                             point_bub_ms neighbour = p.xy() + point( dir_x[i], dir_y[i] );
                             if( lightmap_boundaries.contains( neighbour )
                                 && outside_cache[neighbour.x()][neighbour.y()] &&
-                                ( top_floor || !prev_floor_cache[neighbour.x()][neighbour.y()] )
+                                ( top_floor || ( !prev_floor_cache[neighbour.x()][neighbour.y()] &&
+                                                 !prev_vehicle_roof_cache[neighbour.x()][neighbour.y()] ) )
                               ) {
                                 const float source_light =
                                     std::min( natural_light, lm[neighbour.x()][neighbour.y()].max() );

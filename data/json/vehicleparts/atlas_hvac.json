@@ -12,10 +12,16 @@
     "epower": "-1500 W",
     "flags": [ "APPLIANCE", "ENABLED_DRAINS_EPOWER", "SPLIT_HVAC_INDOOR" ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ],
+        "time": "15 m",
+        "using": [ [ "vehicle_screw", 1 ] ]
+      },
       "removal": { "time": "6 m", "using": [ [ "vehicle_screw", 1 ] ] }
     },
     "breaks_into": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "cable", "count": [ 2, 5 ] } ],
+    "sub_size": [ 3, 4 ],
+    "hardness": 16,
     "variants": [ { "symbols": ";", "symbols_broken": ":" } ]
   },
   {
@@ -32,10 +38,16 @@
     "epower": "-1500 W",
     "flags": [ "APPLIANCE", "ENABLED_DRAINS_EPOWER", "SPLIT_HVAC_OUTDOOR" ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ],
+        "time": "15 m",
+        "using": [ [ "vehicle_screw", 1 ] ]
+      },
       "removal": { "time": "6 m", "using": [ [ "vehicle_screw", 1 ] ] }
     },
     "breaks_into": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "cable", "count": [ 2, 5 ] } ],
+    "sub_size": [ 3, 4 ],
+    "hardness": 22,
     "variants": [ { "symbols": ";", "symbols_broken": ":" } ]
   },
   {
@@ -50,10 +62,16 @@
     "durability": 150,
     "flags": [ "APPLIANCE", "HYDRONIC_BOILER" ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ],
+        "time": "15 m",
+        "using": [ [ "vehicle_screw", 1 ] ]
+      },
       "removal": { "time": "6 m", "using": [ [ "vehicle_screw", 1 ] ] }
     },
     "breaks_into": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "cable", "count": [ 2, 5 ] } ],
+    "sub_size": [ 4, 4 ],
+    "hardness": 24,
     "variants": [ { "symbols": ";", "symbols_broken": ":" } ]
   },
   {
@@ -64,6 +82,8 @@
     "item": "atlas_wood_hydronic_boiler",
     "looks_like": "f_woodstove",
     "description": "A wood stove fitted with a forty-litre water tank.  A lit fire warms the room and can boil the water.  A connected radiator loop carries heat from the tank.",
+    "sub_size": [ 4, 4 ],
+    "hardness": 24,
     "extend": { "flags": [ "NO_POWER_CONNECTION" ] },
     "requirements": { "removal": { "time": "6 m", "using": [ [ "vehicle_wrench_1", 1 ] ] } },
     "breaks_into": [ { "item": "scrap", "count": [ 3, 6 ] }, { "item": "pipe", "count": [ 1, 2 ] } ]
@@ -74,7 +94,9 @@
     "copy-from": "atlas_hydronic_boiler",
     "name": { "str": "household water heater" },
     "item": "household_water_heater",
-    "description": "A 100-litre electric water heater with fittings for a hot-water radiator loop."
+    "description": "A 100-litre electric water heater with fittings for a hot-water radiator loop.",
+    "sub_size": [ 4, 4 ],
+    "hardness": 22
   },
   {
     "type": "vehicle_part",
@@ -82,7 +104,9 @@
     "copy-from": "ap_household_water_heater",
     "name": { "str": "family–sized household water heater" },
     "item": "household_water_heater_family",
-    "description": "A 200-litre electric water heater with fittings for a hot-water radiator loop."
+    "description": "A 200-litre electric water heater with fittings for a hot-water radiator loop.",
+    "sub_size": [ 5, 4 ],
+    "hardness": 24
   },
   {
     "type": "vehicle_part",
@@ -96,10 +120,16 @@
     "durability": 150,
     "flags": [ "APPLIANCE", "HYDRONIC_RADIATOR", "NO_POWER_CONNECTION" ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ],
+        "time": "15 m",
+        "using": [ [ "vehicle_screw", 1 ] ]
+      },
       "removal": { "time": "6 m", "using": [ [ "vehicle_screw", 1 ] ] }
     },
     "breaks_into": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "cable", "count": [ 2, 5 ] } ],
+    "sub_size": [ 2, 4 ],
+    "hardness": 18,
     "variants": [ { "symbols": ";", "symbols_broken": ":" } ]
   },
   {
@@ -114,10 +144,16 @@
     "durability": 150,
     "flags": [ "CABIN_HVAC" ],
     "requirements": {
-      "install": { "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ], "time": "15 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "install": {
+        "skills": [ [ "mechanics", 1 ], [ "electronics", 1 ] ],
+        "time": "15 m",
+        "using": [ [ "vehicle_screw", 1 ] ]
+      },
       "removal": { "time": "6 m", "using": [ [ "vehicle_screw", 1 ] ] }
     },
     "breaks_into": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "cable", "count": [ 2, 5 ] } ],
+    "sub_size": [ 3, 4 ],
+    "hardness": 18,
     "variants": [ { "symbols": ";", "symbols_broken": ":" } ]
   }
 ]

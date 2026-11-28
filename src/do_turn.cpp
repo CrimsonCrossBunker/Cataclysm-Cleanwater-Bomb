@@ -997,7 +997,13 @@ void game::simulate_turn_prefix()
 
     // If you're inside a wall or something and haven't been telefragged, let's get you out.
     // In client MP mode the server is authoritative for position.
-    if( !cata_mp::is_client_mode() &&
+    // Never eject a rider seated in a valid vehicle part just because a sub-tile closed door
+    // or adjacent obstacle shares the same rounded world tile.
+    const optional_vpart_position vp_u = m.veh_at( u.pos_bub() );
+    const bool safely_seated_in_vehicle = u.in_vehicle && vp_u &&
+                                          vp_u->vehicle().find_passenger_part( u ) >= 0 &&
+                                          m.passable_ter_furn( u.pos_bub() );
+    if( !cata_mp::is_client_mode() && !safely_seated_in_vehicle &&
         ( m.impassable( u.pos_bub() ) && !m.impassable_field_at( u.pos_bub() ) ) &&
         !m.has_flag( ter_furn_flag::TFLAG_CLIMBABLE, u.pos_bub() ) ) {
         u.stagger();

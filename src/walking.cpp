@@ -22,10 +22,21 @@ static std::pair<int64_t, int64_t> openable_vehicle_door( map &here,
 {
     if( const optional_vpart_position vp = here.veh_at( target ) ) {
         vehicle &veh = vp->vehicle();
-        const int part = veh.next_part_to_open( vp->part_index(), true );
+        const int part = veh.next_part_to_open( vp->part_index(), true, false );
         return { veh.uid().get_value(), part < 0 ? 0 : veh.part( part ).get_base().uid().get_value() };
     }
     return {};
+}
+
+static std::pair<int64_t, int> current_subtile_part( map &here, const Character &who )
+{
+    if( const optional_vpart_position vp = here.veh_at( who.pos_bub( here ) ) ) {
+        const vehicle &veh = vp->vehicle();
+        if( veh.is_subtile() ) {
+            return { veh.uid().get_value(), veh.find_passenger_part( who ) };
+        }
+    }
+    return { 0, -1 };
 }
 
 std::optional<automove_step> capture_automove_step( Character &who, map &here,
@@ -36,7 +47,8 @@ std::optional<automove_step> capture_automove_step( Character &who, map &here,
     }
     const tripoint_bub_ms target_pos = here.get_bub( target );
     return automove_step{ who.getID(), who.destination_generation(), who.pos_abs(), target,
-                          here.get_context_reference(), here.ter( target_pos ), here.furn( target_pos ), openable_vehicle_door( here, target_pos ) };
+                          here.get_context_reference(), here.ter( target_pos ), here.furn( target_pos ),
+                          openable_vehicle_door( here, target_pos ), current_subtile_part( here, who ) };
 }
 
 void automove_step::finish( Character &who, map &here, bool cancelled ) const
@@ -58,6 +70,14 @@ void automove_step::finish( Character &who, map &here, bool cancelled ) const
     const tripoint_bub_ms target_pos = here.get_bub( target );
     if( who.activity && who.has_destination() && who.get_auto_move_route().front() == target_pos ) {
         return; // Native auto-mining explicitly deferred movement until its activity finishes.
+    }
+    if( subtile_part.first != 0 && subtile_part.second >= 0 &&
+        current_subtile_part( here, who ) != subtile_part ) {
+        // Sub-tile movement advanced within the same world tile; continue toward target_pos.
+        if( !who.defer_move( target_pos ) ) {
+            who.abort_automove();
+        }
+        return;
     }
     const bool changed = here.ter( target_pos ) != terrain || here.furn( target_pos ) != furniture ||
                          openable_vehicle_door( here, target_pos ) != vehicle_door;

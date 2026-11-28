@@ -30,6 +30,7 @@ struct automove_step {
     ter_id terrain;
     furn_id furniture;
     std::pair<int64_t, int64_t> vehicle_door;
+    std::pair<int64_t, int> subtile_part { 0, -1 };
     void finish( Character &who, map &here, bool cancelled ) const;
 };
 std::optional<automove_step> capture_automove_step( Character &who, map &here,

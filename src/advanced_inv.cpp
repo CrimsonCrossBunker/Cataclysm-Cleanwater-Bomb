@@ -13,6 +13,7 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -373,7 +374,9 @@ void advanced_inventory::print_items( side p, bool active )
             if( pane.get_area() == AIM_CONTAINER && pane.container ) {
                 maxvolume = pane.container->get_volume_capacity();
             } else if( pane.in_vehicle() ) {
-                maxvolume = s.get_vehicle_stack().max_volume();
+                for( const int part_idx : s.get_vehicle_cargo_parts() ) {
+                    maxvolume += s.veh->get_items( s.veh->part( part_idx ) ).max_volume();
+                }
             } else {
                 maxvolume = here.max_volume( s.pos );
             }
@@ -781,6 +784,7 @@ void advanced_inventory::recalc_pane( side p )
         advanced_inv_area &alls = squares[AIM_ALL];
         alls.volume = 0_ml;
         alls.weight = 0_gram;
+        std::set<std::pair<const vehicle *, int>> seen_veh_parts;
         for( advanced_inv_area &s : squares ) {
             // All the surrounding squares, nothing else
             if( s.id < AIM_SOUTHWEST || s.id > AIM_NORTHEAST ) {
@@ -798,7 +802,7 @@ void advanced_inventory::recalc_pane( side p )
             // or the ground below the vehicle.
             if( s.can_store_in_vehicle() && !( same && there.in_vehicle() ) ) {
                 bool do_vehicle = there.get_area() == s.id ? !there.in_vehicle() : true;
-                pane.add_items_from_area( s, do_vehicle );
+                pane.add_items_from_area( s, do_vehicle, &seen_veh_parts );
                 alls.volume += s.volume_veh;
                 alls.weight += s.weight_veh;
             }
@@ -1521,9 +1525,15 @@ void advanced_inventory::change_square( const aim_location changeSquare,
                 // check item stacks in vehicle and map at said square
                 advanced_inv_area sq = squares[changeSquare];
                 map_stack map_stack = get_map().i_at( sq.pos );
-                vehicle_stack veh_stack = sq.get_vehicle_stack();
+                bool has_veh_items = false;
+                for( const int part_idx : sq.get_vehicle_cargo_parts() ) {
+                    if( !sq.veh->get_items( sq.veh->part( part_idx ) ).empty() ) {
+                        has_veh_items = true;
+                        break;
+                    }
+                }
                 // auto switch to vehicle storage if vehicle items are there, or neither are there
-                if( !veh_stack.empty() || map_stack.empty() ) {
+                if( has_veh_items || map_stack.empty() ) {
                     in_vehicle_cargo = true;
                 }
             }

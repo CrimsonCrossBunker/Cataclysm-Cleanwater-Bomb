@@ -84,6 +84,7 @@
 #include "veh_utils.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_part_location.h"
 #include "vehicle_selector.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
@@ -2992,7 +2993,35 @@ int veh_interact::part_at_mount( const vehicle &veh, const tripoint_rel_ms &moun
         return displayed;
     }
     const std::vector<int> remaining = veh.parts_at_relative( mount, true, false );
-    return remaining.empty() ? -1 : remaining.front();
+    if( !remaining.empty() ) {
+        return remaining.front();
+    }
+    if( veh.is_subtile() ) {
+        int best_idx = -1;
+        int best_z = INT_MIN;
+        for( int idx = 0; idx < veh.part_count(); ++idx ) {
+            const vehicle_part &vp = veh.part( idx );
+            if( vp.removed || vp.is_fake || vp.mount_level != mount.z() ) {
+                continue;
+            }
+            const vpart_info &vpi = vp.info();
+            const int ax1 = 2 * vp.mount.x() - vpi.sub_size.x;
+            const int ax2 = 2 * vp.mount.x() + vpi.sub_size.x;
+            const int ay1 = 2 * vp.mount.y() - vpi.sub_size.y;
+            const int ay2 = 2 * vp.mount.y() + vpi.sub_size.y;
+            const int px = 2 * mount.x();
+            const int py = 2 * mount.y();
+            if( px >= ax1 && px <= ax2 && py >= ay1 && py <= ay2 ) {
+                const int z_ord = vpi.location->z_order;
+                if( z_ord > best_z ) {
+                    best_z = z_ord;
+                    best_idx = idx;
+                }
+            }
+        }
+        return best_idx;
+    }
+    return -1;
 }
 
 int veh_interact::part_at( const point_rel_ms &d )
@@ -3277,23 +3306,92 @@ void veh_interact::display_veh( map &here )
 
     nc_color col_at_cursor = c_black;
     int sym_at_cursor = ' ';
-    //Iterate over structural parts so we only hit each square once
-    for( const int structural_part_idx : veh->all_parts_at_location( vpart_location_structure ) ) {
-        const vehicle_part &vp = veh->part( structural_part_idx );
-        if( vp.mount_level != cursor_level ) {
-            continue;
+    if( veh->is_subtile() ) {
+        struct ascii_cell {
+            int z_order = INT_MIN;
+            bool is_center = false;
+            nc_color col = c_black;
+            int sym = ' ';
+            int part_idx = -1;
+        };
+        std::map<point, ascii_cell> grid;
+        const auto record_cell = [&]( const point & screen_pt, const int z_order,
+                                      const bool is_center, const nc_color col,
+        const int sym, const int idx ) {
+            if( screen_pt.x < 0 || screen_pt.x >= getmaxx( w_disp ) ||
+                screen_pt.y < 0 || screen_pt.y >= getmaxy( w_disp ) ) {
+                return;
+            }
+            ascii_cell &cell = grid[screen_pt];
+            if( is_center > cell.is_center ||
+                ( is_center == cell.is_center && z_order >= cell.z_order ) ) {
+                cell = { z_order, is_center, col, sym, idx };
+            }
+        };
+        for( int idx = 0; idx < veh->part_count(); ++idx ) {
+            const vehicle_part &vp = veh->part( idx );
+            if( vp.removed || vp.is_fake || vp.hidden || vp.mount_level != cursor_level ) {
+                continue;
+            }
+            const vpart_info &vpi = vp.info();
+            const vpart_display vd = veh->get_display_of_tile( vp.mount_pos3(), false, false );
+            const point_rel_ms q_center = ( vp.mount + cursor_vp_mount ).rotate( 3 );
+            const int hx = std::max( 0, ( vpi.sub_size.x - 1 ) / 2 );
+            const int hy = std::max( 0, ( vpi.sub_size.y - 1 ) / 2 );
+            const int ox = std::max( 0, vpi.sub_size.x - 1 - hx );
+            const int oy = std::max( 0, vpi.sub_size.y - 1 - hy );
+            const int z_ord = vpi.location->z_order;
+            for( int lx = vp.mount.x() - hx; lx <= vp.mount.x() + ox; ++lx ) {
+                for( int ly = vp.mount.y() - hy; ly <= vp.mount.y() + oy; ++ly ) {
+                    const point_rel_ms q = ( point_rel_ms( lx, ly ) + cursor_vp_mount ).rotate( 3 );
+                    const point scr = h_size + q.raw();
+                    const bool is_ctr = ( lx == vp.mount.x() && ly == vp.mount.y() );
+                    int cell_sym = vd.symbol_curses;
+                    if( !is_ctr && !vd.is_open && vpi.sub_size.x > 1 && vpi.sub_size.y > 1 &&
+                        ( vpi.has_flag( "SEAT" ) || vpi.has_flag( "BED" ) ||
+                          vpi.has_flag( VPFLAG_ROOF ) ) ) {
+                        cell_sym = '.';
+                    }
+                    const nc_color cell_col = in_service_area( point_rel_ms( lx, ly ) )
+                                              ? hilite( vd.color ) : vd.color;
+                    record_cell( scr, z_ord, is_ctr, cell_col, cell_sym, idx );
+                }
+            }
+            if( q_center == point_rel_ms::zero ) {
+                cpart = idx;
+            }
         }
-        const vpart_display vd = veh->get_display_of_tile( vp.mount_pos3(), false, false );
-        const point_rel_ms q = ( vp.mount + cursor_vp_mount ).rotate( 3 );
+        const point ctr_disp( getmaxx( w_disp ) / 2, getmaxy( w_disp ) / 2 );
+        for( const auto &[scr, cell] : grid ) {
+            if( scr == ctr_disp ) {
+                col_at_cursor = cell.col;
+                sym_at_cursor = cell.sym;
+                if( cpart < 0 ) {
+                    cpart = cell.part_idx;
+                }
+            } else {
+                mvwputch( w_disp, scr, cell.col, cell.sym );
+            }
+        }
+    } else {
+        //Iterate over structural parts so we only hit each square once
+        for( const int structural_part_idx : veh->all_parts_at_location( vpart_location_structure ) ) {
+            const vehicle_part &vp = veh->part( structural_part_idx );
+            if( vp.mount_level != cursor_level ) {
+                continue;
+            }
+            const vpart_display vd = veh->get_display_of_tile( vp.mount_pos3(), false, false );
+            const point_rel_ms q = ( vp.mount + cursor_vp_mount ).rotate( 3 );
 
-        if( q != point_rel_ms::zero ) { // cursor is not on this part
-            mvwputch( w_disp, h_size + q.raw(), in_service_area( vp.mount ) ? hilite( vd.color ) :
-                      vd.color, vd.symbol_curses );
-            continue;
+            if( q != point_rel_ms::zero ) { // cursor is not on this part
+                mvwputch( w_disp, h_size + q.raw(), in_service_area( vp.mount ) ? hilite( vd.color ) :
+                          vd.color, vd.symbol_curses );
+                continue;
+            }
+            cpart = structural_part_idx;
+            col_at_cursor = vd.color;
+            sym_at_cursor = vd.symbol_curses;
         }
-        cpart = structural_part_idx;
-        col_at_cursor = vd.color;
-        sym_at_cursor = vd.symbol_curses;
     }
 
     const point pt_disp( getmaxx( w_disp ) / 2, getmaxy( w_disp ) / 2 );
@@ -3530,9 +3628,16 @@ void veh_interact::display_stats( map &here ) const
     }
 
     fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
-                    _( "Air drag:       <color_light_blue>%5.2f</color>" ),
-                    veh->coeff_air_drag() );
+                    _( "Air drag / Cd:  <color_light_blue>%4.2f</color> / <color_light_blue>%.2f</color>" ),
+                    veh->coeff_air_drag(), veh->aerodynamic_cd() );
     i += 1;
+
+    if( veh->is_subtile() && i + 1 < slots ) {
+        fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
+                        _( "Size / Hard:    <color_light_blue>%.2f</color>x<color_light_blue>%.2fm</color> / <color_yellow>%d</color>" ),
+                        veh->metric_length(), veh->metric_width(), veh->average_hardness() );
+        i += 1;
+    }
 
     if( is_boat ) {
         fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
@@ -3586,7 +3691,7 @@ void veh_interact::display_stats( map &here ) const
     i = std::max( i, 2 * stats_h );
 
     if( const auto limits = veh->estimate_flight_limits( here ); limits && i + 2 < slots ) {
-        const auto add_stat = [&]( const std::string &text ) {
+        const auto add_stat = [&]( const std::string & text ) {
             trim_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray, text );
             ++i;
         };
@@ -3621,7 +3726,10 @@ void veh_interact::display_name()
                     string_format( _( "Deck %d  [%s / %s]  " ), cursor_level + 1,
                                    main_context.get_desc( "VEHICLE_DECK_UP" ),
                                    main_context.get_desc( "VEHICLE_DECK_DOWN" ) ) +
-                    string_format( _( "%s (%s)" ), veh->name, veh->get_owner_name() ) );
+                    string_format( _( "%s (%s)" ), veh->name, veh->get_owner_name() ) +
+                    ( veh->is_subtile()
+                      ? string_format( _( " [%.2fm x %.2fm]" ), veh->metric_length(), veh->metric_width() )
+                      : std::string() ) );
     wnoutrefresh( w_name );
 }
 

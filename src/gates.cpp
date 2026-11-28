@@ -319,6 +319,20 @@ doors::opening doors::begin_open( map &here, Character &who, const tripoint_bub_
         return {};
     }
 
+    if( const optional_vpart_position vp_who = here.veh_at( who.pos_bub( here ) ) ) {
+        vehicle &veh = vp_who->vehicle();
+        if( veh.is_subtile() ) {
+            const int dir_door = veh.find_directional_door_part(
+                                     who, target.xy() - who.pos_bub( here ).xy(), true );
+            if( dir_door >= 0 ) {
+                if( !veh.handle_potential_theft( who ) ) {
+                    return {};
+                }
+                return { open_tile_result::OPEN_VEHICLE_SINGLE, dir_door };
+            }
+        }
+    }
+
     if( here.open_door( who, target, !here.is_outside( who.pos_bub( here ) ), true ) ) {
         return { open_tile_result::OPEN_DOOR, -1 };
     }
@@ -351,7 +365,23 @@ bool doors::finish_open( map &here, Character &who, const tripoint_bub_ms &targe
         started.result != open_tile_result::OPEN_VEHICLE_ALL ) {
         return false;
     }
-    const optional_vpart_position vp = here.veh_at( target );
+    optional_vpart_position vp = here.veh_at( target );
+    const optional_vpart_position vp_who = here.veh_at( who.pos_bub( here ) );
+    if( vp_who && vp_who->vehicle().is_subtile() &&
+        started.result == open_tile_result::OPEN_VEHICLE_SINGLE &&
+        ( !vp || &vp->vehicle() == &vp_who->vehicle() ) &&
+        started.vehicle_part >= 0 && started.vehicle_part < vp_who->vehicle().part_count() ) {
+        vehicle &veh = vp_who->vehicle();
+        const vehicle_part &door_vp = veh.part( started.vehicle_part );
+        if( !door_vp.removed && !door_vp.is_fake && door_vp.is_available() &&
+            door_vp.info().has_flag( VPFLAG_OPENABLE ) && door_vp.open == 0 &&
+            !door_vp.locked ) {
+            who.add_msg_if_player( _( "You open the %1$s's %2$s." ), veh.name, door_vp.name() );
+            veh.open( here, started.vehicle_part );
+            return true;
+        }
+        return false;
+    }
     if( !vp ) {
         return false;
     }
@@ -415,7 +445,7 @@ bool doors::forced_door_closing( const tripoint_bub_ms &p,
                  std::find( affected_tiles.cbegin(), affected_tiles.cend(), pvl ) == std::end( affected_tiles ) );
     };
     const std::optional<tripoint_bub_ms> pos = random_point( m.points_in_radius( p, 2 ),
-        valid_location );
+            valid_location );
     if( !pos.has_value() ) {
         // can't pushback any creatures anywhere, that means the door can't close.
         return false;
@@ -610,7 +640,7 @@ bool doors::unlock_door( map &m, Creature &who, const tripoint_bub_ms &lockp )
             // It's a lambda right now so we don't have to check it unless we need it.
             auto has_broken_window = [&]() {
                 std::vector<vehicle_part *> parts_at_target = veh->get_parts_at( &m, lockp, "WINDOW",
-                    part_status_flag::available );
+                        part_status_flag::available );
                 return !parts_at_target.empty() && parts_at_target.front()->has_fault( fault_broken_window );
             };
             const bool reaches_in = !inside_vehicle && has_broken_window();

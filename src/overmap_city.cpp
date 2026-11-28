@@ -567,7 +567,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
             for( int x = std::max( start.x, 0 ); x < std::min( stop.x, OMAPX ); ++x ) {
                 const tripoint_om_omt p( x, y, 0 );
                 const oter_id existing = ter( p );
-                if( road.has( existing ) || north_america::is_avenue_flank( existing ) ) {
+                if( road.has( existing ) || existing->is_road() || north_america::is_avenue_flank( existing ) ) {
                     city_tiles.insert( p.xy() );
                     continue;
                 }

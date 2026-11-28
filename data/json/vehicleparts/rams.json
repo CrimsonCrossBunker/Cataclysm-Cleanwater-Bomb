@@ -21,6 +21,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "10 m", "using": [ [ "repair_welding_standard", 5 ] ] }
     },
     "flags": [ "PROTRUSION", "OBSTACLE" ],
+    "sub_size": [ 3, 5 ],
+    "hardness": 42,
     "variants": [
       { "id": "front", "label": "Front", "symbols": "^^<vvv>^", "symbols_broken": "*" },
       { "id": "rear", "label": "Rear", "symbols": "vv>^^^<v", "symbols_broken": "*" },
@@ -57,6 +59,8 @@
       }
     },
     "damage_reduction": { "all": 87 },
+    "sub_size": [ 3, 6 ],
+    "hardness": 70,
     "extend": { "flags": [ "SHOCK_RESISTANT" ] }
   },
   {
@@ -86,7 +90,9 @@
       },
       "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "15 m", "using": [ [ "repair_welding_standard", 6 ] ] }
     },
-    "damage_reduction": { "all": 87 }
+    "damage_reduction": { "all": 87 },
+    "sub_size": [ 3, 6 ],
+    "hardness": 58
   },
   {
     "id": "ram_military",
@@ -114,8 +120,10 @@
         "time": "20 m",
         "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
       },
-      "repair": {  }
+      "repair": { }
     },
+    "sub_size": [ 4, 6 ],
+    "hardness": 78,
     "extend": { "flags": [ "NO_REPAIR" ] },
     "damage_reduction": { "all": 75, "bullet": 131 }
   },
@@ -148,7 +156,9 @@
       },
       "repair": { "skills": [ [ "mechanics", 4 ] ], "time": "10 m", "using": [ [ "repair_welding_standard", 5 ] ] }
     },
-    "damage_reduction": { "all": 60 }
+    "damage_reduction": { "all": 60 },
+    "sub_size": [ 3, 5 ],
+    "hardness": 44
   },
   {
     "id": "ram_steel",
@@ -161,7 +171,11 @@
     "durability": 825,
     "breaks_into": "ig_vp_steel_plate",
     "damage_reduction": { "all": 70 },
-    "requirements": { "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "10 m", "using": [ [ "repair_welding_lc_steel", 6 ] ] } }
+    "requirements": {
+      "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "10 m", "using": [ [ "repair_welding_lc_steel", 6 ] ] }
+    },
+    "sub_size": [ 3, 6 ],
+    "hardness": 42
   },
   {
     "id": "ram_wood",
@@ -178,7 +192,9 @@
       "removal": { "skills": [ [ "fabrication", 2 ] ], "time": "30 m", "using": [ [ "vehicle_nail_removal", 1 ] ] },
       "repair": { "skills": [ [ "fabrication", 3 ] ], "time": "30 m", "using": [ [ "adhesive", 2 ] ] }
     },
-    "damage_reduction": { "all": 20, "cut": 10, "stab": 10 }
+    "damage_reduction": { "all": 20, "cut": 10, "stab": 10 },
+    "sub_size": [ 3, 6 ],
+    "hardness": 14
   },
   {
     "id": "ram_chitin",
@@ -190,7 +206,9 @@
     "looks_like": "ram_wood",
     "durability": 250,
     "breaks_into": [ { "item": "chitin_piece", "count": [ 5, 15 ] } ],
-    "damage_reduction": { "all": 25 }
+    "damage_reduction": { "all": 25 },
+    "sub_size": [ 3, 6 ],
+    "hardness": 26
   },
   {
     "id": "ram_acidchitin",
@@ -200,7 +218,9 @@
     "item": "acidchitin_plate",
     "proportional": { "durability": 1.1 },
     "breaks_into": [ { "item": "chitin_piece", "count": [ 6, 19 ] } ],
-    "damage_reduction": { "all": 30 }
+    "damage_reduction": { "all": 30 },
+    "sub_size": [ 3, 6 ],
+    "hardness": 26
   },
   {
     "id": "ram_mattress",
@@ -212,12 +232,17 @@
     "damage_modifier": 50,
     "durability": 40,
     "description": "A mattress, strapped onto the vehicle.  It could serve to blunt any impact.",
-    "breaks_into": [ { "item": "sheet_cotton", "count": [ 5, 6 ] }, { "item": "cotton_patchwork", "count": [ 8, 15 ] } ],
+    "breaks_into": [
+      { "item": "sheet_cotton", "count": [ 5, 6 ] },
+      { "item": "cotton_patchwork", "count": [ 8, 15 ] }
+    ],
     "requirements": {
       "install": { "skills": [ [ "mechanics", 0 ] ], "time": "5 m", "using": [ [ "rope_natural_short", 2 ] ] },
       "removal": { "skills": [ [ "mechanics", 0 ] ], "time": "5 m", "using": [  ] }
     },
     "damage_reduction": { "bash": 20 },
+    "sub_size": [ 4, 6 ],
+    "hardness": 3,
     "extend": { "flags": [ "OPAQUE" ] },
     "variants": [ { "symbols": "=", "symbols_broken": "*" } ]
   },
@@ -247,6 +272,8 @@
       },
       "repair": { "skills": [ [ "mechanics", 6 ] ], "time": "15 m", "using": [ [ "repair_welding_standard", 6 ] ] }
     },
+    "sub_size": [ 3, 4 ],
+    "hardness": 45,
     "extend": { "flags": [ "SHARP", "UNMOUNT_ON_DAMAGE" ] },
     "delete": { "flags": [ "OBSTACLE" ] },
     "damage_reduction": { "all": 40 },
@@ -266,6 +293,8 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "60 m", "using": [ [ "repair_welding_standard", 2 ] ] }
     },
+    "sub_size": [ 2, 4 ],
+    "hardness": 48,
     "extend": { "flags": [ "SHARP" ] },
     "delete": { "flags": [ "OBSTACLE" ] },
     "breaks_into": [ { "item": "mc_steel_chunk", "prob": 50 } ]
@@ -283,6 +312,8 @@
     "folded_volume": "250 ml",
     "breaks_into": [ { "item": "mc_steel_chunk", "count": [ 1, 2 ] } ],
     "damage_reduction": { "all": 12 },
+    "sub_size": [ 2, 3 ],
+    "hardness": 42,
     "variants": [ { "symbols": ".", "symbols_broken": "x" } ]
   },
   {
@@ -303,6 +334,8 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "30 m", "using": [ [ "adhesive", 2 ] ] }
     },
     "breaks_into": [ { "item": "splinter", "count": [ 3, 7 ] } ],
-    "damage_reduction": { "all": 0 }
+    "damage_reduction": { "all": 0 },
+    "sub_size": [ 2, 3 ],
+    "hardness": 12
   }
 ]

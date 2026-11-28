@@ -4,6 +4,7 @@
     "copy-from": "car_sedan",
     "type": "vehicle",
     "name": "1.5 L Turbo Sedan",
+    "curb_mass": "1480 kg",
     "replace_parts": [ { "from": "engine_inline4", "to": "engine_i4_15t_road" } ]
   },
   {
@@ -11,6 +12,7 @@
     "copy-from": "car_sedan",
     "type": "vehicle",
     "name": "2.0 L Turbo Sedan",
+    "curb_mass": "1480 kg",
     "replace_parts": [ { "from": "engine_inline4", "to": "engine_h4_20t_road" } ]
   },
   {
@@ -18,6 +20,7 @@
     "copy-from": "suv",
     "type": "vehicle",
     "name": "2.4 L Turbo SUV",
+    "curb_mass": "2180 kg",
     "replace_parts": [ { "from": "engine_v6", "to": "engine_h4_24t_road" } ]
   },
   {
@@ -25,6 +28,7 @@
     "copy-from": "car_sedan",
     "type": "vehicle",
     "name": "2.5 L Sedan",
+    "curb_mass": "1480 kg",
     "replace_parts": [ { "from": "engine_inline4", "to": "engine_i4_25_road" } ]
   },
   {
@@ -32,6 +36,7 @@
     "copy-from": "car_coupe_sports_v6",
     "type": "vehicle",
     "name": "2.5 L V6 Coupe",
+    "curb_mass": "1540 kg",
     "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_25_road" } ]
   },
   {
@@ -39,6 +44,7 @@
     "copy-from": "car_coupe_sports_v12",
     "type": "vehicle",
     "name": "3.0 L Twin-Turbo Sports Coupe",
+    "curb_mass": "1640 kg",
     "replace_parts": [ { "from": "engine_v12", "to": "engine_i6_30tt_road" } ]
   },
   {
@@ -46,6 +52,7 @@
     "copy-from": "suv",
     "type": "vehicle",
     "name": "3.5 L V6 SUV",
+    "curb_mass": "2180 kg",
     "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_35_road" } ]
   },
   {
@@ -53,6 +60,7 @@
     "copy-from": "car_coupe_sports_v6",
     "type": "vehicle",
     "name": "3.7 L V6 Sports Coupe",
+    "curb_mass": "1540 kg",
     "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_37_road" } ]
   },
   {
@@ -60,6 +68,7 @@
     "copy-from": "car_sedan_v8",
     "type": "vehicle",
     "name": "5.0 L V8 Sports Sedan",
+    "curb_mass": "1710 kg",
     "replace_parts": [ { "from": "engine_v8", "to": "engine_v8_50_road" }, { "from": "tank", "to": "tank_large" } ]
   },
   {
@@ -67,6 +76,7 @@
     "copy-from": "car_sedan_sports_v6",
     "type": "vehicle",
     "name": "3.5 L V6 Sports Sedan",
+    "curb_mass": "1580 kg",
     "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_35_road" } ]
   },
   {
@@ -74,6 +84,7 @@
     "copy-from": "car_sedan_sports_v6",
     "type": "vehicle",
     "name": "3.7 L V6 Sports Sedan",
+    "curb_mass": "1580 kg",
     "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_37_road" } ]
   },
   {
@@ -81,6 +92,7 @@
     "copy-from": "car_sedan_luxury_v6",
     "type": "vehicle",
     "name": "2.5 L V6 Luxury Sedan",
+    "curb_mass": "1840 kg",
     "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_25_road" } ]
   },
   {
@@ -88,6 +100,7 @@
     "copy-from": "car_hatch",
     "type": "vehicle",
     "name": "1.5 L Turbo Hatchback",
+    "curb_mass": "1340 kg",
     "replace_parts": [ { "from": "engine_inline4", "to": "engine_i4_15t_road" } ]
   },
   {
@@ -95,6 +108,7 @@
     "copy-from": "car_hatch",
     "type": "vehicle",
     "name": "2.0 L Turbo Hatchback",
+    "curb_mass": "1340 kg",
     "replace_parts": [ { "from": "engine_inline4", "to": "engine_h4_20t_road" } ]
   },
   {
@@ -102,6 +116,7 @@
     "copy-from": "car_coupe",
     "type": "vehicle",
     "name": "2.5 L Coupe",
+    "curb_mass": "1460 kg",
     "replace_parts": [ { "from": "engine_inline4", "to": "engine_i4_25_road" } ]
   },
   {
@@ -109,6 +124,7 @@
     "copy-from": "car_sports",
     "type": "vehicle",
     "name": "3.7 L V6 Sports Car",
+    "curb_mass": "1380 kg",
     "replace_parts": [ { "from": "engine_v12", "to": "engine_v6_37_road" } ]
   },
   {
@@ -116,6 +132,7 @@
     "copy-from": "car_shootingbrake_v8",
     "type": "vehicle",
     "name": "3.0 L Twin-Turbo Shooting Brake",
+    "curb_mass": "1740 kg",
     "replace_parts": [ { "from": "engine_v8", "to": "engine_i6_30tt_road" } ]
   },
   {
@@ -123,6 +140,7 @@
     "copy-from": "car_shootingbrake_long_v8",
     "type": "vehicle",
     "name": "2.4 L Turbo Long Shooting Brake",
+    "curb_mass": "1860 kg",
     "replace_parts": [ { "from": "engine_v8", "to": "engine_h4_24t_road" } ]
   },
   {
@@ -130,6 +148,7 @@
     "copy-from": "4seat_pickup",
     "type": "vehicle",
     "name": "3.5 L V6 Crew Cab Pickup",
+    "curb_mass": "2480 kg",
     "replace_parts": [ { "from": "engine_v6", "to": "engine_v6_35_road" } ]
   }
 ]

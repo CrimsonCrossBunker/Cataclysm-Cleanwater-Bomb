@@ -472,6 +472,11 @@
     "type": "json_flag"
   },
   {
+    "id": "ENGINE_HOOD",
+    "type": "json_flag",
+    "info": "Covers an engine compartment and can be opened or closed to inspect and work on the engine underneath."
+  },
+  {
     "id": "FRIDGE",
     "type": "json_flag"
   },
@@ -863,5 +868,10 @@
     "id": "LADDER",
     "type": "json_flag",
     "info": "This part is a ladder, letting you climb down from the vehicle."
+  },
+  {
+    "id": "VEHICLE_SHELL",
+    "type": "json_flag",
+    "info": "Outer aerodynamic body shell or fairing that lowers vehicle air drag and helps shield enclosed parts."
   }
 ]

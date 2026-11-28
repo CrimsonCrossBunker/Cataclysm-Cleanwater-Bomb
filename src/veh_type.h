@@ -141,6 +141,7 @@ enum vpart_bitflags : int {
     VPFLAG_PROPELLER,
     VPFLAG_LADDER,
     VPFLAG_TRAP_PROOF,
+    VPFLAG_SHELL,
 
     NUM_VPFLAGS
 };
@@ -222,6 +223,17 @@ struct vpslot_balloon {
 
 struct vpslot_ladder {
     int length = 0;
+};
+
+struct vpslot_shell {
+    bool was_loaded = false;
+
+    float drag_coeff = 0.35f;
+    float frontal_height_m = 1.45f;
+    float crumple_absorption = 0.25f;
+    int hardness = 16;
+
+    void deserialize( const JsonObject &jo );
 };
 
 
@@ -400,6 +412,7 @@ class vpart_info
         std::optional<vpslot_propeller> propeller_info;
         std::optional<vpslot_balloon> balloon_info;
         std::optional<vpslot_ladder> ladder_info;
+        std::optional<vpslot_shell> shell_info;
         std::optional<vpslot_terrain_transform> transform_terrain_info;
 
         //Enchantments
@@ -521,6 +534,12 @@ class vpart_info
         /** Maximum damage part can sustain before being destroyed */
         int durability = 0;
 
+        /** Structural/material impact hardness rating (used for collision & armor protection) */
+        int hardness = 0;
+
+        /** Physical footprint in 0.125-tile (1/8 m) units: x = length, y = width */
+        point sub_size = point( 8, 8 );
+
         /** Damage modifier (percentage) used when damaging other entities upon collision */
         int dmg_mod = 100;
 
@@ -634,6 +653,8 @@ struct vehicle_prototype {
 
         vproto_id id;
         translation name;
+        int grid_scale = 1;
+        units::mass target_curb_mass = 0_gram;
         std::vector<part_def> parts;
         std::vector<vehicle_item_spawn> item_spawns;
         std::vector<zone_def> zone_defs;

@@ -43,6 +43,7 @@
 #include "activity_actor_definitions.h"
 #include "activity_handlers.h"
 #include "avatar.h"
+#include "avatar_action.h"
 #include "character.h"
 #include "character_id.h"
 #include "clone_ptr.h"
@@ -50,6 +51,7 @@
 #include "color.h"
 #include "craft_reservation.h"
 #include "creature.h"
+#include "creature_tracker.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "effect_on_condition.h"
@@ -1217,11 +1219,19 @@ bool vehicle::can_close( int part_index, Character &who )
         base_element.push_back( part_index );
         openable_parts.emplace_back( base_element );
     }
+    const int pass_part = is_subtile() ? find_passenger_part( who ) : -1;
+    const creature_tracker &creatures = get_creature_tracker();
     for( const std::vector<int> &vec : openable_parts ) {
         for( int partID : vec ) {
             // Check the part for collisions, then if there's a fake part present check that too.
             while( partID >= 0 ) {
-                if( doors::check_mon_blocking_door( who, abs_part_pos( parts[partID] ) ) ) {
+                const tripoint_abs_ms part_pos = abs_part_pos( parts[partID] );
+                // On 0.125-tile cabins a seated occupant can share the rounded 1m world tile
+                // with an adjacent perimeter door mounted on a different sub-tile coordinate.
+                const bool self_in_separate_seat = is_subtile() && pass_part >= 0 &&
+                                                   parts[pass_part].mount != parts[partID].mount &&
+                                                   creatures.creature_at( part_pos ) == &who;
+                if( !self_in_separate_seat && doors::check_mon_blocking_door( who, part_pos ) ) {
                     return false;
                 }
                 if( parts[partID].has_fake &&
@@ -2051,6 +2061,25 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     }
 
     if( !is_appliance() ) {
+        if( !player_inside && here != nullptr && std::abs( velocity ) <= 100 &&
+            vp.part_with_feature( VPFLAG_BOARDABLE, true ) &&
+            square_dist( get_player_character().pos_bub( *here ).xy(), vppos.xy() ) <= 1 &&
+            vppos.z() == get_player_character().posz() ) {
+            menu.add( _( "Board seat" ) )
+            .skip_theft_check()
+            .skip_locked_check()
+            .on_submit( [here, vppos] {
+                avatar &who = get_avatar();
+                if( vppos != who.pos_bub( *here ) )
+                {
+                    avatar_action::move( who, *here, vppos - who.pos_bub( *here ) );
+                } else
+                {
+                    here->board_vehicle( vppos, &who );
+                }
+            } );
+        }
+
         menu.add( _( "Examine vehicle" ) )
         .skip_theft_check()
         .skip_locked_check()
@@ -2360,11 +2389,13 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     add_vehicle_tool_use_menu( menu, *here, *this, here->get_abs( vppos ) );
     add_vehicle_appliance_menu( menu, *here, *this, here->get_abs( vppos ) );
 
-    const std::optional<vpart_reference> vp_cargo = vp.cargo();
+    const std::vector<vpart_reference> vp_cargo = vp.cargo_parts( true, true );
     // Whether vehicle part (cargo) contains items, and whether map tile (ground) has items
     if( with_pickup && (
             here->has_items( vp.pos_bub( *here ) ) ||
-            ( vp_cargo && !vp_cargo->items().empty() ) ) ) {
+    std::any_of( vp_cargo.begin(), vp_cargo.end(), []( const vpart_reference & vpr ) {
+    return !vpr.items().empty();
+    } ) ) ) {
         menu.add( _( "Get items" ) )
         .hotkey( "GET_ITEMS" )
         .skip_locked_check()

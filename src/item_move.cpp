@@ -58,9 +58,10 @@ bool destination_matches( Character &who, map &here, const item_move_selection &
     if( selection.cargo == 0 ) {
         return here.can_put_items_ter_furn( pos );
     }
-    const auto cargo = here.veh_at( pos ).cargo();
-    return cargo && usable_cargo( *cargo ) &&
-           cargo->part().get_base().uid().get_value() == selection.cargo;
+    const auto cargo_parts = here.veh_at( pos ).cargo_parts( false, true );
+    return std::any_of( cargo_parts.begin(), cargo_parts.end(), [&]( const vpart_reference & c ) {
+        return usable_cargo( c ) && c.part().get_base().uid().get_value() == selection.cargo;
+    } );
 }
 
 item_location resolve_movable( Character &who, map &here, const item_move_selection &selection,
@@ -98,10 +99,14 @@ item_location resolve_movable( Character &who, map &here, const item_move_select
                 root = root.parent_item();
             }
             const vehicle_cursor *cursor = root.veh_cursor();
-            const auto cargo = here.veh_at( pos ).cargo();
-            if( !cursor || !cargo || &cursor->veh != &cargo->vehicle() ||
-                cursor->part < 0 || static_cast<size_t>( cursor->part ) != cargo->part_index() ||
-                !usable_cargo( *cargo ) ) {
+            const std::vector<vpart_reference> cargo_parts = here.veh_at( pos ).cargo_parts( false, true );
+            const bool valid_cursor = cursor && cursor->part >= 0 &&
+            std::any_of( cargo_parts.begin(), cargo_parts.end(), [&]( const vpart_reference & c ) {
+                return &cursor->veh == &c.vehicle() &&
+                       static_cast<size_t>( cursor->part ) == c.part_index() &&
+                       usable_cargo( c );
+            } );
+            if( !valid_cursor ) {
                 return item_location();
             }
         }
@@ -142,11 +147,46 @@ int insert_cargo( map &here, const vpart_reference &cargo, item &portion )
     return count;
 }
 
+int insert_cargo_at_tile( map &here, const std::vector<vpart_reference> &cargo_parts,
+                          const int64_t preferred_uid, item &portion )
+{
+    int total_loaded = 0;
+    const auto try_part = [&]( const vpart_reference & cand ) {
+        if( !usable_cargo( cand ) ) {
+            return;
+        }
+        const int added = insert_cargo( here, cand, portion );
+        total_loaded += added;
+    };
+    if( preferred_uid != 0 ) {
+        for( const vpart_reference &cand : cargo_parts ) {
+            if( cand.part().get_base().uid().get_value() == preferred_uid ) {
+                try_part( cand );
+                break;
+            }
+        }
+    }
+    if( portion.count_by_charges() ? portion.charges > 0 : total_loaded == 0 ) {
+        for( const vpart_reference &cand : cargo_parts ) {
+            if( preferred_uid != 0 && cand.part().get_base().uid().get_value() == preferred_uid ) {
+                continue;
+            }
+            try_part( cand );
+            if( portion.count_by_charges() ? portion.charges <= 0 : total_loaded > 0 ) {
+                break;
+            }
+        }
+    }
+    return total_loaded;
+}
+
 int place_item( Character &who, map &here, const item_move_selection &selection,
                 item_location source, item portion )
 {
     const tripoint_bub_ms dest = here.get_bub( selection.target.position );
-    const auto cargo = selection.cargo != 0 ? here.veh_at( dest ).cargo() : std::nullopt;
+    const std::vector<vpart_reference> cargo_parts =
+        selection.cargo != 0 ? here.veh_at( dest ).cargo_parts( false, true )
+        : std::vector<vpart_reference>();
     if( who.is_worn( *source ) ) {
         std::list<item> removed;
         const character_action_guard lifetime( who );
@@ -157,9 +197,12 @@ int place_item( Character &who, map &here, const item_move_selection &selection,
         const int count = removed.front().count();
         portion = std::move( removed.front() );
         const bool destination_available = destination_matches( who, here, selection );
-        const auto current_cargo = destination_available && selection.cargo != 0 ?
-                                   here.veh_at( here.get_bub( selection.target.position ) ).cargo() : std::nullopt;
-        const int loaded = current_cargo ? insert_cargo( here, *current_cargo, portion ) : 0;
+        const std::vector<vpart_reference> current_cargo =
+            destination_available && selection.cargo != 0 ?
+            here.veh_at( here.get_bub( selection.target.position ) ).cargo_parts( false, true ) :
+            std::vector<vpart_reference>();
+        const int loaded = !current_cargo.empty() ?
+                           insert_cargo_at_tile( here, current_cargo, selection.cargo, portion ) : 0;
         if( loaded == count ) {
             return count;
         }
@@ -177,7 +220,8 @@ int place_item( Character &who, map &here, const item_move_selection &selection,
         return loaded;
     }
 
-    const int loaded = cargo ? insert_cargo( here, *cargo, portion ) : 0;
+    const int loaded = !cargo_parts.empty() ?
+                       insert_cargo_at_tile( here, cargo_parts, selection.cargo, portion ) : 0;
     if( loaded > 0 ) {
         if( source->count_by_charges() && source->charges > loaded ) {
             source->charges -= loaded;

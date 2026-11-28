@@ -325,7 +325,7 @@ int map::cost_to_pass( const tripoint_bub_ms &cur, const tripoint_bub_ms &p,
         const bool is_outside_veh = veh_at_internal( cur, dummy ) != veh;
 
         if( part >= 0 ) {
-            if( allow_open_doors && veh->next_part_to_open( part, is_outside_veh ) != -1 ) {
+            if( allow_open_doors && veh->next_part_to_open( part, is_outside_veh, false ) != -1 ) {
                 // Handle car doors, but don't try to path through curtains
                 return 10; // One turn to open, 4 to move there
             } else if( allow_unlock_doors && veh->next_part_to_unlock( part, is_outside_veh ) != -1 ) {
@@ -352,7 +352,8 @@ int map::cost_to_pass( const tripoint_bub_ms &cur, const tripoint_bub_ms &p,
                 return 2 * hp / damage + 8 + 4;
             } else {
                 const vehicle_part &vp = veh->part( part );
-                if( allow_open_doors && vp.info().has_flag( VPFLAG_OPENABLE ) ) {
+                if( allow_open_doors && vp.info().has_flag( VPFLAG_OPENABLE ) &&
+                    !vp.info().has_flag( "ENGINE_HOOD" ) ) {
                     // If we can open doors in general but weren't
                     // able to open this one, we might be able to
                     // open it if we try from another direction.

@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_SPRITE_GEOMETRY_H
 #define CATA_SRC_SPRITE_GEOMETRY_H
 
+#include <algorithm>
 #include <optional>
 
 #include "point.h"
@@ -33,6 +34,9 @@ struct sprite_geometry_input {
     bool allow_diagonal_rotation = false;
     bool calculate_opaque_bounds = false;
     sprite_rectangle source_opaque_bounds;
+    std::optional<double> exact_angle_deg;
+    float scale_x = 1.0f;
+    float scale_y = 1.0f;
 };
 
 struct sprite_geometry_result {
@@ -58,44 +62,57 @@ CATA_FORCEINLINE sprite_geometry_result prepare_sprite_geometry( const sprite_ge
                               input.offset + ( input.offset_retracted - input.offset ) * input.retract / 100;
     result.destination.origin = input.screen_position + point(
                                     divide_round_down( ( tile_offset.x + input.extra_offset.x ) * input.screen_tile_size.x,
-                                        input.tileset_tile_size.x ),
+                                            input.tileset_tile_size.x ),
                                     divide_round_down( ( tile_offset.y + input.extra_offset.y - input.stacked_height ) *
-                                        input.screen_tile_size.x, input.tileset_tile_size.x ) );
-    result.destination.size = point(
-                                  input.sprite_size.x * input.screen_tile_size.x * input.pixelscale / input.tileset_tile_size.x,
-                                  input.sprite_size.y * input.screen_tile_size.y * input.pixelscale / input.tileset_tile_size.y );
+                                            input.screen_tile_size.x, input.tileset_tile_size.x ) );
+    const point raw_size(
+        input.sprite_size.x * input.screen_tile_size.x * input.pixelscale / input.tileset_tile_size.x,
+        input.sprite_size.y * input.screen_tile_size.y * input.pixelscale / input.tileset_tile_size.y );
+    const int scaled_w = input.scale_x == 1.0f
+                         ? raw_size.x
+                         : std::max( 1, static_cast<int>( raw_size.x * input.scale_x + 0.5f ) );
+    const int scaled_h = input.scale_y == 1.0f
+                         ? raw_size.y
+                         : std::max( 1, static_cast<int>( raw_size.y * input.scale_y + 0.5f ) );
+    result.destination.origin += point( ( raw_size.x - scaled_w ) / 2,
+                                        ( raw_size.y - scaled_h ) / 2 );
+    result.destination.size = point( scaled_w, scaled_h );
 
     if( input.rotate_sprite ) {
-        result.rotation_code = input.rotation == -1 ? -1 :
-                               input.allow_diagonal_rotation ? input.rotation : input.rotation % 4;
-        if( input.rotation == -1 ) {
-            result.flip_horizontal = true;
-        } else if( !input.isometric ) {
-            switch( result.rotation_code ) {
-                case 1:
-                    result.angle = 90;
-                    break;
-                case 2:
-                    result.flip_horizontal = true;
-                    result.flip_vertical = true;
-                    break;
-                case 3:
-                    result.angle = -90;
-                    break;
-                case 5:
-                    result.angle = 45;
-                    break;
-                case 6:
-                    result.angle = -45;
-                    break;
-                case 7:
-                    result.angle = -135;
-                    break;
-                case 8:
-                    result.angle = 135;
-                    break;
-                default:
-                    break;
+        if( input.exact_angle_deg ) {
+            result.angle = *input.exact_angle_deg;
+        } else {
+            result.rotation_code = input.rotation == -1 ? -1 :
+                                   input.allow_diagonal_rotation ? input.rotation : input.rotation % 4;
+            if( input.rotation == -1 ) {
+                result.flip_horizontal = true;
+            } else if( !input.isometric ) {
+                switch( result.rotation_code ) {
+                    case 1:
+                        result.angle = 90;
+                        break;
+                    case 2:
+                        result.flip_horizontal = true;
+                        result.flip_vertical = true;
+                        break;
+                    case 3:
+                        result.angle = -90;
+                        break;
+                    case 5:
+                        result.angle = 45;
+                        break;
+                    case 6:
+                        result.angle = -45;
+                        break;
+                    case 7:
+                        result.angle = -135;
+                        break;
+                    case 8:
+                        result.angle = 135;
+                        break;
+                    default:
+                        break;
+                }
             }
         }
     }
@@ -115,10 +132,10 @@ CATA_FORCEINLINE sprite_geometry_result prepare_sprite_geometry( const sprite_ge
         }
         result.opaque_bounds = sprite_rectangle {
             result.destination.origin + point(
-            opaque.origin.x *result.destination.size.x / input.sprite_size.x,
-            opaque.origin.y *result.destination.size.y / input.sprite_size.y ),
+                opaque.origin.x *result.destination.size.x / input.sprite_size.x,
+                opaque.origin.y *result.destination.size.y / input.sprite_size.y ),
             point( opaque.size.x *result.destination.size.x / input.sprite_size.x,
-            opaque.size.y *result.destination.size.y / input.sprite_size.y )
+                   opaque.size.y *result.destination.size.y / input.sprite_size.y )
         };
     }
     return result;

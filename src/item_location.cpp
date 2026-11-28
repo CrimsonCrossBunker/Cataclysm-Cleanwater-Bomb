@@ -699,8 +699,9 @@ class item_location::impl::item_on_vehicle : public item_location::impl
             if( const std::optional<std::string> label = part_pos.get_label() ) {
                 res = colorize( *label, c_light_blue ) + " ";
             }
-            if( const std::optional<vpart_reference> cargo_part = part_pos.cargo() ) {
-                res += cargo_part->part().name();
+            if( const int cargo_idx = part_pos.vehicle().part_with_feature( cur.part, VPFLAG_CARGO,
+                                      true ); cargo_idx >= 0 ) {
+                res += cur.veh.part( cargo_idx ).name();
             } else {
                 debugmsg( "item in vehicle part without cargo storage" );
             }

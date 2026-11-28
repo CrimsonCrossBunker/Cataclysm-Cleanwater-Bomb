@@ -488,6 +488,9 @@ struct vehicle_part {
         /** mount translated to face.dir [0] and turn_dir [1] */
         std::array<tripoint_rel_ms, 2> precalc = { { tripoint_rel_ms( -1, -1, 0 ), tripoint_rel_ms( -1, -1, 0 ) } };
 
+        /** Exact continuous rotated offset in world tiles (meters) from vehicle origin for face [0] and turn_dir [1] */
+        std::array<rl_vec2d, 2> world_offset = { { rl_vec2d( 0.0, 0.0 ), rl_vec2d( 0.0, 0.0 ) } }; // NOLINT(cata-serialize)
+
         /** temporarily held projected position */
         tripoint_abs_ms next_pos = tripoint_abs_ms( -1, -1, 0 ); // NOLINT(cata-serialize)
 
@@ -1098,7 +1101,8 @@ class vehicle
         // Vehicle parts list - all the parts on a single tile
         int print_part_list( const catacurses::window &win, int y1, int max_y, int width,
                              int p,
-                             int hl = -1, bool detail = false, bool include_fakes = true ) const;
+                             int hl = -1, bool detail = false, bool include_fakes = true,
+                             bool world_tile = false ) const;
 
         // Vehicle parts descriptions - descriptions for all the parts on a single tile
         void print_vparts_descs( const catacurses::window &win, int max_y, int width, int p,
@@ -1475,7 +1479,7 @@ class vehicle
          *  @param outside If true, give parts that can be opened from outside only
          *  @return part index or -1 if no part
          */
-        int next_part_to_open( int p, bool outside = false ) const;
+        int next_part_to_open( int p, bool outside = false, bool include_hood = true ) const;
 
         /**
          *  Return the index of the next part to close at `p`
@@ -1485,9 +1489,10 @@ class vehicle
          *
          *  @param p Part who's coordinates provide the location to check
          *  @param outside If true, give parts that can be closed from outside only
+         *  @param include_hood If true, consider ENGINE_HOOD parts
          *  @return part index or -1 if no part
          */
-        int next_part_to_close( int p, bool outside = false ) const;
+        int next_part_to_close( int p, bool outside = false, bool include_hood = true ) const;
 
         /**
          *  Return the index of the next part to lock at part `p`'s location.
@@ -1533,6 +1538,50 @@ class vehicle
         void coord_translate( tileray tdir, const point_rel_ms &pivot, const point_rel_ms &p,
                               tripoint_rel_ms &q ) const;
 
+        // Exact continuous 2D rigid-body rotation of a mount coordinate (in 1/grid_scale tile units)
+        // into world tile offsets (meters) relative to pivot, avoiding tileray staircase warping.
+        rl_vec2d coord_translate_exact( const units::angle &dir, const point_rel_ms &pivot,
+                                        const point_rel_ms &p ) const;
+        static point_rel_ms rotate_mount_to_tile( int grid_scale, const units::angle &dir,
+                const point_rel_ms &pivot, const point_rel_ms &p );
+
+        // Sub-tile (0.125-tile) geometry, aerodynamics, hardness, and interior navigation helpers
+        bool is_subtile() const {
+            return grid_scale > 1;
+        }
+        point effective_sub_size( const point_rel_ms &mount, const vpart_info &vpi,
+                                  const std::string &variant ) const;
+        point effective_sub_size( const vehicle_part &vp ) const;
+        double metric_length() const;
+        double metric_width() const;
+        double aerodynamic_cd() const;
+        double shell_integrity() const;
+        int average_hardness() const;
+        void init_chassis_ballast( units::mass target_curb_mass );
+        units::mass current_chassis_ballast() const;
+        void rebuild_world_tile_parts();
+        const std::vector<int> &parts_at_world_tile( const tripoint_rel_ms &precalc_pos ) const;
+        std::vector<int> cargo_parts_at_world_tile( const tripoint_rel_ms &precalc_pos,
+                bool include_cleaner = false, bool allow_open_door_forward = true ) const;
+        bool has_adjacent_structure( const tripoint_rel_ms &dp, const vpart_info &vpi ) const;
+        bool sub_footprints_touch( const vehicle_part &a, const vehicle_part &b ) const;
+        int shell_covering_part( int part_idx ) const;
+        int effective_part_hardness( int part_idx ) const;
+        bool subtile_overlaps_vehicle( const vehicle &other, const tripoint_rel_ms &dp_this,
+                                       const map &here ) const;
+        bool subtile_overlaps_point( const tripoint_abs_ms &world_tile, const tripoint_rel_ms &dp_this,
+                                     int part_idx ) const;
+        int find_passenger_part( const Character &who ) const;
+        int find_interior_move_target( int from_part, const point_rel_ms &world_dir,
+                                       int &blocking_door_part ) const;
+        int find_exit_door_or_blocker( int from_part, const point_rel_ms &world_dir,
+                                       bool &blocked_solid ) const;
+        int find_entry_seat_and_door( const tripoint_bub_ms &from_outside, const map &here,
+                                      const tripoint_bub_ms &target_tile, int &blocking_door_part,
+                                      bool &blocked_solid ) const;
+        int find_directional_door_part( const Character &who, const point_rel_ms &world_dir,
+                                        bool want_open ) const;
+
         tripoint_bub_ms mount_to_tripoint( map *here,  const point_rel_ms &mount ) const;
         tripoint_abs_ms mount_to_tripoint_abs( const point_rel_ms &mount ) const;
         tripoint_bub_ms mount_to_tripoint( map *here, const tripoint_rel_ms &mount ) const;
@@ -1550,6 +1599,9 @@ class vehicle
                                bool below_roof = true, bool roof = true ) const;
         int part_displayed_at( const tripoint_rel_ms &dp, bool include_fake = false,
                                bool below_roof = true, bool roof = true ) const;
+        int part_displayed_at_world_tile( const tripoint_rel_ms &precalc_pos,
+                                          bool include_fake = false,
+                                          bool below_roof = true, bool roof = true ) const;
         int roof_at_part( int p ) const;
 
         // Finds index of a given vehicle_part in parts vector, compared by address
@@ -1568,6 +1620,9 @@ class vehicle
         vpart_display get_display_of_tile( const tripoint_rel_ms &dp, bool rotate = true,
                                            bool include_fake = true,
                                            bool below_roof = true, bool roof = true ) const;
+        vpart_display get_display_of_world_tile( const tripoint_rel_ms &precalc_pos,
+                bool rotate = true, bool include_fake = true,
+                bool below_roof = true, bool roof = true ) const;
 
         // Get all printable fuel types
         std::vector < itype_id > get_printable_fuel_types( map &here ) const;
@@ -2445,6 +2500,8 @@ class vehicle
 
     private:
         mutable double coefficient_air_resistance = 1; // NOLINT(cata-serialize)
+        mutable double cached_drag_coeff = 0.50; // NOLINT(cata-serialize)
+        mutable double cached_shell_integrity = 0.0; // NOLINT(cata-serialize)
         mutable double coefficient_rolling_resistance = 1; // NOLINT(cata-serialize)
         mutable double coefficient_water_resistance = 1; // NOLINT(cata-serialize)
         mutable double draft_m = 1; // NOLINT(cata-serialize)
@@ -2542,6 +2599,13 @@ class vehicle
         std::vector < int > cable_ports; // NOLINT(cata-serialize)
         std::vector < int > fake_parts; // NOLINT(cata-serialize)
         std::vector < int > control_req_parts; // NOLINT(cata-serialize)
+        std::vector < int > shells; // NOLINT(cata-serialize)
+
+        // Sub-tile grid resolution (8 = 0.125-tile grid, 1 = legacy 1-tile grid)
+        int grid_scale = 1;
+        // Integrated unibody/drivetrain/suspension mass calibrated to real curb weights
+        units::mass chassis_ballast_mass = 0_gram;
+        int initial_structure_count = 0;
 
         // config values
         std::string name;   // vehicle name
@@ -2553,6 +2617,9 @@ class vehicle
         vproto_id type;
         // parts_at_relative(dp) is used a lot (to put it mildly)
         std::map < point_rel_ms, std::vector < int>> relative_parts; // NOLINT(cata-serialize)
+        // Rotated world-tile index (precalc[0] -> all parts covering that world tile)
+        std::unordered_map < tripoint_rel_ms, std::vector < int>>
+                world_tile_parts; // NOLINT(cata-serialize)
         std::set < label > labels;         // stores labels
         std::set < std::string > tags;     // Properties of the vehicle
         // After fuel consumption, this tracks the remainder of fuel < 1, and applies it the next time.

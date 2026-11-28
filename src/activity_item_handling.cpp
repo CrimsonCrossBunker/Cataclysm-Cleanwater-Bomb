@@ -370,20 +370,20 @@ static bool handle_spillable_contents( Character &c, item &it, map &m )
 //try to put items into_vehicle .If fail,first try to add to character bag, then character try wield  it, last drop.
 static std::vector<item_location> try_to_put_into_vehicle( Character &c, item_drop_reason reason,
         const std::list<item> &items,
-        const vpart_reference &vpr )
+        const std::vector<vpart_reference> &cargo_parts )
 {
     map &here = get_map();
     std::vector<item_location> result;
-    if( items.empty() ) {
+    if( items.empty() || cargo_parts.empty() ) {
         return result;
     }
     c.invalidate_weight_carried_cache();
-    vehicle_part &vp = vpr.part();
-    vehicle &veh = vpr.vehicle();
-    const tripoint_bub_ms where = veh.bub_part_pos( here, vp );
+    const vpart_reference &primary_vpr = cargo_parts.front();
+    vehicle &veh = primary_vpr.vehicle();
+    const tripoint_bub_ms where = veh.bub_part_pos( here, primary_vpr.part() );
     int items_did_not_fit_count = 0;
     int into_vehicle_count = 0;
-    const std::string part_name = vp.info().name();
+    std::string part_name = primary_vpr.info().name();
     // can't use constant reference here because of the spill_contents()
     for( item it : items ) {
         if( handle_spillable_contents( c, it, here ) ) {
@@ -395,16 +395,39 @@ static std::vector<item_location> try_to_put_into_vehicle( Character &c, item_dr
             it.charges = 0;
         }
 
-        if( std::optional<vehicle_stack::iterator> maybe_item = veh.add_item( here, vp, it ) ) {
-            into_vehicle_count += it.count();
-            result.emplace_back( vehicle_cursor( veh, vpr.part_index() ), &*maybe_item.value() );
-            craft_relocated( result.back() );
-        } else {
+        bool placed_whole = false;
+        for( const vpart_reference &cand : cargo_parts ) {
+            if( std::optional<vehicle_stack::iterator> maybe_item = veh.add_item( here, cand.part(), it ) ) {
+                into_vehicle_count += it.count();
+                result.emplace_back( vehicle_cursor( veh, cand.part_index() ), &*maybe_item.value() );
+                craft_relocated( result.back() );
+                if( into_vehicle_count == it.count() ) {
+                    part_name = cand.info().name();
+                }
+                placed_whole = true;
+                break;
+            }
+        }
+        if( !placed_whole ) {
             if( it.count_by_charges() ) {
-                // Maybe we can add a few charges in the trunk and the rest on the ground.
-                const int charges_added = veh.add_charges( here, vp, it );
-                it.mod_charges( -charges_added );
-                into_vehicle_count += charges_added;
+                // Maybe we can add some charges into available cargo parts and the rest on the ground.
+                for( const vpart_reference &cand : cargo_parts ) {
+                    const int charges_added = veh.add_charges( here, cand.part(), it );
+                    if( charges_added > 0 ) {
+                        it.mod_charges( -charges_added );
+                        into_vehicle_count += charges_added;
+                        if( into_vehicle_count == charges_added ) {
+                            part_name = cand.info().name();
+                        }
+                        if( it.charges <= 0 ) {
+                            break;
+                        }
+                    }
+                }
+                if( it.charges <= 0 ) {
+                    it.handle_pickup_ownership( c );
+                    continue;
+                }
             }
             items_did_not_fit_count += it.count();
             //~ %1$s is item name, %2$s is vehicle name, %3$s is vehicle part name
@@ -659,9 +682,9 @@ void put_into_vehicle_or_drop( Character &you, item_drop_reason reason,
                                const std::list<item> &items,
                                map *here, const tripoint_bub_ms &where, bool force_ground )
 {
-    const std::optional<vpart_reference> vp = here->veh_at( where ).cargo();
-    if( vp && !force_ground ) {
-        try_to_put_into_vehicle( you, reason, items, *vp );
+    const std::vector<vpart_reference> cargo_parts = here->veh_at( where ).cargo_parts( false, true );
+    if( !cargo_parts.empty() && !force_ground ) {
+        try_to_put_into_vehicle( you, reason, items, cargo_parts );
         return;
     }
     drop_on_map( you, reason, items, here, where );
@@ -686,9 +709,9 @@ std::vector<item_location> put_into_vehicle_or_drop_ret_locs( Character &you,
         const std::list<item> &items,
         map *here, const tripoint_bub_ms &where, bool force_ground )
 {
-    const std::optional<vpart_reference> vp = here->veh_at( where ).cargo();
-    if( vp && !force_ground ) {
-        return try_to_put_into_vehicle( you, reason, items, *vp );
+    const std::vector<vpart_reference> cargo_parts = here->veh_at( where ).cargo_parts( false, true );
+    if( !cargo_parts.empty() && !force_ground ) {
+        return try_to_put_into_vehicle( you, reason, items, cargo_parts );
     }
     return drop_on_map( you, reason, items, here, where );
 }

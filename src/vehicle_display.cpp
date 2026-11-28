@@ -1,6 +1,7 @@
 #include "vehicle.h" // IWYU pragma: associated
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <cstdlib>
 #include <iterator>
@@ -11,6 +12,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "character.h"
 #include "color.h"
 #include "coordinates.h"
 #include "cursesdef.h"
@@ -27,6 +29,7 @@
 #include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
+#include "vehicle_part_location.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -37,6 +40,7 @@ static const ammotype ammo_battery( "battery" );
 static const itype_id fuel_type_muscle( "muscle" );
 static const itype_id itype_battery( "battery" );
 
+static const vpart_location_id vpart_location_on_roof( "on_roof" );
 static const vpart_location_id vpart_location_structure( "structure" );
 
 std::string vehicle::disp_name() const
@@ -146,6 +150,158 @@ vpart_display vehicle::get_display_of_tile( const tripoint_rel_ms &dp, bool rota
     return ret;
 }
 
+int vehicle::part_displayed_at_world_tile( const tripoint_rel_ms &precalc_pos,
+        bool include_fake, bool below_roof, bool roof ) const
+{
+    const std::vector<int> &parts_in_tile = parts_at_world_tile( precalc_pos );
+    if( parts_in_tile.empty() ) {
+        return -1;
+    }
+
+    bool in_vehicle = !roof;
+    if( roof ) {
+        in_vehicle = is_passenger( get_player_character() );
+    }
+    const int hide_z_at_or_above = in_vehicle ? vpart_location_on_roof->z_order : INT_MAX;
+
+    int best_idx = -1;
+    int best_score = INT_MIN;
+    const int min_z_order = below_roof ? 0 : vpart_location_on_roof->z_order;
+
+    for( const int test_index : parts_in_tile ) {
+        const vehicle_part &vp = parts[test_index];
+        if( vp.removed || ( !include_fake && vp.is_fake ) ) {
+            continue;
+        }
+        const vpart_info &vpi = vp.info();
+        const int z_order = vpi.location->z_order;
+        if( z_order < min_z_order || z_order >= hide_z_at_or_above ) {
+            continue;
+        }
+        int score = z_order * 1000;
+        if( !vp.is_broken() ) {
+            if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) ) {
+                score += vp.open ? 650 : 350;
+            } else if( vpi.has_flag( VPFLAG_CONTROLS ) ) {
+                score += 450;
+            } else if( vpi.has_flag( VPFLAG_WINDOW ) ) {
+                score += 320;
+            } else if( vpi.has_flag( VPFLAG_WHEEL ) ) {
+                score += 240;
+            } else if( vpi.has_flag( VPFLAG_SHELL ) ) {
+                score += 280;
+            } else if( vpi.has_flag( "SEAT" ) || vpi.has_flag( "BED" ) ) {
+                score += 200;
+            }
+        }
+        const double dist2 = std::hypot( vp.world_offset[0].x - precalc_pos.x(),
+                                         vp.world_offset[0].y - precalc_pos.y() );
+        score -= static_cast<int>( std::lround( dist2 * 100.0 ) );
+        if( score > best_score ) {
+            best_score = score;
+            best_idx = test_index;
+        }
+    }
+    return best_idx;
+}
+
+vpart_display vehicle::get_display_of_world_tile( const tripoint_rel_ms &precalc_pos,
+        bool rotate, bool include_fake, bool below_roof, bool roof ) const
+{
+    const int part_idx = part_displayed_at_world_tile( precalc_pos, include_fake, below_roof, roof );
+    if( part_idx < 0 ) {
+        return {};
+    }
+    const vehicle_part &vp = part( part_idx );
+    if( vp.hidden ) {
+        return {};
+    }
+    const vpart_info &vpi = vp.info();
+    auto variant_it = vpi.variants.find( vp.variant );
+    if( variant_it == vpi.variants.end() ) {
+        variant_it = vpi.variants.begin();
+    }
+    const vpart_variant &vv = variant_it->second;
+
+    vpart_display ret( vp );
+    ret.is_broken = vp.is_broken();
+    ret.is_open = vp.open && vpi.has_flag( VPFLAG_OPENABLE );
+    ret.color = ret.is_broken ? vpi.color_broken : vpi.color;
+
+    if( ret.is_open ) {
+        ret.symbol = '\'';
+        ret.symbol_curses = '\'';
+    } else {
+        const units::angle direction = rotate ? 270_degrees - face.dir() : 0_degrees;
+        ret.symbol = vv.get_symbol( direction, ret.is_broken );
+        ret.symbol_curses = vpart_variant::get_symbol_curses( ret.symbol );
+    }
+
+    const std::vector<int> &tile_parts = parts_at_world_tile( precalc_pos );
+    const bool in_vehicle = !roof || is_passenger( get_player_character() );
+
+    // Silhouette contouring for sub-tile outer body panels / roofs so 0.125m vehicles
+    // render with clean chassis edges instead of boxy noise at arbitrary headings.
+    if( is_subtile() && rotate && !ret.is_open && !ret.is_broken &&
+        ( vpi.has_flag( VPFLAG_SHELL ) || vpi.has_flag( VPFLAG_ROOF ) ) ) {
+        const bool has_n = !parts_at_world_tile( precalc_pos + point::north ).empty();
+        const bool has_s = !parts_at_world_tile( precalc_pos + point::south ).empty();
+        const bool has_w = !parts_at_world_tile( precalc_pos + point::west ).empty();
+        const bool has_e = !parts_at_world_tile( precalc_pos + point::east ).empty();
+        const int deg = static_cast<int>( std::lround( to_degrees( face.dir() ) ) ) % 180;
+        const bool diagonal = ( deg >= 25 && deg <= 65 ) || ( deg >= 115 && deg <= 155 );
+        if( !has_n && has_s && !has_w && has_e ) {
+            ret.symbol_curses = LINE_OXXO;
+        } else if( !has_n && has_s && has_w && !has_e ) {
+            ret.symbol_curses = LINE_OOXX;
+        } else if( has_n && !has_s && !has_w && has_e ) {
+            ret.symbol_curses = LINE_XXOO;
+        } else if( has_n && !has_s && has_w && !has_e ) {
+            ret.symbol_curses = LINE_XOOX;
+        } else if( ( !has_n || !has_s ) && has_w && has_e ) {
+            ret.symbol_curses = LINE_OXOX;
+        } else if( ( !has_w || !has_e ) && has_n && has_s ) {
+            ret.symbol_curses = LINE_XOXO;
+        } else if( diagonal && !( has_n && has_s && has_w && has_e ) ) {
+            ret.symbol_curses = ( deg < 90 ) ? '\\' : '/';
+        }
+    }
+
+    int max_blood = vp.blood;
+    for( const int idx : tile_parts ) {
+        const vehicle_part &tp = parts[idx];
+        if( tp.removed || ( !include_fake && tp.is_fake ) ) {
+            continue;
+        }
+        const vpart_info &tvpi = tp.info();
+        max_blood = std::max( max_blood, tp.blood );
+        if( !in_vehicle && !tp.open && tvpi.has_flag( VPFLAG_SHELL ) && !tp.is_broken() ) {
+            ret.color = tvpi.color;
+        }
+        if( tvpi.has_flag( VPFLAG_CARGO ) && !tp.is_broken() && !get_items( tp ).empty() ) {
+            ret.has_cargo = true;
+        }
+    }
+    if( get_option<bool>( "VEHICLE_ARMOR_COLOR" ) ) {
+        for( const int idx : tile_parts ) {
+            const vehicle_part &tp = parts[idx];
+            if( !tp.removed && !tp.is_broken() && tp.info().has_flag( VPFLAG_ARMOR ) ) {
+                ret.color = tp.info().color;
+                break;
+            }
+        }
+    }
+    if( max_blood > 200 ) {
+        ret.color = c_red;
+    } else if( max_blood > 0 ) {
+        ret.color = c_light_red;
+    }
+    if( ret.has_cargo ) {
+        ret.color = invert_color( ret.color );
+    }
+    return ret;
+}
+
 /**
  * Prints a list of all parts to the screen inside of a boxed window, possibly
  * highlighting a selected one.
@@ -159,12 +315,15 @@ vpart_display vehicle::get_display_of_tile( const tripoint_rel_ms &dp, bool rota
  */
 int vehicle::print_part_list( const catacurses::window &win, int y1,
                               const int max_y, int width,
-                              int p, int hl /*= -1*/, bool detail, bool include_fakes ) const
+                              int p, int hl /*= -1*/, bool detail, bool include_fakes,
+                              bool world_tile ) const
 {
     if( p < 0 || p >= static_cast<int>( parts.size() ) ) {
         return y1;
     }
-    std::vector<int> pl = this->parts_at_relative( parts[p].mount_pos3(), true, include_fakes );
+    std::vector<int> pl = ( world_tile && is_subtile() )
+                          ? this->parts_at_world_tile( parts[p].precalc[0] )
+                          : this->parts_at_relative( parts[p].mount_pos3(), true, include_fakes );
     int y = y1;
     for( size_t i = 0; i < pl.size(); i++ ) {
         const vehicle_part &vp = parts[pl[i]];

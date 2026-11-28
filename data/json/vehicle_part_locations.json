@@ -142,6 +142,14 @@
   },
   {
     "type": "vehicle_part_location",
+    "id": "shell",
+    "name": "Shell",
+    "desc": "Aerodynamic body shell or fairing mounted around the frame",
+    "z_order": 6,
+    "list_order": 2
+  },
+  {
+    "type": "vehicle_part_location",
     "id": "anywhere",
     "name": "Anywhere",
     "desc": "Can be installed in any location",

@@ -25,6 +25,7 @@ struct mod_tileset_tile_definition {
     std::vector<mod_tileset_sprite_variation> background;
     bool multitile = false;
     std::optional<bool> rotates;
+    std::optional<bool> subtile_scale;
     bool animated = false;
     int height_3d = 0;
     std::vector<mod_tileset_tile_definition> additional_tiles;

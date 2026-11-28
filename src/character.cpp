@@ -2179,7 +2179,7 @@ bool Character::uncanny_dodge()
         set_pos_bub_only( here, adjacent );
 
         //landed in a vehicle tile
-        if( here.veh_at( pos_bub( here ) ) ) {
+        if( here.veh_at( pos_bub( here ) ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
             here.board_vehicle( pos_bub( here ), this );
         }
 

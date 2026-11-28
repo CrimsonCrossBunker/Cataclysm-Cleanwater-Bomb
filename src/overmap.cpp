@@ -1483,7 +1483,7 @@ std::vector<tripoint_om_omt> overmap::place_atlas_start_special( const overmap_s
         const tripoint_om_omt &site, om_direction::type rotation )
 {
     const auto footprint = special.required_locations();
-    const auto blocks_placement = [&]( const overmap_special_locations &tile ) {
+    const auto blocks_placement = [&]( const overmap_special_locations & tile ) {
         const tripoint_om_omt p = site + om_direction::rotate( tile.p, rotation );
         if( !inbounds( p, 2 ) || overmap_special_placements.count( p ) ) {
             return true;
@@ -2528,11 +2528,14 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
             const bool mapped = settings->place_roads ||
                                 ( settings->overmap_highway && tile.lanes >= 4 );
             const bool highway = on_highway( p );
+            const bool controlled_corridor = highway && ( tile.lanes >= 4 ||
+                                             tile.mapped_wide_connections != 0 );
             std::size_t links = 0;
             for( const auto direction : om_direction::all ) {
                 if( mapped && om_lines::has_segment( tile.mapped_connections, direction ) &&
                     ( om_lines::has_segment( tile.mapped_wide_connections, direction ) ||
-                      ( !highway && !on_highway( p + om_direction::displace( direction ) ) ) ) ) {
+                      ( !controlled_corridor &&
+                        !on_highway( p + om_direction::displace( direction ) ) ) ) ) {
                     links = om_lines::set_segment( links, direction );
                 }
             }
@@ -2571,21 +2574,23 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                     }
                 }
                 for( const auto direction : om_direction::all ) {
-                    if( !generate_city_streets || highway ||
+                    const bool arterial_arm = om_lines::has_segment( tile.arterial_connections, direction );
+                    if( !generate_city_streets || ( highway && !arterial_arm ) ||
                         !om_lines::has_segment( tile.connections, direction ) ||
                         om_lines::has_segment( links, direction ) ||
                         om_lines::has_segment( tile.mapped_connections, direction ) ) {
                         continue;
                     }
                     const tripoint_om_omt next = p + om_direction::displace( direction );
-                    if( on_highway( next ) ) {
+                    if( on_highway( next ) && !arterial_arm ) {
                         continue;
                     }
                     bool land = false;
                     if( inbounds( next ) ) {
-                        land = can_build_street( next );
+                        land = can_build_street( next ) ||
+                               ( atlas_water_at( next ) && arterial_arm );
                     } else {
-                        land = !atlas_water_at( next );
+                        land = !atlas_water_at( next ) || arterial_arm;
                     }
                     if( land ) {
                         links = om_lines::set_segment( links, direction );
@@ -2617,12 +2622,12 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
             for( int column = 0; column < OMAPX; ++column ) {
                 const unsigned char cell = footprint[row * OMAPX + column];
                 const tripoint_om_omt position( column, row, 0 );
-                if( !cell ) {
+                const north_america::wide_bridge_cell &bridge = bridges[row * OMAPX + column];
+                if( !cell && !bridge.present ) {
                     continue;
                 }
-                const bool vertical = cell % 2 != 0;
+                const bool vertical = cell ? ( cell % 2 != 0 ) : bridge.vertical;
                 const om_direction::type axis = vertical ? om_direction::type::north : om_direction::type::east;
-                const north_america::wide_bridge_cell &bridge = bridges[row * OMAPX + column];
                 if( bridge.present && !overmap_special_placements.count( position ) ) {
                     const om_direction::type forward = bridge.vertical ? om_direction::type::south :
                                                        om_direction::type::east;
@@ -2642,17 +2647,20 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 if( atlas_water_at( position ) ) {
                     // Reserve the entire corridor over water, including tiles beside the mapped centerline.
                     const oter_type_str_id existing_deck = ter( position + tripoint::above )->get_type_id();
-                    if( existing_deck == oter_type_atlas_raised_bridge_deck || existing_deck == oter_type_bridge_road ) {
+                    if( existing_deck == oter_type_atlas_raised_bridge_deck ||
+                        existing_deck == oter_type_bridge_road ) {
                         continue;
                     }
                     ter_set( position, oter_type_bridge->get_rotated( axis ) );
                     const std::size_t links = om_lines::set_segment(
-                                                 om_lines::set_segment( 0, axis ), om_direction::opposite( axis ) );
+                                                  om_lines::set_segment( 0, axis ), om_direction::opposite( axis ) );
                     ter_set( position + tripoint::above, oter_type_atlas_raised_bridge_deck->get_linear( links ) );
                     continue;
                 }
                 bool bridgehead = false;
-                for( const om_direction::type direction : { axis, om_direction::opposite( axis ) } ) {
+                for( const om_direction::type direction : {
+                         axis, om_direction::opposite( axis )
+                     } ) {
                     const tripoint_om_omt next = position + om_direction::displace( direction );
                     const tripoint_om_omt behind = position - om_direction::displace( direction );
                     if( atlas_water_at( next ) && !atlas_water_at( behind ) &&
@@ -3245,7 +3253,8 @@ void overmap::build_special_connection( const point_om_omt &target,
     if( north_america::active() && entrance.z() == 0 && connection.id == local_road &&
         inbounds( entrance ) && !north_america::in_urban_footprint(
             project_to<coords::omt>( pos() ) + entrance.xy().raw() ) ) {
-        const auto mapped = north_america::road_network( project_to<coords::omt>( pos() ), OMAPX, OMAPY, false );
+        const auto mapped = north_america::road_network( project_to<coords::omt>( pos() ), OMAPX, OMAPY,
+                            false );
         std::vector<point_om_omt> roads;
         for( int y = 0; y < OMAPY; ++y ) {
             for( int x = 0; x < OMAPX; ++x ) {
@@ -3257,13 +3266,15 @@ void overmap::build_special_connection( const point_om_omt &target,
                 }
             }
         }
-        std::stable_sort( roads.begin(), roads.end(), [&]( const point_om_omt & a, const point_om_omt & b ) {
+        std::stable_sort( roads.begin(), roads.end(), [&]( const point_om_omt & a,
+        const point_om_omt & b ) {
             return manhattan_dist( entrance.xy(), a ) < manhattan_dist( entrance.xy(), b );
         } );
         // Nearby shared lanes are access points even when the city centre is on the far side of a river.
         const std::size_t attempts = std::min<std::size_t>( roads.size(), 16 );
         for( std::size_t i = 0; i < attempts; ++i ) {
-            const auto access = lay_out_connection( connection, roads[i], entrance.xy(), 0, must_be_unexplored );
+            const auto access = lay_out_connection( connection, roads[i], entrance.xy(), 0,
+                                                    must_be_unexplored );
             if( access.nodes.empty() ) {
                 continue;
             }

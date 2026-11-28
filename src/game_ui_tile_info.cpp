@@ -469,7 +469,8 @@ void game::print_vehicle_info( const vehicle *veh, int veh_part, const catacurse
         }
         mvwprintz( w_look, point( column, ++line ), c_white, "%s", veh->name );
         // Then the list of parts on that tile.
-        line = veh->print_part_list( w_look, ++line, last_line, getmaxx( w_look ), veh_part );
+        line = veh->print_part_list( w_look, ++line, last_line, getmaxx( w_look ), veh_part, -1, false,
+                                     true, true );
     }
 }
 

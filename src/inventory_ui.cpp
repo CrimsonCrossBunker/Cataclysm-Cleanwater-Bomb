@@ -2275,20 +2275,23 @@ void inventory_selector::add_inaccessible_map_items( const tripoint_bub_ms &targ
     }
 }
 
-void inventory_selector::add_vehicle_items( const tripoint_bub_ms &target, bool add_efiles )
+void inventory_selector::add_vehicle_items( const tripoint_bub_ms &target, bool add_efiles,
+        std::set<std::pair<const vehicle *, int>> *seen_parts )
 {
-    const std::optional<vpart_reference> ovp = get_map().veh_at( target ).cargo();
-    if( !ovp ) {
-        return;
+    for( const vpart_reference &ovp : get_map().veh_at( target ).cargo_parts( true, true ) ) {
+        if( seen_parts &&
+            !seen_parts->emplace( &ovp.vehicle(), static_cast<int>( ovp.part_index() ) ).second ) {
+            continue;
+        }
+        vehicle_part &vp = ovp.part();
+        vehicle_stack items = ovp.items();
+        const std::string name = to_upper_case( remove_color_tags( vp.name() ) );
+        const item_category vehicle_cat( name, no_translation( name ), translation(), 200 );
+        const vehicle_cursor cursor( ovp.vehicle(), ovp.part_index() );
+        _add_map_items( target, vehicle_cat, items, [&cursor]( item & it ) {
+            return item_location( cursor, &it );
+        }, add_efiles );
     }
-    vehicle_part &vp = ovp->part();
-    vehicle_stack items = ovp->items();
-    const std::string name = to_upper_case( remove_color_tags( vp.name() ) );
-    const item_category vehicle_cat( name, no_translation( name ), translation(), 200 );
-    const vehicle_cursor cursor( ovp->vehicle(), ovp->part_index() );
-    _add_map_items( target, vehicle_cat, items, [&cursor]( item & it ) {
-        return item_location( cursor, &it );
-    }, add_efiles );
 }
 
 void inventory_selector::add_vehicle_tank_items()
@@ -2390,6 +2393,7 @@ void inventory_selector::add_nearby_items( int radius, bool add_efiles )
 {
     if( radius >= 0 ) {
         map &here = get_map();
+        std::set<std::pair<const vehicle *, int>> seen_parts;
         for( const tripoint_bub_ms &pos : closest_points_first( u.pos_bub(), radius ) ) {
             // can not reach this -> can not access its contents
             if( u.pos_bub() != pos &&
@@ -2397,7 +2401,7 @@ void inventory_selector::add_nearby_items( int radius, bool add_efiles )
                 continue;
             }
             add_map_items( pos, add_efiles );
-            add_vehicle_items( pos, add_efiles );
+            add_vehicle_items( pos, add_efiles, &seen_parts );
         }
     }
 }

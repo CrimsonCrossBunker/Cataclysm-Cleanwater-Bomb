@@ -3148,6 +3148,14 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
 
     const bool is_adjacent = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 1;
     const bool is_self = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 0;
+    const tripoint_bub_ms target_3d( mouse_target.xy(), u.posz() );
+    const optional_vpart_position target_vp = here.veh_at( target_3d );
+    const optional_vpart_position player_vp = here.veh_at( u.pos_bub() );
+    const bool click_board_vehicle =
+        !is_self && target_vp && !target_vp->vehicle().is_appliance() &&
+        ( !player_vp || &player_vp->vehicle() != &target_vp->vehicle() ) &&
+        std::abs( target_vp->vehicle().velocity ) <= 100 &&
+        target_vp.part_with_feature( VPFLAG_BOARDABLE, true );
     if( const monster *const mon = get_creature_tracker().creature_at<monster>( mouse_target ) ) {
         if( !u.sees( here, *mon ) ) {
             add_msg( _( "Nothing relevant here." ) );
@@ -3162,6 +3170,30 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
         // TODO: Add weapon range check. This requires weapon to be reloaded.
 
         act = ACTION_FIRE;
+    } else if( click_board_vehicle ) {
+        if( is_adjacent ) {
+            act = get_movement_action_from_delta( target_3d - u.pos_bub(), iso_rotate::yes );
+            if( act == ACTION_NULL ) {
+                return false;
+            }
+        } else {
+            std::optional<std::vector<tripoint_bub_ms>> route =
+            safe_route_to( u, target_3d, 0, []( const std::string & ) {} );
+            if( !route || route->empty() ) {
+                route = safe_route_to( u, target_3d, 1, []( const std::string & msg ) {
+                    add_msg( msg );
+                } );
+            }
+            if( !route || route->empty() ) {
+                return false;
+            }
+            u.set_destination( *route );
+            act = u.get_next_auto_move_direction();
+            if( act == ACTION_NULL ) {
+                u.clear_destination();
+                return false;
+            }
+        }
     } else if( is_adjacent &&
                here.close_door( tripoint_bub_ms( mouse_target.xy(), u.posz() ),
                                 !here.is_outside( u.pos_bub() ), true ) ) {
@@ -5834,8 +5866,10 @@ void game::control_vehicle( const std::optional<tripoint_bub_ms> &p )
 
     if( const optional_vpart_position vp = here.veh_at( target_pos ) ) {
         veh = &vp->vehicle();
-        const int controls_idx = veh->avail_part_with_feature( vp->mount_pos3(), "CONTROLS" );
-        const int reins_idx = veh->avail_part_with_feature( vp->mount_pos3(), "CONTROL_ANIMAL" );
+        const std::optional<vpart_reference> controls = vp->avail_part_with_feature( "CONTROLS" );
+        const std::optional<vpart_reference> reins = vp->avail_part_with_feature( "CONTROL_ANIMAL" );
+        const int controls_idx = controls ? controls->part_index() : -1;
+        const int reins_idx = reins ? reins->part_index() : -1;
         controls_ok = controls_idx >= 0; // controls available to "drive"
         reins_ok = reins_idx >= 0 // reins + animal available to "drive"
                    && veh->has_engine_type( fuel_type_animal, false )
@@ -9442,11 +9476,24 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
     }
     // If the player is in a vehicle, unboard them from the current part
     bool was_in_control_same_pos = false;
+    int64_t exited_subtile_vid = 0;
     if( who.in_vehicle ) {
         if( who.pos_bub() == dest_loc ) {
             was_in_control_same_pos = true;
         } else {
-            if( here.veh_at( who.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
+            const optional_vpart_position cur_vp = here.veh_at( who.pos_bub() );
+            if( cur_vp && cur_vp->vehicle().is_subtile() ) {
+                exited_subtile_vid = cur_vp->vehicle().uid().get_value();
+                const int p_idx = cur_vp->vehicle().find_passenger_part( who );
+                if( p_idx >= 0 ) {
+                    here.unboard_vehicle( vpart_reference( cur_vp->vehicle(), p_idx ), &who );
+                } else if( cur_vp.part_with_feature( "BOARDABLE", true ) ) {
+                    here.unboard_vehicle( who.pos_bub() );
+                } else {
+                    who.in_vehicle = false;
+                    who.controlling_vehicle = false;
+                }
+            } else if( cur_vp.part_with_feature( "BOARDABLE", true ) ) {
                 here.unboard_vehicle( who.pos_bub() );
             } else {
                 who.in_vehicle = false;
@@ -9471,6 +9518,19 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
             who.stop_hauling();
         }
     }
+    // Pre-resolve preferred sub-tile entry seat before update_map shifts dest_loc
+    int planned_subtile_seat = -1;
+    int64_t planned_subtile_vid = 0;
+    if( !was_in_control_same_pos && vp1 && vp1->vehicle().is_subtile() &&
+        vp1->vehicle().uid().get_value() != exited_subtile_vid &&
+        !who.is_mounted() ) {
+        int tmp_door = -1;
+        bool tmp_solid = false;
+        planned_subtile_seat = vp1->vehicle().find_entry_seat_and_door(
+                                   who.pos_bub(), here, dest_loc, tmp_door, tmp_solid );
+        planned_subtile_vid = vp1->vehicle().uid().get_value();
+    }
+
     who.setpos( here, dest_loc );
     if( !lifetime ) {
         return point_rel_sm::zero;
@@ -9554,9 +9614,17 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
         return point_rel_sm::zero;
     }
     // If the new tile is a boardable part, board it
-    if( !was_in_control_same_pos &&
-        here.veh_at( who.pos_bub() ).part_with_feature( "BOARDABLE", true ) && !who.is_mounted() ) {
-        here.board_vehicle( who.pos_bub(), &who );
+    if( !was_in_control_same_pos && !who.is_mounted() ) {
+        const optional_vpart_position dest_vp = here.veh_at( who.pos_bub() );
+        if( dest_vp && dest_vp->vehicle().is_subtile() &&
+            dest_vp->vehicle().uid().get_value() == planned_subtile_vid &&
+            planned_subtile_seat >= 0 ) {
+            here.board_vehicle_part( dest_vp->vehicle(), planned_subtile_seat, &who );
+        } else if( dest_vp.part_with_feature( "BOARDABLE", true ) &&
+                   !( dest_vp->vehicle().is_subtile() &&
+                      dest_vp->vehicle().uid().get_value() == exited_subtile_vid ) ) {
+            here.board_vehicle( who.pos_bub(), &who );
+        }
     }
 
     // Traps!
@@ -11347,7 +11415,7 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     }
     // Without this vehicles only load in after walking around a bit
     here.reset_vehicles_sm_pos();
-    if( here.veh_at( player.pos_bub() ) ) {
+    if( here.veh_at( player.pos_bub() ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
         here.board_vehicle( player.pos_bub(), &player );
         player.controlling_vehicle = controlling_vehicle;
     }

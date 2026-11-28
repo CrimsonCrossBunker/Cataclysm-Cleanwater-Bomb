@@ -4,6 +4,8 @@
     "id": "atlas_roll_down_window",
     "copy-from": "door_window",
     "name": { "str": "roll-down door window" },
+    "sub_size": [ 5, 1 ],
+    "hardness": 10,
     "extend": { "flags": [ "OPENABLE", "CABIN_WINDOW" ] }
   },
   {
@@ -23,6 +25,8 @@
       "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "10 m", "using": [ [ "vehicle_nail_removal", 1 ] ] }
     },
     "breaks_into": [ { "count": [ 15, 30 ], "item": "glass_shard" } ],
+    "sub_size": [ 5, 1 ],
+    "hardness": 8,
     "variants": [ { "symbols": "+", "symbols_broken": "+" } ]
   },
   {
@@ -42,6 +46,8 @@
       "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "10 m", "using": [ [ "vehicle_nail_removal", 1 ] ] }
     },
     "breaks_into": [ { "count": [ 15, 30 ], "item": "glass_shard" } ],
+    "sub_size": [ 5, 1 ],
+    "hardness": 18,
     "variants": [ { "symbols": "+", "symbols_broken": "+" } ]
   }
 ]

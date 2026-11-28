@@ -19,6 +19,8 @@
         "using": [ [ "nail_any_adhesive", 2 ], [ "wood_structural_small", 1 ] ]
       }
     },
+    "sub_size": [ 4, 4 ],
+    "hardness": 14,
     "extend": { "flags": [ "MANUAL" ] },
     "breaks_into": [ { "item": "splinter", "count": [ 7, 9 ] }, { "item": "nail", "charges": [ 5, 10 ] } ]
   },
@@ -36,7 +38,12 @@
       { "item": "splinter", "count": [ 12, 24 ] },
       { "item": "string_36", "count": [ 5, 10 ] }
     ],
-    "requirements": { "install": { "skills": [ [ "mechanics", 3 ], [ "launcher", 1 ] ] }, "removal": { "skills": [ [ "mechanics", 1 ] ] } }
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 3 ], [ "launcher", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 1 ] ] }
+    },
+    "sub_size": [ 5, 4 ],
+    "hardness": 18
   },
   {
     "id": "mounted_huge_crossbow",
@@ -52,6 +59,8 @@
       { "item": "splinter", "count": [ 8, 16 ] },
       { "item": "string_36", "count": [ 3, 6 ] }
     ],
-    "requirements": { "install": { "skills": [ [ "mechanics", 2 ] ] }, "removal": { "skills": [ [ "mechanics", 0 ] ] } }
+    "requirements": { "install": { "skills": [ [ "mechanics", 2 ] ] }, "removal": { "skills": [ [ "mechanics", 0 ] ] } },
+    "sub_size": [ 4, 3 ],
+    "hardness": 16
   }
 ]

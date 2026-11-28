@@ -101,6 +101,7 @@ struct tile_type {
     weighted_int_list<std::vector<int>> fg, bg;
     bool multitile = false;
     bool rotates = false;
+    bool subtile_scale = true;
     bool animated = false;
     int height_3d = 0;
     point offset = point::zero;
@@ -1476,6 +1477,10 @@ class cata_tiles
         // part sprite gets recolored with the part's paint color; nullopt
         // otherwise. Consumed when building tile_render_params.
         std::optional<RGBColor> pending_part_tint_ = std::nullopt;
+        std::optional<double> pending_part_exact_angle_deg_ = std::nullopt;
+        point pending_part_offset_ = point::zero;
+        float pending_part_scale_x_ = 1.0f;
+        float pending_part_scale_y_ = 1.0f;
         // Shape-exact gray overlay applied to the next drawn sprite (overmap ground
         // shown through open air); set by draw_om around the draw call so multitile
         // and fallback sprites inherit it, then cleared.
@@ -1546,6 +1551,31 @@ class cata_tiles
         // for the deferred pass instead of drawing them in place. False during the
         // deferred pass itself so they draw normally.
         bool m_collecting_glide_critters = false;
+
+        // Sub-tile vehicles offset parts by up to +/-0.5 tiles across row boundaries,
+        // so drawing them per row lets the next row's opaque terrain slice the lower half
+        // of north-edge parts. Deferring sub-tile vehicle layers and nearby critters to a
+        // sorted per-z-level pass keeps sprites whole and properly layered.
+        struct deferred_subtile_tile {
+            const tile_render_info *tile = nullptr;
+            lit_level ll = lit_level::BLANK;
+            int height_3d = 0;
+            std::array<bool, 5> invisible = {};
+        };
+        struct deferred_subtile_critter {
+            tripoint_bub_ms pos;
+            lit_level ll = lit_level::BLANK;
+            int height_3d = 0;
+            std::array<bool, 5> invisible = {};
+            float sort_y = 0.0f;
+            bool inside_subtile = false;
+        };
+        std::vector<deferred_subtile_tile> m_deferred_subtile_tiles;
+        std::vector<deferred_subtile_critter> m_deferred_subtile_critters;
+        bool m_deferring_subtile_pass = false;
+
+        bool draw_subtile_vpart_entry( const tile_render_info::sprite::subtile_vpart_entry &entry,
+                                       const tripoint_bub_ms &p, lit_level ll, int &height_3d );
 
         // Scratch render target for the ortho silhouette mask tint path. Sized
         // to fit the largest batched sprite region; reused across tiles/frames.

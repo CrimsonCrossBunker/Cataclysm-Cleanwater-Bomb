@@ -6755,8 +6755,11 @@ static void CheckMessages()
                                 if( curtainpart && curtainpart->part().open && ( dx != 0 || dy != 0 ) ) {
                                     actions.insert( ACTION_CLOSE );
                                 }
-                                const std::optional<vpart_reference> cargopart = vp.cargo();
-                                if( cargopart && ( !cargopart->items().empty() ) ) {
+                                const std::vector<vpart_reference> cargoparts = vp.cargo_parts( true, true );
+                                if( std::any_of( cargoparts.begin(), cargoparts.end(),
+                                []( const vpart_reference & vpr ) {
+                                return !vpr.items().empty();
+                                } ) ) {
                                     actions.insert( ACTION_PICKUP );
                                 }
                             }
