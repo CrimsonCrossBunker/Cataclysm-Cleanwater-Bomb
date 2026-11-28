@@ -40,7 +40,14 @@ int advanced_inv_area::get_item_count() const
     } else if( id == AIM_ALL ) {
         return 0;
     } else if( id == AIM_DRAGGED ) {
-        return can_store_in_vehicle() ? get_vehicle_stack().size() : 0;
+        if( !can_store_in_vehicle() ) {
+            return 0;
+        }
+        int total = 0;
+        for( const int part_idx : vstor_parts ) {
+            total += veh->get_items( veh->part( part_idx ) ).size();
+        }
+        return total;
     } else {
         return get_map().i_at( pos ).size();
     }
@@ -58,12 +65,36 @@ advanced_inv_area::advanced_inv_area( aim_location id, const point &h, tripoint 
 {
 }
 
+static void populate_vehicle_cargo( const map &here, const tripoint_bub_ms &pos,
+                                    vehicle *&veh, int &vstor, std::vector<int> &vstor_parts )
+{
+    veh = nullptr;
+    vstor = -1;
+    vstor_parts.clear();
+    const std::vector<vpart_reference> cargo = here.veh_at( pos ).cargo_parts( true, true );
+    if( cargo.empty() ) {
+        return;
+    }
+    veh = &cargo.front().vehicle();
+    vstor = static_cast<int>( cargo.front().part_index() );
+    if( veh->part( vstor ).is_cleaner_on() ) {
+        return;
+    }
+    vstor_parts.reserve( cargo.size() );
+    for( const vpart_reference &vpr : cargo ) {
+        if( !vpr.part().is_cleaner_on() ) {
+            vstor_parts.push_back( static_cast<int>( vpr.part_index() ) );
+        }
+    }
+}
+
 void advanced_inv_area::init()
 {
     avatar &player_character = get_avatar();
     pos = player_character.pos_bub() + off;
     veh = nullptr;
     vstor = -1;
+    vstor_parts.clear();
     // must update in main function
     volume = 0_ml;
     volume_veh = 0_ml;
@@ -86,9 +117,8 @@ void advanced_inv_area::init()
             off = player_character.grab_point;
             // Reset position because offset changed
             pos = player_character.pos_bub() + off;
-            if( const std::optional<vpart_reference> vp = here.veh_at( pos ).cargo() ) {
-                veh = &vp->vehicle();
-                vstor = vp->part_index();
+            populate_vehicle_cargo( here, pos, veh, vstor, vstor_parts );
+            if( veh != nullptr && vstor >= 0 ) {
                 desc[0] = veh->name;
                 canputitemsloc = true;
                 max_size = max_item_in_square;
@@ -120,16 +150,13 @@ void advanced_inv_area::init()
         case AIM_NORTHWEST:
         case AIM_NORTH:
         case AIM_NORTHEAST: {
-            const std::optional<vpart_reference> vp = here.veh_at( pos ).cargo();
-            if( vp ) {
-                veh = &vp->vehicle();
-                vstor = vp->part_index();
-            }
+            populate_vehicle_cargo( here, pos, veh, vstor, vstor_parts );
             canputitemsloc = can_store_in_vehicle() || here.can_put_items_ter_furn( pos );
             max_size = max_item_in_square;
             if( can_store_in_vehicle() ) {
-                std::string part_name = vp->info().name();
-                desc[1] = vp->get_label().value_or( part_name );
+                const vpart_reference vp( *veh, vstor );
+                std::string part_name = vp.info().name();
+                desc[1] = vp.get_label().value_or( part_name );
             }
             // get graffiti or terrain name
             desc[0] = here.has_graffiti_at( pos ) ?
@@ -231,13 +258,7 @@ void advanced_inv_area::set_container_position()
     // update the absolute position
     pos = player_character.pos_bub() + off;
     // update vehicle information
-    if( const std::optional<vpart_reference> vp = get_map().veh_at( pos ).cargo() ) {
-        veh = &vp->vehicle();
-        vstor = vp->part_index();
-    } else {
-        veh = nullptr;
-        vstor = -1;
-    }
+    populate_vehicle_cargo( get_map(), pos, veh, vstor, vstor_parts );
 }
 
 aim_location advanced_inv_area::offset_to_location() const

@@ -875,7 +875,7 @@
         "y": 0,
         "parts": [
           "hdframe#horizontal_2",
-          "hdhalfboard#horizontal",
+          "hdhood#horizontal",
           "plating_military",
           "diesel_engine_v8",
           "alternator_truck",
@@ -1013,7 +1013,7 @@
         "y": 0,
         "parts": [
           "hdframe#horizontal_2",
-          "hdhalfboard#horizontal",
+          "hdhood#horizontal",
           "plating_military",
           "diesel_engine_v8",
           "alternator_truck",
@@ -1150,7 +1150,7 @@
         "y": 0,
         "parts": [
           "hdframe#horizontal_2",
-          "hdhalfboard#horizontal",
+          "hdhood#horizontal",
           "plating_military",
           "diesel_engine_v8",
           "alternator_truck",
@@ -1291,7 +1291,7 @@
         "y": 0,
         "parts": [
           "hdframe#vertical_2",
-          "hdhalfboard#horizontal_front",
+          "hdhood#horizontal_front",
           "plating_military",
           "diesel_engine_v8",
           "alternator_truck",
@@ -1461,7 +1461,7 @@
         "y": 0,
         "parts": [
           "hdframe#vertical_2",
-          "hdhalfboard#horizontal_front",
+          "hdhood#horizontal_front",
           "plating_military",
           "diesel_engine_v8",
           "alternator_truck",

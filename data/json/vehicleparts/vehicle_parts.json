@@ -321,6 +321,7 @@
     "categories": [ "hull", "passengers" ],
     "color": "white",
     "durability": 400,
+    "size": "40 L",
     "item": "sheet_metal",
     "location": "center",
     "//": ".5 m square sheet of metal, likely affixed with bolts in places, assume 200 cm weld to install and 50 cm weld to repair",
@@ -337,7 +338,7 @@
       },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "6 m", "using": [ [ "repair_welding_lc_steel", 5 ] ] }
     },
-    "flags": [ "AISLE", "BOARDABLE" ],
+    "flags": [ "AISLE", "BOARDABLE", "CARGO", "CARGO_PASSABLE" ],
     "breaks_into": [
       { "item": "sheet_metal_small", "count": [ 0, 1 ] },
       { "item": "lc_steel_lump", "count": [ 1, 2 ] },
@@ -380,7 +381,7 @@
     "folded_volume": "12500 ml",
     "item": "foldwoodframe",
     "breaks_into": [ { "item": "splinter", "count": [ 7, 11 ] }, { "item": "nail", "charges": [ 5, 10 ] } ],
-    "flags": [ "AISLE", "BOARDABLE" ],
+    "flags": [ "AISLE", "BOARDABLE", "CARGO", "CARGO_PASSABLE" ],
     "sub_size": [ 5, 4 ],
     "hardness": 8
   },

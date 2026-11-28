@@ -193,14 +193,14 @@ auto simple_point_hash = []( const point &p )
     return p.x + p.y * 65536;
 };
 
-bool has_direct_vpart_tile( const tileset &ts, const std::string &prefix_id,
-                            const std::string &variant )
+const tile_type *find_direct_vpart_tile( const tileset &ts, const std::string &prefix_id,
+        const std::string &variant )
 {
     if( !variant.empty() ) {
         std::string chunk = variant;
         while( !chunk.empty() ) {
-            if( ts.find_tile_type( prefix_id + "_" + chunk ) != nullptr ) {
-                return true;
+            if( const tile_type *tt = ts.find_tile_type( prefix_id + "_" + chunk ) ) {
+                return tt;
             }
             const size_t underscore = chunk.rfind( '_' );
             if( underscore == std::string::npos ) {
@@ -209,7 +209,22 @@ bool has_direct_vpart_tile( const tileset &ts, const std::string &prefix_id,
             chunk.erase( underscore );
         }
     }
-    return ts.find_tile_type( prefix_id ) != nullptr;
+    return ts.find_tile_type( prefix_id );
+}
+
+bool has_direct_vpart_tile( const tileset &ts, const std::string &prefix_id,
+                            const std::string &variant )
+{
+    return find_direct_vpart_tile( ts, prefix_id, variant ) != nullptr;
+}
+
+bool has_direct_vpart_subtile( const tileset &ts, const std::string &prefix_id,
+                               const std::string &variant, const std::string &subtile_name )
+{
+    const tile_type *tt = find_direct_vpart_tile( ts, prefix_id, variant );
+    return tt != nullptr &&
+           std::find( tt->available_subtiles.begin(), tt->available_subtiles.end(),
+                      subtile_name ) != tt->available_subtiles.end();
 }
 
 } // namespace
@@ -1422,9 +1437,12 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                                 continue;
                                             }
                                             const vpart_info &cvpi = cvp.info();
-                                            if( !cvpi.has_flag( VPFLAG_OPENABLE ) &&
-                                                ( cvpi.has_flag( "HALF_BOARD" ) ||
-                                                  cvpi.has_flag( "FULL_BOARD" ) ) ) {
+                                            if( !cvpi.has_flag( VPFLAG_OPENABLE ) ) {
+                                                if( cvpi.has_flag( "HALF_BOARD" ) ||
+                                                    cvpi.has_flag( "FULL_BOARD" ) ) {
+                                                    return true;
+                                                }
+                                            } else if( cvpi.has_flag( "ENGINE_HOOD" ) && !cvp.open ) {
                                                 return true;
                                             }
                                         }
@@ -1451,6 +1469,14 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                         if( ( svpi.location == vpart_location_engine_block ||
                                               svpi.has_flag( "ALTERNATOR" ) ) &&
                                             is_covered_by_hood( svp.mount ) ) {
+                                            continue;
+                                        }
+                                        if( svpi.has_flag( "ENGINE_HOOD" ) && svp.open &&
+                                            ( !tileset_ptr ||
+                                              ( !has_direct_vpart_subtile( *tileset_ptr,
+                                                                           "vp_subtile_" + svpi.id.str(), svp.variant, "open" ) &&
+                                                !has_direct_vpart_subtile( *tileset_ptr,
+                                                                           "vp_" + svpi.id.str(), svp.variant, "open" ) ) ) ) {
                                             continue;
                                         }
                                         const bool part_is_roof =

@@ -361,8 +361,8 @@ void for_each_item_at( map &here, const tripoint_bub_ms &p, const Character *ch,
             }
         }
     }
-    if( const std::optional<vpart_reference> vp = here.veh_at( p ).cargo() ) {
-        for( const item &it : vp->items() ) {
+    for( const vpart_reference &vp : here.veh_at( p ).cargo_parts( true, false ) ) {
+        for( const item &it : vp.items() ) {
             if( filter_vehicle_ownership && ch && !it.is_owned_by( *ch, true ) ) {
                 continue;
             }
@@ -5374,7 +5374,7 @@ bool map::is_roofed( const tripoint_bub_ms &p ) const
 
         // Fast path: use floor_cache when it exists and is clean
         if( cache && !cache->floor_cache_dirty ) {
-            if( cache->floor_cache[p.x()][p.y()] ) {
+            if( cache->floor_cache[p.x()][p.y()] || cache->vehicle_roof_cache[p.x()][p.y()] ) {
                 return true;
             }
             // Transparent floors (glass, ramps, grates) are marked as "no floor"
@@ -7035,7 +7035,7 @@ bool map::open_door( Creature const &u, const tripoint_bub_ms &p, const bool ins
         const bool creature_outside = !creature_veh.has_value() ||
                                       &creature_veh->vehicle() != &veh_at( p )->vehicle();
 
-        const int openable = vp->vehicle().next_part_to_open( vp->part_index(), creature_outside );
+        const int openable = vp->vehicle().next_part_to_open( vp->part_index(), creature_outside, false );
         if( openable >= 0 ) {
             if( !check_only ) {
                 if( ( u.is_npc() || u.is_avatar() ) &&
@@ -8887,8 +8887,8 @@ std::list<item> map::use_amount_square( const tripoint_bub_ms &p, const itype_id
         return ret;
     }
 
-    if( const std::optional<vpart_reference> ovp = veh_at( p ).cargo() ) {
-        std::list<item> tmp = use_amount_stack( ovp->items(), type, quantity, filter );
+    for( const vpart_reference &ovp : veh_at( p ).cargo_parts( true, false ) ) {
+        std::list<item> tmp = use_amount_stack( ovp.items(), type, quantity, filter );
         ret.splice( ret.end(), tmp );
     }
     std::list<item> tmp = use_amount_stack( i_at( p ), type, quantity, filter );
@@ -8900,10 +8900,10 @@ std::list<item_location> map::items_with( const tripoint_bub_ms &p,
         const std::function<bool( const item & )> &filter )
 {
     std::list<item_location> ret;
-    if( const std::optional<vpart_reference> vp = veh_at( p ).cargo() ) {
-        for( item &it : vp->items() ) {
+    for( const vpart_reference &vp : veh_at( p ).cargo_parts( true, false ) ) {
+        for( item &it : vp.items() ) {
             if( filter( it ) ) {
-                ret.emplace_back( vehicle_cursor( vp->vehicle(), vp->part_index() ), &it );
+                ret.emplace_back( vehicle_cursor( vp.vehicle(), vp.part_index() ), &it );
             }
         }
     }
@@ -13471,7 +13471,11 @@ static void vehicle_caching_internal( level_cache &zch, const vpart_reference &v
     }
 
     if( vp.has_feature( VPFLAG_BOARDABLE ) && !vp.part().is_broken() ) {
-        floor_cache[part_pos.x()][part_pos.y()] = true;
+        if( v.is_subtile() ) {
+            zch.vehicle_roof_cache[part_pos.x()][part_pos.y()] = true;
+        } else {
+            floor_cache[part_pos.x()][part_pos.y()] = true;
+        }
     }
 }
 
@@ -13490,7 +13494,12 @@ void map::do_vehicle_caching( int z )
             vehicle_caching_internal( get_cache( part_pos.z() ), vp, *v, part_pos );
             if( part_pos.z() < max_z() &&
                 ( vp.has_feature( VPFLAG_ROOF ) || vp.has_feature( VPFLAG_OPAQUE ) ) ) {
-                get_cache( part_pos.z() + 1 ).floor_cache[part_pos.x()][part_pos.y()] = true;
+                level_cache &above = get_cache( part_pos.z() + 1 );
+                if( v->is_subtile() ) {
+                    above.vehicle_roof_cache[part_pos.x()][part_pos.y()] = true;
+                } else {
+                    above.floor_cache[part_pos.x()][part_pos.y()] = true;
+                }
             }
         }
     }
@@ -13536,6 +13545,9 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     vehicle_overlay_versions_.resize( vehicle_index );
     // Reapply overlays after all terrain caches, including floors on adjacent levels.
     if( vehicle_overlay_dirty ) {
+        for( int z = minz; z <= maxz; z++ ) {
+            get_cache( z ).vehicle_roof_cache.fill( false );
+        }
         for( int z = minz; z <= maxz; z++ ) {
             do_vehicle_caching( z );
         }

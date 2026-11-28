@@ -315,12 +315,15 @@ vpart_display vehicle::get_display_of_world_tile( const tripoint_rel_ms &precalc
  */
 int vehicle::print_part_list( const catacurses::window &win, int y1,
                               const int max_y, int width,
-                              int p, int hl /*= -1*/, bool detail, bool include_fakes ) const
+                              int p, int hl /*= -1*/, bool detail, bool include_fakes,
+                              bool world_tile ) const
 {
     if( p < 0 || p >= static_cast<int>( parts.size() ) ) {
         return y1;
     }
-    std::vector<int> pl = this->parts_at_relative( parts[p].mount_pos3(), true, include_fakes );
+    std::vector<int> pl = ( world_tile && is_subtile() )
+                          ? this->parts_at_world_tile( parts[p].precalc[0] )
+                          : this->parts_at_relative( parts[p].mount_pos3(), true, include_fakes );
     int y = y1;
     for( size_t i = 0; i < pl.size(); i++ ) {
         const vehicle_part &vp = parts[pl[i]];

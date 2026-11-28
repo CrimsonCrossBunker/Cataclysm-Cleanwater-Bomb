@@ -472,6 +472,11 @@
     "type": "json_flag"
   },
   {
+    "id": "ENGINE_HOOD",
+    "type": "json_flag",
+    "info": "Covers an engine compartment and can be opened or closed to inspect and work on the engine underneath."
+  },
+  {
     "id": "FRIDGE",
     "type": "json_flag"
   },

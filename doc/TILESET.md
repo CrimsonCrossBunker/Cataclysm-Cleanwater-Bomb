@@ -841,7 +841,10 @@ If your tileset already draws a sprite pre-proportioned inside its tile canvas f
 #### 4. Z-Order, Occlusion & Tinting
 * Parts with `location->z_order < 0` (`on_ground`, etc.) are skipped on the vehicle sprite pass.
 * Parts render in ascending `(location->z_order, screen_y)` order; `LIGHT` parts render at `>= 6`.
-* Engine blocks and alternators are hidden when covered by a closed non-openable `HALF_BOARD`/`FULL_BOARD` hood at the same mount.
+* Engine blocks and alternators are hidden when covered at the same mount by either a closed non-openable `HALF_BOARD`/`FULL_BOARD` part or a closed `ENGINE_HOOD` part (`hood`, `hdhood`, `xlhood`).
+* **Trunk lids & Engine hoods (`door_trunk`, `hddoor_trunk`, `hatchback_trunk`, `hood`, `hdhood`, `xlhood`)**:
+  * **Trunk lids** already exist in vanilla (`vp_door_trunk`, `vp_hddoor_trunk`, `vp_hatchback_trunk`) and support `"multitile": true` with an `"open"` sub-tile in `additional_tiles`.
+  * **Engine hoods** (`vp_hood`, `vp_hdhood`, `vp_xlhood`, or sub-tile overrides `vp_subtile_hood` / `vp_subtile_hdhood` / `vp_subtile_xlhood`, with variant lookup e.g. `_horizontal_front` / `_cover`) fall back via `looks_like` (`halfboard` / `hdhalfboard` / `xlhalfboard`) when closed. When opened (`open`), if a tileset defines an `"open"` sub-tile on `vp_subtile_<id>` or `vp_<id>`, that open-hood sprite renders over the exposed `engine_block` and `ALTERNATOR`; otherwise the closed fallback sprite is omitted while open so the engine compartment underneath is cleanly visible.
 * Parts with `z_order >= on_roof` (such as roofs and roof-mounted racks/rotors) are hidden when the player is boarded inside the vehicle.
 * `default_tint_color` and instance vehicle paint tint are applied automatically when `VEHICLE_PART_COLOR` is enabled.
 

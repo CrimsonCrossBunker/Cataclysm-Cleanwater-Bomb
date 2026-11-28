@@ -22,7 +22,7 @@ static std::pair<int64_t, int64_t> openable_vehicle_door( map &here,
 {
     if( const optional_vpart_position vp = here.veh_at( target ) ) {
         vehicle &veh = vp->vehicle();
-        const int part = veh.next_part_to_open( vp->part_index(), true );
+        const int part = veh.next_part_to_open( vp->part_index(), true, false );
         return { veh.uid().get_value(), part < 0 ? 0 : veh.part( part ).get_base().uid().get_value() };
     }
     return {};

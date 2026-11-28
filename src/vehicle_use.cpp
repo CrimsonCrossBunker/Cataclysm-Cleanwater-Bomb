@@ -2389,11 +2389,13 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     add_vehicle_tool_use_menu( menu, *here, *this, here->get_abs( vppos ) );
     add_vehicle_appliance_menu( menu, *here, *this, here->get_abs( vppos ) );
 
-    const std::optional<vpart_reference> vp_cargo = vp.cargo();
+    const std::vector<vpart_reference> vp_cargo = vp.cargo_parts( true, true );
     // Whether vehicle part (cargo) contains items, and whether map tile (ground) has items
     if( with_pickup && (
             here->has_items( vp.pos_bub( *here ) ) ||
-            ( vp_cargo && !vp_cargo->items().empty() ) ) ) {
+    std::any_of( vp_cargo.begin(), vp_cargo.end(), []( const vpart_reference & vpr ) {
+    return !vpr.items().empty();
+    } ) ) ) {
         menu.add( _( "Get items" ) )
         .hotkey( "GET_ITEMS" )
         .skip_locked_check()

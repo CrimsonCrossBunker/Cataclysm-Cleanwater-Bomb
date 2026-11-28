@@ -56,7 +56,7 @@
       {
         "x": 12,
         "y": 0,
-        "parts": [ "hdframe#cover", "halfboard#cover", "engine_v6", "alternator_truck", "battery_car" ]
+        "parts": [ "hdframe#cover", "hood#cover", "engine_v6", "alternator_truck", "battery_car" ]
       },
       { "x": 12, "y": 5, "parts": [ "hdframe#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 7, "parts": [ "frame_narrow#vertical", "halfboard#ne", "headlight" ] },
@@ -208,7 +208,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_commercial" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_truck", "halfboard#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_truck", "hood#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -306,7 +306,7 @@
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_commercial" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical", "shifter_console" ] },
       { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 18, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_truck", "halfboard#horizontal_front" ] }
+      { "x": 18, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_truck", "hood#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -399,7 +399,7 @@
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_commercial" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical", "shifter_console" ] },
       { "x": 12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 18, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_truck", "halfboard#horizontal_front" ] }
+      { "x": 18, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_truck", "hood#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 90, "item_groups": [ "car_misc" ] },
@@ -481,7 +481,7 @@
         "y": 0,
         "parts": [
           "hdframe#cover",
-          "halfboard#horizontal_front",
+          "hood#horizontal_front",
           "diesel_engine_v8",
           "alternator_truck",
           "battery_car"
@@ -615,7 +615,7 @@
         "y": 0,
         "parts": [
           "hdframe#cover",
-          "halfboard#horizontal_front",
+          "hood#horizontal_front",
           "diesel_engine_v8",
           "alternator_truck",
           "battery_car"
@@ -876,7 +876,7 @@
         "y": 0,
         "parts": [
           "hdframe#horizontal_front",
-          "hdhalfboard#horizontal_front",
+          "hdhood#horizontal_front",
           "diesel_engine_v12",
           "alternator_truck",
           "battery_car"
@@ -1015,7 +1015,7 @@
       { "x": -12, "y": 0, "parts": [ "frame_narrow#vertical" ] },
       { "x": -6, "y": 0, "parts": [ "frame_narrow#vertical", "shell_sedan" ] },
       { "x": 6, "y": 0, "parts": [ "frame_narrow#vertical" ] },
-      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_truck", "halfboard#horizontal_front" ] }
+      { "x": 12, "y": 0, "parts": [ "frame#horizontal_front", "engine_v6", "alternator_truck", "hood#horizontal_front" ] }
     ],
     "items": [
       { "x": 0, "y": -4, "chance": 25, "items": [ "file" ] },
@@ -1106,7 +1106,7 @@
       {
         "x": 12,
         "y": 0,
-        "parts": [ "frame#horizontal_front", "halfboard#cover", "engine_v8", "alternator_truck", "battery_car" ]
+        "parts": [ "frame#horizontal_front", "hood#cover", "engine_v8", "alternator_truck", "battery_car" ]
       },
       { "x": 12, "y": 5, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 7, "parts": [ "frame_narrow#vertical", "halfboard#ne", "headlight" ] },
@@ -1211,7 +1211,7 @@
       {
         "x": 12,
         "y": 0,
-        "parts": [ "frame#horizontal_front", "halfboard#cover", "engine_v8", "alternator_truck", "battery_car" ]
+        "parts": [ "frame#horizontal_front", "hood#cover", "engine_v8", "alternator_truck", "battery_car" ]
       },
       { "x": 12, "y": 5, "parts": [ "frame#horizontal_front", "halfboard#cover_right" ] },
       { "x": 12, "y": 7, "parts": [ "frame_narrow#vertical", "halfboard#ne", "headlight" ] },

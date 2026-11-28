@@ -128,7 +128,8 @@ For example the tileset lookups for `seat_leather#windshield_left` are as follow
 Modern stock vehicles set `"grid_scale": 8` on the `"type": "vehicle"` prototype, placing part `(x, y)` mounts in `1/8`-tile sub-units (where `8` units = `1` full world tile) around the `(0, 0)` local origin.
 * On `"type": "vehicle_part"`, `"sub_size": [ length, width ]` defines the unrotated footprint in `1/8`-tile units (`length` along local `+x` front-back, `width` along local `+y` left-right). Elongated parts swap `[x, y]` for `vertical`/`left`/`right`/`wheel_left`/`wheel_right`/`*_edge` variants, and non-boardable obstacle walls mounted on `[6, 1]`/`[1, 6]` `frame_narrow` sills clamp thickness to `<= 2`.
 * `"VEHICLE_SHELL"` parts (in `data/json/vehicleparts/shells.json`) provide aerodynamic shell drag/armor without rendering a fallback `roof` block unless a tileset explicitly defines `vp_subtile_<id>` or `vp_<id>`.
-* For sprite authoring conventions (`vp_subtile_<id>`, North-up `0°` facing, `fg`/`bg` continuous rotation, and `"subtile_scale": false` for pre-proportioned custom art), see [TILESET.md](../TILESET.md#sub-tile-vehicles-18-grid).
+* Openable engine covers (`hood`, `hdhood`, `xlhood` flagged `ENGINE_HOOD` + `OPENABLE`) hide `engine_block` and `ALTERNATOR` sprites at the same mount while closed and reveal them when opened (drawing the `"open"` additional tile when provided by a tileset, or omitting the closed fallback sprite when none is defined). Trunk lids use existing vanilla `door_trunk`, `hddoor_trunk`, or `hatchback_trunk` parts.
+* For sprite authoring conventions (`vp_subtile_<id>`, North-up `0°` facing, `fg`/`bg` continuous rotation, `"open"` hood/trunk sub-tiles, and `"subtile_scale": false` for pre-proportioned custom art), see [TILESET.md](../TILESET.md#sub-tile-vehicles-18-grid).
 
 ### Items list
 The items list contains an arbitrary number of lines. Each line is of the form:

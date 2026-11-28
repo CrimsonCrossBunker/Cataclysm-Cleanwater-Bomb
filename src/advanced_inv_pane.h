@@ -4,7 +4,9 @@
 
 #include <array>
 #include <functional>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "advanced_inv_area.h"
@@ -36,6 +38,7 @@ enum advanced_inv_sortby {
 /**
  * Displayed pane, what is shown on the screen.
  */
+class vehicle;
 class advanced_inventory_pane
 {
     private:
@@ -87,7 +90,8 @@ class advanced_inventory_pane
         */
         int other_cont = -1;
 
-        void add_items_from_area( advanced_inv_area &square, bool vehicle_override = false );
+        void add_items_from_area( advanced_inv_area &square, bool vehicle_override = false,
+                                  std::set<std::pair<const vehicle *, int>> *seen_veh_parts = nullptr );
         /**
          * Makes sure the @ref index is valid (if possible).
          */

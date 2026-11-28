@@ -81,6 +81,17 @@
     "extend": { "flags": [ "HALF_BOARD" ] }
   },
   {
+    "id": "hood",
+    "copy-from": "halfboard",
+    "type": "vehicle_part",
+    "looks_like": "halfboard",
+    "name": { "str": "hood" },
+    "description": "A hinged metal engine cover.  Open it to inspect and expose the engine bay, or close it to shield the engine and keep aerodynamics streamlined.",
+    "sub_size": [ 5, 5 ],
+    "hardness": 20,
+    "extend": { "flags": [ "OPENABLE", "ENGINE_HOOD", "SIMPLE_PART" ] }
+  },
+  {
     "abstract": "clothboard_abstract",
     "copy-from": "base_board_abstract",
     "type": "vehicle_part",
@@ -205,6 +216,17 @@
     "extend": { "flags": [ "HALF_BOARD" ] }
   },
   {
+    "id": "hdhood",
+    "copy-from": "hdhalfboard",
+    "type": "vehicle_part",
+    "looks_like": "hdhalfboard",
+    "name": { "str": "heavy-duty hood" },
+    "description": "A heavy-duty hinged steel engine cover.  Open it to inspect and expose the engine bay, or close it to armor the engine compartment.",
+    "sub_size": [ 5, 5 ],
+    "hardness": 44,
+    "extend": { "flags": [ "OPENABLE", "ENGINE_HOOD", "SIMPLE_PART" ] }
+  },
+  {
     "abstract": "woodboard_abstract",
     "type": "vehicle_part",
     "copy-from": "base_board_abstract",
@@ -267,6 +289,17 @@
     "hardness": 14,
     "extend": { "flags": [ "HALF_BOARD" ] },
     "damage_reduction": { "all": 5 }
+  },
+  {
+    "id": "xlhood",
+    "copy-from": "xlhalfboard",
+    "type": "vehicle_part",
+    "looks_like": "xlhalfboard",
+    "name": { "str": "extra-light hood" },
+    "description": "A hinged lightweight engine cover.  Open it to inspect and expose the engine bay, or close it to shield the engine and keep aerodynamics streamlined.",
+    "sub_size": [ 4, 4 ],
+    "hardness": 14,
+    "extend": { "flags": [ "OPENABLE", "ENGINE_HOOD", "SIMPLE_PART" ] }
   },
   {
     "id": "counterweight",

@@ -2622,12 +2622,12 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
             for( int column = 0; column < OMAPX; ++column ) {
                 const unsigned char cell = footprint[row * OMAPX + column];
                 const tripoint_om_omt position( column, row, 0 );
-                if( !cell ) {
+                const north_america::wide_bridge_cell &bridge = bridges[row * OMAPX + column];
+                if( !cell && !bridge.present ) {
                     continue;
                 }
-                const bool vertical = cell % 2 != 0;
+                const bool vertical = cell ? ( cell % 2 != 0 ) : bridge.vertical;
                 const om_direction::type axis = vertical ? om_direction::type::north : om_direction::type::east;
-                const north_america::wide_bridge_cell &bridge = bridges[row * OMAPX + column];
                 if( bridge.present && !overmap_special_placements.count( position ) ) {
                     const om_direction::type forward = bridge.vertical ? om_direction::type::south :
                                                        om_direction::type::east;

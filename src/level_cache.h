@@ -50,6 +50,9 @@ struct level_cache_default_zero_members {
     // false otherwise
     // i.e. true == has floor
     cata::mdarray<bool, point_bub_ms> floor_cache;
+    // true when sub-tile vehicle below has "ROOF" or "OPAQUE" part (shelters from rain/sunlight
+    // without blocking lower-z terrain rendering or downward sight over open air)
+    cata::mdarray<bool, point_bub_ms> vehicle_roof_cache;
 
     // stores cached transparency of the tiles
     // units: "transparency" (see LIGHT_TRANSPARENCY_OPEN_AIR)

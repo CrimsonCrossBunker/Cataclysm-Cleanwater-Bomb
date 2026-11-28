@@ -708,7 +708,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
     bool outside_vehicle = veh0 == nullptr || veh0 != veh1 ||
                            ( veh0->is_subtile() && veh0->find_passenger_part( you ) < 0 );
     if( veh1 != nullptr ) {
-        dpart = veh1->next_part_to_open( vp1->part_index(), outside_vehicle );
+        dpart = veh1->next_part_to_open( vp1->part_index(), outside_vehicle, false );
         veh_closed_door = dpart >= 0 && !veh1->part( dpart ).open;
     }
 
@@ -1019,7 +1019,7 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
     if( door_vp ) {
         vehicle &door_vehicle = door_vp->vehicle();
         const bool outside = !current_vp || &current_vp->vehicle() != &door_vehicle;
-        const int door = door_vehicle.next_part_to_open( door_vp->part_index(), outside );
+        const int door = door_vehicle.next_part_to_open( door_vp->part_index(), outside, false );
         if( door >= 0 && !door_vehicle.part( door ).open ) {
             if( choices && door_vehicle.has_owner() && !door_vehicle.is_owned_by( you ) &&
                 !choices->permits_theft( door_vehicle ) ) {
@@ -1034,7 +1034,8 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
             if( !refreshed || refreshed->vehicle().uid().get_value() != door_vehicle_id ) {
                 return false;
             }
-            const int current_door = refreshed->vehicle().next_part_to_open( refreshed->part_index(), outside );
+            const int current_door = refreshed->vehicle().next_part_to_open( refreshed->part_index(), outside,
+                                     false );
             if( current_door < 0 ) {
                 return false;
             }

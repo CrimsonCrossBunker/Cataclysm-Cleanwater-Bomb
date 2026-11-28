@@ -604,7 +604,8 @@ void vehicle::init_state( map &placed_on, int init_veh_fuel, veh_spawn_status in
             rng_fuel_amount( pt, pt.ammo_current() );
         }
 
-        if( vp.has_feature( "OPENABLE" ) && !vp.has_feature( "CABIN_WINDOW" ) ) {
+        if( vp.has_feature( "OPENABLE" ) && !vp.has_feature( "CABIN_WINDOW" ) &&
+            !vp.has_feature( "ENGINE_HOOD" ) ) {
             if( !pt.open && one_in( 4 ) ) {
                 open( placed_on, p );
             }
@@ -3164,7 +3165,7 @@ std::optional<vpart_reference> vpart_position::obstacle_at_part() const
                 continue;
             }
             if( vp.info().has_flag( VPFLAG_OPENABLE ) ) {
-                if( vp.open ) {
+                if( !vp.info().has_flag( "ENGINE_HOOD" ) && vp.open ) {
                     continue;
                 }
                 if( !vp.info().has_flag( "CABIN_WINDOW" ) ) {
@@ -3316,7 +3317,45 @@ std::map<item, int> vpart_position::get_tools( map &here ) const
 
 std::optional<vpart_reference> vpart_position::cargo() const
 {
-    return part_with_feature( VPFLAG_CARGO, true );
+    const std::vector<vpart_reference> parts = cargo_parts( true, true );
+    if( parts.empty() ) {
+        return std::nullopt;
+    }
+    return parts.front();
+}
+
+std::vector<vpart_reference> vpart_position::cargo_parts( const bool include_cleaner,
+        const bool allow_open_door_forward ) const
+{
+    std::vector<vpart_reference> res;
+    ::vehicle &veh = this->vehicle();
+    if( veh.is_subtile() ) {
+        for( const int idx : veh.cargo_parts_at_world_tile( veh.part( part_index() ).precalc[0],
+                include_cleaner, allow_open_door_forward ) ) {
+            res.emplace_back( veh, idx );
+        }
+        return res;
+    }
+    std::vector<int> indices;
+    const int direct = veh.part_with_feature( part_index(), VPFLAG_CARGO, true, false );
+    if( direct >= 0 ) {
+        indices.push_back( direct );
+    }
+    for( const int idx : veh.parts_at_relative( mount_pos3(), true, false ) ) {
+        const vehicle_part &vp = veh.part( idx );
+        if( vp.removed || vp.is_fake || vp.is_broken() || !vp.info().has_flag( VPFLAG_CARGO ) ) {
+            continue;
+        }
+        if( std::find( indices.begin(), indices.end(), idx ) == indices.end() ) {
+            indices.push_back( idx );
+        }
+    }
+    for( const int idx : indices ) {
+        if( include_cleaner || !veh.part( idx ).is_cleaner_on() ) {
+            res.emplace_back( veh, idx );
+        }
+    }
+    return res;
 }
 
 std::optional<vpart_reference> vpart_position::part_with_feature( const std::string &f,
@@ -3417,6 +3456,14 @@ std::optional<vpart_reference> optional_vpart_position::part_with_feature( const
 std::optional<vpart_reference> optional_vpart_position::cargo() const
 {
     return has_value() ? value().cargo() : std::nullopt;
+}
+
+std::vector<vpart_reference> optional_vpart_position::cargo_parts( const bool include_cleaner,
+        const bool allow_open_door_forward ) const
+{
+    return has_value()
+           ? value().cargo_parts( include_cleaner, allow_open_door_forward )
+           : std::vector<vpart_reference>();
 }
 
 std::optional<vpart_reference> optional_vpart_position::avail_part_with_feature(
@@ -3672,7 +3719,7 @@ void vpart_position::set_label( const std::string &text ) const
     }
 }
 
-int vehicle::next_part_to_close( int p, bool outside ) const
+int vehicle::next_part_to_close( int p, bool outside, bool include_hood ) const
 {
     const std::vector<int> parts_here = is_subtile()
                                         ? parts_at_world_tile( parts[p].precalc[0] )
@@ -3685,6 +3732,7 @@ int vehicle::next_part_to_close( int p, bool outside ) const
         const vehicle_part &vp = part( *part_it );
         const vpart_info &vpi = vp.info();
         if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) &&
+            ( include_hood || !vpi.has_flag( "ENGINE_HOOD" ) ) &&
             vp.is_available() && vp.open == 1
             && ( !outside || !vpi.has_flag( "OPENCLOSE_INSIDE" ) ) ) {
             return *part_it;
@@ -3693,7 +3741,7 @@ int vehicle::next_part_to_close( int p, bool outside ) const
     return -1;
 }
 
-int vehicle::next_part_to_open( int p, bool outside ) const
+int vehicle::next_part_to_open( int p, bool outside, bool include_hood ) const
 {
     const bool has_lock = part_has_lock( p );
     // We want forwards, since we open the outermost thing first (curtains), and then the innermost thing (door)
@@ -3704,6 +3752,7 @@ int vehicle::next_part_to_open( int p, bool outside ) const
         const vehicle_part &vp = part( elem );
         const vpart_info &vpi = vp.info();
         if( vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) &&
+            ( include_hood || !vpi.has_flag( "ENGINE_HOOD" ) ) &&
             vp.is_available() && vp.open == 0 &&
             !( vp.locked && has_lock ) &&
             ( !outside || !vpi.has_flag( "OPENCLOSE_INSIDE" ) ) ) {
@@ -4628,6 +4677,97 @@ const std::vector<int> &vehicle::parts_at_world_tile( const tripoint_rel_ms &pre
     return it != world_tile_parts.end() ? it->second : empty;
 }
 
+static int cargo_priority_tier( const vehicle_part &vp )
+{
+    const vpart_info &vpi = vp.info();
+    if( vpi.has_flag( "DOOR" ) || vpi.has_flag( "BOARD_INTERNAL" ) ) {
+        return 1;
+    }
+    if( ( vpi.has_flag( VPFLAG_AISLE ) && !vpi.has_flag( "LOCKABLE_CARGO" ) ) ||
+        vpi.has_flag( "PROTRUSION" ) ) {
+        return 2;
+    }
+    if( vpi.has_flag( "SEAT" ) || vpi.has_flag( "BED" ) ) {
+        return 3;
+    }
+    return 4;
+}
+
+std::vector<int> vehicle::cargo_parts_at_world_tile( const tripoint_rel_ms &precalc_pos,
+        const bool include_cleaner, const bool allow_open_door_forward ) const
+{
+    std::vector<int> result;
+    const auto collect = [&]( const std::vector<int> &candidates, const int min_tier ) {
+        for( const int idx : candidates ) {
+            if( idx < 0 || idx >= static_cast<int>( parts.size() ) ) {
+                continue;
+            }
+            const vehicle_part &vp = parts[idx];
+            if( vp.removed || vp.is_fake || vp.is_broken() ||
+                !vp.info().has_flag( VPFLAG_CARGO ) ) {
+                continue;
+            }
+            if( !include_cleaner && vp.is_cleaner_on() ) {
+                continue;
+            }
+            if( cargo_priority_tier( vp ) < min_tier ) {
+                continue;
+            }
+            if( std::find( result.begin(), result.end(), idx ) == result.end() ) {
+                result.push_back( idx );
+            }
+        }
+    };
+
+    collect( parts_at_world_tile( precalc_pos ), 0 );
+
+    // On sub-tile vehicles, an open (or smashed) exterior trunk tailgate often
+    // occupies a rear overhang world tile one square behind the trunk itself.
+    if( result.empty() && allow_open_door_forward && is_subtile() ) {
+        for( const int idx : parts_at_world_tile( precalc_pos ) ) {
+            const vehicle_part &door_vp = parts[idx];
+            if( door_vp.removed || door_vp.is_fake ||
+                ( !door_vp.is_broken() && door_vp.open == 0 ) ) {
+                continue;
+            }
+            const vpart_info &dvpi = door_vp.info();
+            if( !dvpi.has_flag( "DOOR" ) || dvpi.has_flag( "CABIN_WINDOW" ) ) {
+                continue;
+            }
+            const int dx = door_vp.mount.x() <= 0 ? grid_scale : -grid_scale;
+            const tripoint_rel_ms inward_precalc(
+                rotate_mount_to_tile( grid_scale, face.dir(), pivot_anchor[0],
+                                      door_vp.mount + point( dx, 0 ) ),
+                door_vp.mount_level );
+            if( inward_precalc != precalc_pos && rl_dist( precalc_pos, inward_precalc ) <= 1 ) {
+                collect( parts_at_world_tile( inward_precalc ), 4 );
+            }
+        }
+    }
+
+    std::stable_sort( result.begin(), result.end(), [this]( const int a, const int b ) {
+        const vehicle_part &pa = parts[a];
+        const vehicle_part &pb = parts[b];
+        const bool cleaner_a = pa.is_cleaner_on();
+        const bool cleaner_b = pb.is_cleaner_on();
+        if( cleaner_a != cleaner_b ) {
+            return !cleaner_a;
+        }
+        const int tier_a = cargo_priority_tier( pa );
+        const int tier_b = cargo_priority_tier( pb );
+        if( tier_a != tier_b ) {
+            return tier_a > tier_b;
+        }
+        const units::volume size_a = pa.info().size;
+        const units::volume size_b = pb.info().size;
+        if( size_a != size_b ) {
+            return size_a > size_b;
+        }
+        return false;
+    } );
+    return result;
+}
+
 static bool subtile_boxes_touch_2x( const point_rel_ms &ma, const point &sa, const int za,
                                     const point_rel_ms &mb, const point &sb, const int zb )
 {
@@ -4939,6 +5079,12 @@ static bool segment_hits_subtile_box( const double ax, const double ay,
     return true;
 }
 
+static bool is_openable_door_part( const vpart_info &vpi )
+{
+    return vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" ) &&
+           !vpi.has_flag( "ENGINE_HOOD" );
+}
+
 int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world_dir,
                                         int &blocking_door_part ) const
 {
@@ -4976,8 +5122,7 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
         if( !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
             continue;
         }
-        const bool is_openable_door = vpi.has_flag( VPFLAG_OPENABLE ) &&
-                                      !vpi.has_flag( "CABIN_WINDOW" );
+        const bool is_openable_door = is_openable_door_part( vpi );
         const bool cand_closed_door = vpi.has_flag( VPFLAG_OBSTACLE ) &&
                                       is_openable_door && !cand.open;
         if( vpi.has_flag( VPFLAG_OBSTACLE ) && !is_openable_door ) {
@@ -5023,7 +5168,7 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
             const double ohy = is_subtile() ? std::max( 0.04, osz.y / 16.0 ) : 0.45;
             double t_hit = 0.0;
             if( segment_hits_subtile_box( fx, fy, sx, sy, ox, oy, ohx, ohy, t_hit ) ) {
-                if( ovpi.has_flag( VPFLAG_OPENABLE ) && !ovpi.has_flag( "CABIN_WINDOW" ) ) {
+                if( is_openable_door_part( ovpi ) ) {
                     if( t_hit < closest_t ) {
                         closest_t = t_hit;
                         door_blocker = obs_idx;
@@ -5096,7 +5241,7 @@ int vehicle::find_exit_door_or_blocker( int from_part, const point_rel_ms &world
             continue;
         }
         const vpart_info &vpi = vp.info();
-        const bool is_door = vpi.has_flag( VPFLAG_OPENABLE ) && !vpi.has_flag( "CABIN_WINDOW" );
+        const bool is_door = is_openable_door_part( vpi );
         const bool is_wall = vpi.has_flag( VPFLAG_OBSTACLE );
         if( !is_door && !is_wall ) {
             continue;
@@ -5160,7 +5305,7 @@ int vehicle::find_entry_seat_and_door( const tripoint_bub_ms &from_outside, cons
         if( !tp.removed && !tp.is_fake && tp.is_available() &&
             tp.mount_level == target_level && tp.precalc[0] == target_rel ) {
             const vpart_info &tvpi = tp.info();
-            if( tvpi.has_flag( VPFLAG_OPENABLE ) && !tvpi.has_flag( "CABIN_WINDOW" ) ) {
+            if( is_openable_door_part( tvpi ) ) {
                 target_has_door = true;
                 break;
             }
@@ -5182,8 +5327,7 @@ int vehicle::find_entry_seat_and_door( const tripoint_bub_ms &from_outside, cons
         if( !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
             continue;
         }
-        const bool is_openable_door = vpi.has_flag( VPFLAG_OPENABLE ) &&
-                                      !vpi.has_flag( "CABIN_WINDOW" );
+        const bool is_openable_door = is_openable_door_part( vpi );
         const bool cand_closed_door = vpi.has_flag( VPFLAG_OBSTACLE ) &&
                                       is_openable_door && !cand.open;
         if( vpi.has_flag( VPFLAG_OBSTACLE ) && !is_openable_door ) {
@@ -5213,7 +5357,7 @@ int vehicle::find_entry_seat_and_door( const tripoint_bub_ms &from_outside, cons
                 continue;
             }
             const vpart_info &ovpi = ovp.info();
-            const bool is_door = ovpi.has_flag( VPFLAG_OPENABLE ) && !ovpi.has_flag( "CABIN_WINDOW" );
+            const bool is_door = is_openable_door_part( ovpi );
             const bool is_wall = ovpi.has_flag( VPFLAG_OBSTACLE );
             if( !is_door && !is_wall ) {
                 continue;
@@ -5299,7 +5443,7 @@ int vehicle::find_directional_door_part( const Character &who, const point_rel_m
             continue;
         }
         const vpart_info &vpi = vp.info();
-        if( !vpi.has_flag( VPFLAG_OPENABLE ) || vpi.has_flag( "CABIN_WINDOW" ) ) {
+        if( !is_openable_door_part( vpi ) ) {
             continue;
         }
         if( want_open ? ( vp.open != 0 ) : ( vp.open == 0 ) ) {
@@ -8595,11 +8739,19 @@ void vehicle::disable_smart_controller_if_needed()
 void vehicle::make_active( item_location &loc )
 {
     item &target = *loc;
+    if( loc.where() == item_location::type::vehicle ) {
+        if( const vehicle_cursor *cur = loc.veh_cursor() ) {
+            if( cur->part >= 0 && cur->part < part_count() && &cur->veh == this ) {
+                active_items.add( target, part( cur->part ).mount_pos3() );
+                return;
+            }
+        }
+    }
     auto cargo_parts = get_parts_at( loc.pos_abs(), "CARGO", part_status_flag::any );
     if( cargo_parts.empty() ) {
         return;
     }
-    // System insures that there is only one part in this vector.
+    // System insures that there is only one part in this vector when no cursor exists.
     vehicle_part *cargo_part = cargo_parts.front();
     active_items.add( target, cargo_part->mount_pos3() );
 }
@@ -9975,7 +10127,8 @@ void vehicle::refresh_insides()
                         cover = true;
                         break;
                     } else if( vpi_near.has_flag( "OBSTACLE" ) ) { // obstacle, like board or windshield or door
-                        if( vp_near.inside || ( vpi_near.has_flag( "OPENABLE" ) && vp_near.open ) ) {
+                        if( vp_near.inside || ( vpi_near.has_flag( "OPENABLE" ) &&
+                                                !vpi_near.has_flag( "ENGINE_HOOD" ) && vp_near.open ) ) {
                             continue; // door and it's open -- can't cover
                         }
                         cover = true;
@@ -10045,7 +10198,8 @@ void vehicle::refresh_insides()
                     cover = true;
                     break;
                 }
-                if( vpi_near.has_flag( "OPENABLE" ) && vp_near.open ) {
+                if( vpi_near.has_flag( "OPENABLE" ) && !vpi_near.has_flag( "ENGINE_HOOD" ) &&
+                    vp_near.open ) {
                     continue;
                 }
                 cover = true;

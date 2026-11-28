@@ -67,7 +67,15 @@ void advanced_inventory_pane::load_settings( int saved_area_idx,
     const aim_location location = static_cast<aim_location>( i_location );
     const advanced_inv_area &square = squares[location];
     // determine the square's vehicle/map item presence
-    bool has_veh_items = square.can_store_in_vehicle() && !square.get_vehicle_stack().empty();
+    bool has_veh_items = false;
+    if( square.can_store_in_vehicle() ) {
+        for( const int part_idx : square.get_vehicle_cargo_parts() ) {
+            if( !square.veh->get_items( square.veh->part( part_idx ) ).empty() ) {
+                has_veh_items = true;
+                break;
+            }
+        }
+    }
     bool has_map_items = !get_map().i_at( square.pos ).empty();
     // determine based on map items and settings to show cargo
     bool show_vehicle = false;
@@ -106,7 +114,7 @@ bool advanced_inventory_pane::is_filtered( const item &it ) const
 
 /** converts a raw list of items to "stacks" - items that are not count_by_charges that otherwise stack go into one stack */
 static std::vector<std::vector<item_location>> item_list_to_stack(
-    const item_location &parent, std::list<item *> item_list )
+            const item_location &parent, std::list<item *> item_list )
 {
     std::vector<std::vector<item_location>> ret;
     for( auto iter_outer = item_list.begin(); iter_outer != item_list.end(); ++iter_outer ) {
@@ -159,7 +167,7 @@ std::vector<advanced_inv_listitem> avatar::get_AIM_inventory( const advanced_inv
     size_t item_index = 0;
 
     std::vector<advanced_inv_listitem> items = worn.get_AIM_inventory( item_index, *this, pane,
-        square );
+            square );
 
     item_location weapon = get_wielded_item();
     if( weapon && weapon->is_container() ) {
@@ -199,7 +207,8 @@ void outfit::add_AIM_items_from_area( avatar &you, advanced_inv_area &square,
 }
 
 void advanced_inventory_pane::add_items_from_area( advanced_inv_area &square,
-        bool vehicle_override )
+        bool vehicle_override,
+        std::set<std::pair<const vehicle *, int>> *seen_veh_parts )
 {
     cata_assert( square.id != AIM_ALL );
     if( !square.canputitems( container ) ) {
@@ -259,44 +268,55 @@ void advanced_inventory_pane::add_items_from_area( advanced_inv_area &square,
         if( m.impassable_field_at( square.pos ) ) {
             return;
         }
-        const advanced_inv_area::itemstack &stacks = is_in_vehicle ?
-            square.i_stacked( square.get_vehicle_stack() ) :
-            square.i_stacked( m.i_at( square.pos ) );
-
-        map_cursor loc_cursor( square.pos );
-        for( size_t x = 0; x < stacks.size(); ++x ) {
-            std::vector<item_location> locs;
-            locs.reserve( stacks[x].size() );
-            for( item *const it : stacks[x] ) {
-                if( is_in_vehicle ) {
-                    locs.emplace_back( vehicle_cursor( *square.veh, square.vstor ), it );
-                } else {
-                    locs.emplace_back( loc_cursor, it );
-                    if( it->is_corpse() ) {
-                        for( item *loot : it->all_items_top( pocket_type::CONTAINER ) ) {
-                            if( !is_filtered( *loot ) ) {
-                                advanced_inv_listitem aim_item( item_location( item_location( loc_cursor, it ), loot ),
-                                                                0, 1, square.id, is_in_vehicle );
-                                square.volume += aim_item.volume;
-                                square.weight += aim_item.weight;
-                                items.push_back( aim_item );
+        size_t stack_idx = 0;
+        const auto append_stacks = [&]( const advanced_inv_area::itemstack & stacks, const int part_idx ) {
+            map_cursor loc_cursor( square.pos );
+            for( size_t x = 0; x < stacks.size(); ++x ) {
+                std::vector<item_location> locs;
+                locs.reserve( stacks[x].size() );
+                for( item *const it : stacks[x] ) {
+                    if( is_in_vehicle ) {
+                        locs.emplace_back( vehicle_cursor( *square.veh, part_idx ), it );
+                    } else {
+                        locs.emplace_back( loc_cursor, it );
+                        if( it->is_corpse() ) {
+                            for( item *loot : it->all_items_top( pocket_type::CONTAINER ) ) {
+                                if( !is_filtered( *loot ) ) {
+                                    advanced_inv_listitem aim_item( item_location( item_location( loc_cursor, it ), loot ),
+                                                                    0, 1, square.id, is_in_vehicle );
+                                    square.volume += aim_item.volume;
+                                    square.weight += aim_item.weight;
+                                    items.push_back( aim_item );
+                                }
                             }
                         }
                     }
                 }
+                advanced_inv_listitem it( locs, stack_idx++, square.id, is_in_vehicle );
+                if( is_filtered( *it.items.front() ) ) {
+                    continue;
+                }
+                if( is_in_vehicle ) {
+                    square.volume_veh += it.volume;
+                    square.weight_veh += it.weight;
+                } else {
+                    square.volume += it.volume;
+                    square.weight += it.weight;
+                }
+                items.push_back( it );
             }
-            advanced_inv_listitem it( locs, x, square.id, is_in_vehicle );
-            if( is_filtered( *it.items.front() ) ) {
-                continue;
+        };
+        if( is_in_vehicle ) {
+            for( const int part_idx : square.get_vehicle_cargo_parts() ) {
+                if( seen_veh_parts &&
+                    !seen_veh_parts->emplace( square.veh, part_idx ).second ) {
+                    continue;
+                }
+                append_stacks( square.i_stacked( square.veh->get_items( square.veh->part( part_idx ) ) ),
+                               part_idx );
             }
-            if( is_in_vehicle ) {
-                square.volume_veh += it.volume;
-                square.weight_veh += it.weight;
-            } else {
-                square.volume += it.volume;
-                square.weight += it.weight;
-            }
-            items.push_back( it );
+        } else {
+            append_stacks( square.i_stacked( m.i_at( square.pos ) ), -1 );
         }
     }
 }
@@ -457,7 +477,11 @@ units::volume advanced_inventory_pane::free_volume( const advanced_inv_area &squ
     } else if( area == AIM_INVENTORY || area == AIM_WORN ) {
         return get_player_character().free_space();
     } else if( in_vehicle() ) {
-        return square.get_vehicle_stack().free_volume();
+        units::volume free_vol = 0_ml;
+        for( const int part_idx : square.get_vehicle_cargo_parts() ) {
+            free_vol += square.veh->get_items( square.veh->part( part_idx ) ).free_volume();
+        }
+        return free_vol;
     } else {
         return get_map().free_volume( square.pos );
     }

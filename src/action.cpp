@@ -822,6 +822,11 @@ bool can_interact_at( action_id action, map &here, const tripoint_bub_ms &p )
     tripoint_bub_ms player_pos = get_player_character().pos_bub();
     switch( action ) {
         case ACTION_OPEN: {
+            const optional_vpart_position vp = here.veh_at( p );
+            if( vp && vp->vehicle().next_part_to_open( vp->part_index(),
+                    veh_pointer_or_null( here.veh_at( player_pos ) ) != &vp->vehicle() ) >= 0 ) {
+                return true;
+            }
             if( here.open_door( get_avatar(), p, !here.is_outside( player_pos ), true ) ) {
                 return true;
             }

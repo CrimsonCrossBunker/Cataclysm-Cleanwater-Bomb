@@ -2537,8 +2537,9 @@ drop_locations game_menus::inv::pickup( const std::set<tripoint_bub_ms> &targets
 
     // Add items from the selected tile, or from current and all surrounding tiles
     if( !targets.empty() ) {
+        std::set<std::pair<const vehicle *, int>> seen_parts;
         for( tripoint_bub_ms target : targets ) {
-            pick_s.add_vehicle_items( target );
+            pick_s.add_vehicle_items( target, false, &seen_parts );
             pick_s.add_map_items( target );
         }
     } else {

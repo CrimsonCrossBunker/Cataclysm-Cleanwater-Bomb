@@ -63,9 +63,10 @@ class advanced_inv_area
         /** Can we put items there? Only checks if location is valid, not if
             selected container in pane is. For full check use canputitems() **/
         bool canputitemsloc = false;
-        // vehicle pointer and cargo part index
+        // vehicle pointer and cargo part indices (vstor is the primary part for labels/state)
         vehicle *veh = nullptr;
         int vstor = 0;
+        std::vector<int> vstor_parts;
         // description, e.g. vehicle name, label, or terrain
         std::array<std::string, 2> desc;
         // flags, e.g. FIRE, TRAP, WATER
@@ -103,7 +104,11 @@ class advanced_inv_area
         void set_container_position();
         aim_location offset_to_location() const;
         bool can_store_in_vehicle() const;
-        // @return vehicle_stack for this area, call only if can_store_in_vehicle is true
+        // @return vehicle_stack for the primary part in this area, call only if can_store_in_vehicle is true
         vehicle_stack get_vehicle_stack() const;
+        // @return all usable cargo part indices for this area
+        const std::vector<int> &get_vehicle_cargo_parts() const {
+            return vstor_parts;
+        }
 };
 #endif // CATA_SRC_ADVANCED_INV_AREA_H

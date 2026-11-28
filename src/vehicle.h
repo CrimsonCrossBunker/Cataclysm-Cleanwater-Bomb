@@ -1101,7 +1101,8 @@ class vehicle
         // Vehicle parts list - all the parts on a single tile
         int print_part_list( const catacurses::window &win, int y1, int max_y, int width,
                              int p,
-                             int hl = -1, bool detail = false, bool include_fakes = true ) const;
+                             int hl = -1, bool detail = false, bool include_fakes = true,
+                             bool world_tile = false ) const;
 
         // Vehicle parts descriptions - descriptions for all the parts on a single tile
         void print_vparts_descs( const catacurses::window &win, int max_y, int width, int p,
@@ -1478,7 +1479,7 @@ class vehicle
          *  @param outside If true, give parts that can be opened from outside only
          *  @return part index or -1 if no part
          */
-        int next_part_to_open( int p, bool outside = false ) const;
+        int next_part_to_open( int p, bool outside = false, bool include_hood = true ) const;
 
         /**
          *  Return the index of the next part to close at `p`
@@ -1488,9 +1489,10 @@ class vehicle
          *
          *  @param p Part who's coordinates provide the location to check
          *  @param outside If true, give parts that can be closed from outside only
+         *  @param include_hood If true, consider ENGINE_HOOD parts
          *  @return part index or -1 if no part
          */
-        int next_part_to_close( int p, bool outside = false ) const;
+        int next_part_to_close( int p, bool outside = false, bool include_hood = true ) const;
 
         /**
          *  Return the index of the next part to lock at part `p`'s location.
@@ -1559,6 +1561,8 @@ class vehicle
         units::mass current_chassis_ballast() const;
         void rebuild_world_tile_parts();
         const std::vector<int> &parts_at_world_tile( const tripoint_rel_ms &precalc_pos ) const;
+        std::vector<int> cargo_parts_at_world_tile( const tripoint_rel_ms &precalc_pos,
+                bool include_cleaner = false, bool allow_open_door_forward = true ) const;
         bool has_adjacent_structure( const tripoint_rel_ms &dp, const vpart_info &vpi ) const;
         bool sub_footprints_touch( const vehicle_part &a, const vehicle_part &b ) const;
         int shell_covering_part( int part_idx ) const;
