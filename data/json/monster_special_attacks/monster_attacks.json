@@ -301,6 +301,22 @@
   },
   {
     "type": "monster_attack",
+    "attack_type": "bite",
+    "id": "bite_bonecrusher_followup",
+    "grab_sequence": true,
+    "condition": { "not": { "u_has_effect": "maimed_mandible" } },
+    "cooldown": 8,
+    "move_cost": 180,
+    "accuracy": 5,
+    "damage_max_instance": [
+      { "damage_type": "stab", "amount": 16, "armor_multiplier": 0.6 },
+      { "damage_type": "bash", "amount": 20, "armor_multiplier": 0.6 }
+    ],
+    "hit_dmg_u": "%1$s bears down on your %2$s with its jaws!",
+    "hit_dmg_npc": "%1$s bears down on <npcname>'s %2$s with its jaws!"
+  },
+  {
+    "type": "monster_attack",
     "attack_type": "melee",
     "id": "tail_club",
     "cooldown": 10,

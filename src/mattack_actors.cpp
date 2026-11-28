@@ -6,6 +6,7 @@
 #include <translation.h>
 #include <type_id.h>
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
@@ -20,6 +21,7 @@
 #include "calendar.h"
 #include "character.h"
 #include "character_attire.h"
+#include "character_id.h"
 #include "condition.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -462,6 +464,7 @@ void melee_actor::load_internal( const JsonObject &obj, const std::string & )
     optional( obj, was_loaded, "effects_require_dmg", effects_require_dmg, true );
     optional( obj, was_loaded, "effects_require_organic", effects_require_organic, false );
     optional( obj, was_loaded, "grab", is_grab, false );
+    optional( obj, was_loaded, "grab_sequence", grab_sequence, false );
     optional( obj, was_loaded, "attack_amount", attack_amount, pair_reader<int> {}, {1, 1} );
     optional( obj, was_loaded, "spread_damage", spread_damage, false );
     optional( obj, was_loaded, "throw_strength", throw_strength, 0 );
@@ -494,6 +497,9 @@ void melee_actor::load_internal( const JsonObject &obj, const std::string & )
     }
     if( is_grab ) {
         grab_data.load_grab( obj.get_object( "grab_data" ) );
+        if( grab_sequence && grab_data.grab_effect != effect_grabbed ) {
+            obj.throw_error_at( "grab_sequence", "A grab sequence must start with the grabbed effect." );
+        }
     }
 
     optional( obj, was_loaded, "body_part_types", body_parts_types );
@@ -868,6 +874,49 @@ std::vector<bodypart_id> melee_actor::pick_bodyparts_hit( const Creature *target
     return bodyparts_hit;
 }
 
+static const std::string grab_sequence_key( "mattack_grab_sequence" );
+
+static std::string grab_sequence_target( const Creature &target )
+{
+    if( const Character *character = target.as_character() ) {
+        if( character->getID().is_valid() ) {
+            return "character:" + std::to_string( character->getID().get_value() );
+        }
+    } else if( const monster *mon = target.as_monster() ) {
+        if( mon->uid().is_valid() ) {
+            return "monster:" + std::to_string( mon->uid().get_value() );
+        }
+    }
+    return {};
+}
+
+static std::string grab_sequence_token( const std::string &target_id, const effect &held )
+{
+    return target_id + ":" + held.get_bp().id().str() + ":" +
+           std::to_string( to_turn<std::int64_t>( held.get_start_time() ) );
+}
+
+static bool ready_grab_followup( monster &z, const Creature &target )
+{
+    const diag_value *recorded = z.maybe_get_value( grab_sequence_key );
+    if( !recorded || !recorded->is_str() ) {
+        return false;
+    }
+    const std::string target_id = grab_sequence_target( target );
+    if( !target_id.empty() && z.has_effect( effect_grabbing ) ) {
+        for( const effect &held : target.get_effects_with_flag( json_flag_GRAB ) ) {
+            if( held.get_id() == effect_grabbed &&
+                ( target.is_monster() || z.is_grabbing( held.get_bp().id() ) ) &&
+                recorded->str() == grab_sequence_token( target_id, held ) ) {
+                // Special attacks can run in the same move, even after spending moves on the grab.
+                return held.get_start_time() < calendar::turn;
+            }
+        }
+    }
+    z.remove_value( grab_sequence_key );
+    return false;
+}
+
 bool melee_actor::call( monster &z ) const
 {
     map &here = get_map();
@@ -879,6 +928,10 @@ bool melee_actor::call( monster &z ) const
 
     if( z.is_underwater() && !target->is_underwater() &&
         here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SWIM_UNDER, z.pos_bub() ) ) {
+        return false;
+    }
+
+    if( grab_sequence && !is_grab && !ready_grab_followup( z, *target ) ) {
         return false;
     }
 
@@ -1052,6 +1105,15 @@ bool melee_actor::call( monster &z ) const
             return true;
         }
         grabbed_bp_id = bp_id;
+
+        if( grab_sequence ) {
+            const bodypart_id held_bp = target->is_monster() ? bodypart_str_id::NULL_ID().id() : bp_id;
+            const effect &held = target->get_effect( effect_grabbed, held_bp );
+            const std::string target_id = grab_sequence_target( *target );
+            if( !target_id.empty() && !held.is_null() && held.get_start_time() == calendar::turn ) {
+                z.set_value( grab_sequence_key, grab_sequence_token( target_id, held ) );
+            }
+        }
 
         if( switched_to_another_bp ) {
             bodyparts_hit.clear();

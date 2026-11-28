@@ -34,9 +34,64 @@
       { "id": "grab", "cooldown": 4 },
       { "id": "scratch_humanoid", "damage_max_instance": [ { "damage_type": "cut", "amount": 12 } ] }
     ],
-    "upgrades": false,
+    "upgrades": { "half_life": 112, "into": "mon_zombie_biter_splitjaw" },
     "armor": { "bash": 5, "cut": 2, "bullet": 2, "electric": 1 },
     "extend": { "flags": [ "SMELLS", "KEENNOSE" ] }
+  },
+  {
+    "id": "mon_zombie_biter_splitjaw",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_biter",
+    "looks_like": "mon_zombie_biter",
+    "name": { "str": "splitjaw biter" },
+    "description": "This zombie's long lower jaw is split down the middle.  The two halves splay as it opens its mouth and clamp inward as it bites.",
+    "hp": 130,
+    "speed": 105,
+    "dodge": 2,
+    "special_attacks": [
+      {
+        "id": "bite_grab",
+        "move_cost": 140,
+        "accuracy": 5,
+        "damage_max_instance": [ { "damage_type": "stab", "amount": 6 }, { "damage_type": "bash", "amount": 4 } ]
+      },
+      {
+        "id": "bite_humanoid",
+        "cooldown": 4,
+        "accuracy": 5,
+        "damage_max_instance": [
+          { "damage_type": "stab", "amount": 10, "armor_multiplier": 0.3 },
+          { "damage_type": "bash", "amount": 10, "armor_multiplier": 0.3 }
+        ]
+      },
+      { "id": "scratch_humanoid", "damage_max_instance": [ { "damage_type": "cut", "amount": 12 } ] }
+    ],
+    "upgrades": { "half_life": 168, "into": "mon_zombie_biter_bonecrusher" }
+  },
+  {
+    "id": "mon_zombie_biter_bonecrusher",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_biter_splitjaw",
+    "name": { "str": "bonecrushing biter" },
+    "description": "A thick ridge of muscle bulges from this zombie's neck, and its short, broad jaws hang low against its chest.  Once it clamps onto something, it braces to bite down harder.",
+    "hp": 180,
+    "speed": 85,
+    "dodge": 1,
+    "melee_dice": 3,
+    "melee_damage": [ { "damage_type": "cut", "amount": 6 } ],
+    "grab_strength": 36,
+    "special_attacks": [
+      {
+        "id": "bite_grab",
+        "grab_sequence": true,
+        "move_cost": 140,
+        "accuracy": 5,
+        "damage_max_instance": [ { "damage_type": "stab", "amount": 6 }, { "damage_type": "bash", "amount": 4 } ]
+      },
+      { "id": "bite_bonecrusher_followup" },
+      { "id": "scratch_humanoid", "damage_max_instance": [ { "damage_type": "cut", "amount": 12 } ] }
+    ],
+    "upgrades": false
   },
   {
     "id": "mon_zombie_brainless",

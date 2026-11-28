@@ -165,6 +165,8 @@ class melee_actor : public mattack_actor
         bool attack_upper = true;
         grab grab_data;
         bool is_grab = false;
+        // A grab records the hold; a follow-up can only use that hold on a later turn.
+        bool grab_sequence = false;
         std::pair<int, int> attack_amount = {1, 1};
         bool spread_damage = false;
 
