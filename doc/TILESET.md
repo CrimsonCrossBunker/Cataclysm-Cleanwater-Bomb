@@ -167,7 +167,7 @@ Special prefixes that are used include:
 
 `overlay_` for movement modes.
 
-`vp_` for vehicle parts (see also [`symbols` and `standard_symbols` JSON keys](JSON/JSON_INFO.md#symbols-and-variants) that are used as suffixes).
+`vp_` for vehicle parts (see also [`symbols` and `standard_symbols` JSON keys](JSON/JSON_INFO.md#symbols-and-variants) that are used as suffixes).  For `grid_scale > 1` sub-tile vehicles, an optional `vp_subtile_` override prefix is also checked before `vp_` (see [Sub-tile Vehicles (1/8-Grid)](#sub-tile-vehicles-18-grid)).
 
 `explosion_` for spell explosion effects.  Multitile is required; only supports "center", "edge" and "corner".
 
@@ -799,6 +799,51 @@ Each legacy tileset has a `tile_config.json` describing how to map the contents 
     ]
   }
 ```
+
+### Sub-tile Vehicles (1/8-Grid)
+
+Vehicles with `"grid_scale": 8` place parts in 1/8-tile local units (a full world tile is `8 x 8` units) and render every part with continuous rigid-body rotation and sub-tile offsets.
+
+#### 1. Sprite Lookup Priority
+When rendering a part `<id>` with variant `<variant>` on a sub-tile vehicle, 2D tilesets check IDs in this order:
+1. Dedicated sub-tile override (no `looks_like` fallback):
+   `vp_subtile_<id>_<variant>` -> right-to-left `_` variant truncation -> `vp_subtile_<id>`
+2. Standard vehicle-part lookup (with `looks_like` fallback):
+   `vp_<id>_<variant>` -> right-to-left `_` variant truncation -> `vp_<id>` -> `vp_<looks_like>` -> `<looks_like>`
+3. Multitile states (`"multitile": true`, `additional_tiles`): `"open"`, `"broken"`.
+
+Use `vp_subtile_<id>` when you want to keep classic `1x1` (`vp_<id>`) artwork unchanged while providing dedicated sub-tile sprites. Parts flagged `VEHICLE_SHELL` (e.g. `shell_sedan`, `shell_commercial`) are skipped unless the tileset explicitly defines `vp_subtile_<id>` or `vp_<id>` without relying on `looks_like`.
+
+#### 2. Canonical Orientation & Layer Rotation
+* All vehicle-part sprites at index `0` (and single-sprite entries) must be drawn facing **North (`0°` / Up)** in top-down 2D tilesets: local vehicle `+x` (front) points Up, local `+y` (right side) points Right.
+* Multi-sprite rotation arrays follow `[N, E, S, W]` (4 sprites) or `[N/S, E/W]` (2 sprites). During rendering, the engine selects the nearest cardinal sprite and rotates it by the residual continuous angle (`exact_angle_deg`).
+* Both `fg` and single-sprite `bg` layers rotate with the vehicle chassis on sub-tile vehicles, so any `bg` pad/underlay must match the North-up silhouette of `fg` (oversized `1x1` square `bg` fills will poke out underneath angled seats or consoles).
+
+#### 3. Footprint Scaling & `"subtile_scale"`
+Each part has a `sub_size` `[length, width]` in 1/8-tile units (resolved at runtime via `vehicle::effective_sub_size`, clamping non-boardable perimeter walls on `[6, 1]`/`[1, 6]` `frame_narrow` sills to `2` sub-units thick). The renderer positions each sprite at `world_offset - precalc` around its sub-tile pivot (`offset_x * tile_width`, `offset_y * tile_height`).
+
+By default, legacy `1x1` sprites (`"subtile_scale": true`) are automatically scaled around their pivot using `effective_sub_size`:
+* `dim >= 6`: `clamp(dim / 6.0, 0.95, 1.5)`
+* `dim == 5`: `0.85`
+* `dim <= 4`: `clamp(dim / 6.5, 0.35, 0.85)` (parts at `engine_block` are capped at `0.72`)
+* For 2/4-sprite pre-rotated arrays, E/W indices automatically swap `scale_x` and `scale_y`.
+
+If your tileset already draws a sprite pre-proportioned inside its tile canvas for 1/8-grid vehicles (e.g. a narrow door `vp_door_subtile`, narrow sill `vp_frame_narrow`, or custom `vp_subtile_*` sprite), set `"subtile_scale": false` on that tile entry (and/or its `additional_tiles`) so the engine keeps `1:1` sprite proportions while still applying exact sub-tile position, continuous rotation, z-ordering, and paint tinting:
+```jsonc
+{
+  "id": "vp_subtile_seat",
+  "fg": "subtile_seat_north",
+  "rotates": true,
+  "subtile_scale": false
+}
+```
+
+#### 4. Z-Order, Occlusion & Tinting
+* Parts with `location->z_order < 0` (`on_ground`, etc.) are skipped on the vehicle sprite pass.
+* Parts render in ascending `(location->z_order, screen_y)` order; `LIGHT` parts render at `>= 6`.
+* Engine blocks and alternators are hidden when covered by a closed non-openable `HALF_BOARD`/`FULL_BOARD` hood at the same mount.
+* Parts with `z_order >= on_roof` (such as roofs and roof-mounted racks/rotors) are hidden when the player is boarded inside the vehicle.
+* `default_tint_color` and instance vehicle paint tint are applied automatically when `VEHICLE_PART_COLOR` is enabled.
 
 ### decompose.py
 

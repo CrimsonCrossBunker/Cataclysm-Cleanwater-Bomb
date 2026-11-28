@@ -9476,12 +9476,14 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
     }
     // If the player is in a vehicle, unboard them from the current part
     bool was_in_control_same_pos = false;
+    int64_t exited_subtile_vid = 0;
     if( who.in_vehicle ) {
         if( who.pos_bub() == dest_loc ) {
             was_in_control_same_pos = true;
         } else {
             const optional_vpart_position cur_vp = here.veh_at( who.pos_bub() );
             if( cur_vp && cur_vp->vehicle().is_subtile() ) {
+                exited_subtile_vid = cur_vp->vehicle().uid().get_value();
                 const int p_idx = cur_vp->vehicle().find_passenger_part( who );
                 if( p_idx >= 0 ) {
                     here.unboard_vehicle( vpart_reference( cur_vp->vehicle(), p_idx ), &who );
@@ -9520,6 +9522,7 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
     int planned_subtile_seat = -1;
     int64_t planned_subtile_vid = 0;
     if( !was_in_control_same_pos && vp1 && vp1->vehicle().is_subtile() &&
+        vp1->vehicle().uid().get_value() != exited_subtile_vid &&
         !who.is_mounted() ) {
         int tmp_door = -1;
         bool tmp_solid = false;
@@ -9617,7 +9620,9 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
             dest_vp->vehicle().uid().get_value() == planned_subtile_vid &&
             planned_subtile_seat >= 0 ) {
             here.board_vehicle_part( dest_vp->vehicle(), planned_subtile_seat, &who );
-        } else if( dest_vp.part_with_feature( "BOARDABLE", true ) ) {
+        } else if( dest_vp.part_with_feature( "BOARDABLE", true ) &&
+                   !( dest_vp->vehicle().is_subtile() &&
+                      dest_vp->vehicle().uid().get_value() == exited_subtile_vid ) ) {
             here.board_vehicle( who.pos_bub(), &who );
         }
     }

@@ -4098,27 +4098,29 @@ point vehicle::effective_sub_size( const point_rel_ms &mount, const vpart_info &
                                    const std::string &variant ) const
 {
     point sz = vpi.sub_size;
-    if( !is_subtile() || sz.x == sz.y || vpi.has_flag( "PROTRUSION" ) ) {
+    if( !is_subtile() || vpi.has_flag( "PROTRUSION" ) ) {
         return sz;
     }
-    const bool has_vert_var =
-        string_starts_with( variant, "vertical" ) ||
-        variant == "left" || variant == "right" ||
-        variant == "wheel_left" || variant == "wheel_right" ||
-        variant == "nw_edge" || variant == "ne_edge" ||
-        variant == "sw_edge" || variant == "se_edge";
-    const bool has_horiz_var =
-        variant == "front" || variant == "rear" ||
-        variant == "cover_left" || variant == "cover_right" ||
-        string_starts_with( variant, "horizontal" );
-    if( sz.x < sz.y ) {
-        if( has_vert_var ||
-            ( !has_horiz_var && std::abs( mount.y() ) > std::abs( mount.x() ) &&
-              std::abs( mount.y() ) >= 6 ) ) {
+    if( sz.x != sz.y ) {
+        const bool has_vert_var =
+            string_starts_with( variant, "vertical" ) ||
+            variant == "left" || variant == "right" ||
+            variant == "wheel_left" || variant == "wheel_right" ||
+            variant == "nw_edge" || variant == "ne_edge" ||
+            variant == "sw_edge" || variant == "se_edge";
+        const bool has_horiz_var =
+            variant == "front" || variant == "rear" ||
+            variant == "cover_left" || variant == "cover_right" ||
+            string_starts_with( variant, "horizontal" );
+        if( sz.x < sz.y ) {
+            if( has_vert_var ||
+                ( !has_horiz_var && std::abs( mount.y() ) > std::abs( mount.x() ) &&
+                  std::abs( mount.y() ) >= 6 ) ) {
+                std::swap( sz.x, sz.y );
+            }
+        } else if( sz.x > sz.y && has_horiz_var ) {
             std::swap( sz.x, sz.y );
         }
-    } else if( sz.x > sz.y && has_horiz_var ) {
-        std::swap( sz.x, sz.y );
     }
     if( vpi.location != vpart_location_structure && vpi.has_flag( VPFLAG_OBSTACLE ) &&
         !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
@@ -4974,12 +4976,11 @@ int vehicle::find_interior_move_target( int from_part, const point_rel_ms &world
         if( !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
             continue;
         }
+        const bool is_openable_door = vpi.has_flag( VPFLAG_OPENABLE ) &&
+                                      !vpi.has_flag( "CABIN_WINDOW" );
         const bool cand_closed_door = vpi.has_flag( VPFLAG_OBSTACLE ) &&
-                                      vpi.has_flag( VPFLAG_OPENABLE ) && !cand.open;
-        if( vpi.has_flag( VPFLAG_OBSTACLE ) && !cand_closed_door ) {
-            continue;
-        }
-        if( cand_closed_door && vpi.has_flag( "CABIN_WINDOW" ) ) {
+                                      is_openable_door && !cand.open;
+        if( vpi.has_flag( VPFLAG_OBSTACLE ) && !is_openable_door ) {
             continue;
         }
         const double sx = static_cast<double>( cand.mount.x() ) / scale;
@@ -5154,9 +5155,21 @@ int vehicle::find_entry_seat_and_door( const tripoint_bub_ms &from_outside, cons
     const int target_level = target_tile.z() - origin_bub.z();
 
     const tripoint_rel_ms target_rel = target_tile - origin_bub;
+    bool target_has_door = false;
+    for( const vehicle_part &tp : parts ) {
+        if( !tp.removed && !tp.is_fake && tp.is_available() &&
+            tp.mount_level == target_level && tp.precalc[0] == target_rel ) {
+            const vpart_info &tvpi = tp.info();
+            if( tvpi.has_flag( VPFLAG_OPENABLE ) && !tvpi.has_flag( "CABIN_WINDOW" ) ) {
+                target_has_door = true;
+                break;
+            }
+        }
+    }
     int best_seat = -1;
     double best_score = -1e9;
     int best_door_blocker = -1;
+    double best_door_score = -1e9;
     bool best_was_solid = false;
 
     for( int idx = 0; idx < static_cast<int>( parts.size() ); ++idx ) {
@@ -5169,20 +5182,25 @@ int vehicle::find_entry_seat_and_door( const tripoint_bub_ms &from_outside, cons
         if( !vpi.has_flag( VPFLAG_BOARDABLE ) ) {
             continue;
         }
-        if( vpi.has_flag( VPFLAG_OBSTACLE ) && ( !vpi.has_flag( VPFLAG_OPENABLE ) || !cand.open ) ) {
+        const bool is_openable_door = vpi.has_flag( VPFLAG_OPENABLE ) &&
+                                      !vpi.has_flag( "CABIN_WINDOW" );
+        const bool cand_closed_door = vpi.has_flag( VPFLAG_OBSTACLE ) &&
+                                      is_openable_door && !cand.open;
+        if( vpi.has_flag( VPFLAG_OBSTACLE ) && !is_openable_door ) {
             continue;
         }
         const double sx = static_cast<double>( cand.mount.x() ) / scale;
         const double sy = static_cast<double>( cand.mount.y() ) / scale;
         const double dist_from = std::hypot( sx - from_lx, sy - from_ly );
         const bool same_world_tile = cand.precalc[0] == target_rel;
-        if( !same_world_tile && dist_from > 1.45 ) {
+        const double max_entry_dist = target_has_door ? 2.25 : 1.85;
+        if( !same_world_tile && dist_from > max_entry_dist ) {
             continue;
         }
 
         // Check perimeter door or wall between player outside and candidate seat
-        int closed_door = -1;
-        double closed_t = 1e9;
+        int closed_door = cand_closed_door ? idx : -1;
+        double closed_t = cand_closed_door ? 1.0 : 1e9;
         bool open_door = false;
         bool solid_wall = false;
         for( int obs_idx = 0; obs_idx < static_cast<int>( parts.size() ); ++obs_idx ) {
@@ -5219,14 +5237,16 @@ int vehicle::find_entry_seat_and_door( const tripoint_bub_ms &from_outside, cons
                 }
             }
         }
-        if( closed_door >= 0 ) {
-            if( best_door_blocker < 0 ) {
-                best_door_blocker = closed_door;
-            }
-            continue;
-        }
         if( solid_wall && !open_door ) {
             best_was_solid = true;
+            continue;
+        }
+        if( closed_door >= 0 ) {
+            const double door_score = ( same_world_tile ? 2.0 : 0.0 ) - dist_from;
+            if( best_door_blocker < 0 || door_score > best_door_score ) {
+                best_door_score = door_score;
+                best_door_blocker = closed_door;
+            }
             continue;
         }
         double score = ( same_world_tile ? 2.0 : 0.0 ) - dist_from;
@@ -5288,7 +5308,7 @@ int vehicle::find_directional_door_part( const Character &who, const point_rel_m
         const double dx = static_cast<double>( vp.mount.x() ) / scale - ref_x;
         const double dy = static_cast<double>( vp.mount.y() ) / scale - ref_y;
         const double dist = std::hypot( dx, dy );
-        const double max_dist = passenger_part >= 0 ? 1.05 : 1.45;
+        const double max_dist = passenger_part >= 0 ? 1.35 : 1.45;
         if( dist > max_dist ) {
             continue;
         }
@@ -9889,10 +9909,10 @@ bool vehicle::enclosed_at( map *here, const tripoint_bub_ms &pos )
 bool vehicle::enclosed_at( const tripoint_abs_ms &pos )
 {
     refresh_insides();
-    std::vector < vehicle_part * > parts_here = get_parts_at( pos, "BOARDABLE",
-            part_status_flag::working );
-    if( !parts_here.empty() ) {
-        return parts_here.front()->inside;
+    for( const vehicle_part *vp : get_parts_at( pos, "BOARDABLE", part_status_flag::working ) ) {
+        if( vp->inside ) {
+            return true;
+        }
     }
     return false;
 }
@@ -9911,7 +9931,31 @@ void vehicle::refresh_insides()
         }
         /* If there's no roof, or there is a roof but it's broken, it's outside.
          * (Use short-circuiting || so broken frames don't screw this up) */
-        const int roof_idx = part_with_feature( vp.mount_pos3(), "ROOF", true );
+        int roof_idx = part_with_feature( vp.mount_pos3(), "ROOF", true );
+        if( subtile && roof_idx < 0 && vp.is_available() ) {
+            const point vp_sz = effective_sub_size( vp );
+            const int vx1 = 2 * vp.mount.x() - vp_sz.x;
+            const int vx2 = 2 * vp.mount.x() + vp_sz.x;
+            const int vy1 = 2 * vp.mount.y() - vp_sz.y;
+            const int vy2 = 2 * vp.mount.y() + vp_sz.y;
+            for( int cand_idx = 0; cand_idx < static_cast<int>( parts.size() ); ++cand_idx ) {
+                const vehicle_part &cand = parts[cand_idx];
+                if( cand.removed || cand.is_fake || cand.mount_level != vp.mount_level ||
+                    !cand.is_available() || !cand.info().has_flag( "ROOF" ) ) {
+                    continue;
+                }
+                const point rf_sz = effective_sub_size( cand );
+                const int rx1 = 2 * cand.mount.x() - rf_sz.x;
+                const int rx2 = 2 * cand.mount.x() + rf_sz.x;
+                const int ry1 = 2 * cand.mount.y() - rf_sz.y;
+                const int ry2 = 2 * cand.mount.y() + rf_sz.y;
+                if( std::min( vx2, rx2 ) > std::max( vx1, rx1 ) &&
+                    std::min( vy2, ry2 ) > std::max( vy1, ry1 ) ) {
+                    roof_idx = cand_idx;
+                    break;
+                }
+            }
+        }
         if( ( roof_idx < 0 ) || !vp.is_available() ) {
             vp.inside = false;
             continue;
@@ -9950,8 +9994,8 @@ void vehicle::refresh_insides()
         // Sub-tile grids place seats, windshields, boards, and perimeter doors several
         // 0.125-tile units apart; check each cardinal outward face against neighboring footprints.
         const vehicle_part &roof_vp = part( roof_idx );
-        const point vp_s = vp.info().sub_size;
-        const point rf_s = roof_vp.info().sub_size;
+        const point vp_s = effective_sub_size( vp );
+        const point rf_s = effective_sub_size( roof_vp );
         const int ax1 = std::min( 2 * vp.mount.x() - vp_s.x, 2 * roof_vp.mount.x() - rf_s.x );
         const int ax2 = std::max( 2 * vp.mount.x() + vp_s.x, 2 * roof_vp.mount.x() + rf_s.x );
         const int ay1 = std::min( 2 * vp.mount.y() - vp_s.y, 2 * roof_vp.mount.y() - rf_s.y );
@@ -9975,7 +10019,7 @@ void vehicle::refresh_insides()
                 if( d_proj <= 0 ) {
                     continue;
                 }
-                const point ns = vpi_near.sub_size;
+                const point ns = effective_sub_size( vp_near );
                 const int bx1 = 2 * vp_near.mount.x() - ns.x;
                 const int bx2 = 2 * vp_near.mount.x() + ns.x;
                 const int by1 = 2 * vp_near.mount.y() - ns.y;
@@ -9985,7 +10029,7 @@ void vehicle::refresh_insides()
                         continue;
                     }
                     const int gap = offset.x > 0 ? ( bx1 - ax2 ) : ( ax1 - bx2 );
-                    if( gap > 2 ) {
+                    if( gap > 5 ) {
                         continue;
                     }
                 } else {
@@ -9993,7 +10037,7 @@ void vehicle::refresh_insides()
                         continue;
                     }
                     const int gap = offset.y > 0 ? ( by1 - ay2 ) : ( ay1 - by2 );
-                    if( gap > 2 ) {
+                    if( gap > 5 ) {
                         continue;
                     }
                 }
@@ -10021,7 +10065,20 @@ bool vpart_position::is_inside() const
     // this should be called elsewhere and not in a function that intends to just query
     // it's also a no-op if the insides are up to date.
     vehicle().refresh_insides();
-    return vehicle().part( part_index() ).inside;
+    const class vehicle &veh = vehicle();
+    if( veh.part( part_index() ).inside ) {
+        return true;
+    }
+    if( veh.is_subtile() ) {
+        for( const int idx : veh.parts_at_world_tile( veh.part( part_index() ).precalc[0] ) ) {
+            const vehicle_part &vp = veh.part( idx );
+            if( !vp.removed && !vp.is_fake && vp.is_available() &&
+                vp.info().has_flag( VPFLAG_BOARDABLE ) && vp.inside ) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void vehicle::unboard_all( map &here ) const
@@ -11624,6 +11681,17 @@ std::pair < int, double > vehicle::get_exhaust_part() const
 tripoint_bub_ms vehicle::exhaust_dest( map *here, int part ) const
 {
     point_rel_ms p = parts[part].mount;
+    if( is_subtile() ) {
+        const int step = ( velocity < 0 ? 1 : -1 ) * std::max( 1, grid_scale );
+        for( int i = 0; i < 32; ++i ) {
+            const tripoint_rel_ms tile_rel( coord_translate( p ), parts[part].mount_level );
+            if( parts_at_world_tile( tile_rel ).empty() ) {
+                return pos_bub( *here ) + tile_rel;
+            }
+            p.x() += step;
+        }
+        return pos_bub( *here ) + tripoint_rel_ms( coord_translate( p ), parts[part].mount_level );
+    }
     // Move back from engine/muffler until we find an open space
     while( relative_parts.find( p ) != relative_parts.end() ) {
         p.x() += ( velocity < 0 ? 1 : -1 );

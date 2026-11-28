@@ -101,6 +101,7 @@ struct tile_type {
     weighted_int_list<std::vector<int>> fg, bg;
     bool multitile = false;
     bool rotates = false;
+    bool subtile_scale = true;
     bool animated = false;
     int height_3d = 0;
     point offset = point::zero;

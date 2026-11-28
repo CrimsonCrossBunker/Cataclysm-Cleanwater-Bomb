@@ -705,7 +705,8 @@ bool avatar_action::move( Character &you, map &m, const tripoint_rel_ms &d,
     vehicle *const veh1 = veh_pointer_or_null( vp1 );
 
     bool veh_closed_door = false;
-    bool outside_vehicle = veh0 == nullptr || veh0 != veh1;
+    bool outside_vehicle = veh0 == nullptr || veh0 != veh1 ||
+                           ( veh0->is_subtile() && veh0->find_passenger_part( you ) < 0 );
     if( veh1 != nullptr ) {
         dpart = veh1->next_part_to_open( vp1->part_index(), outside_vehicle );
         veh_closed_door = dpart >= 0 && !veh1->part( dpart ).open;

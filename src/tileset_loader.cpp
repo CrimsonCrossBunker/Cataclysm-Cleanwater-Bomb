@@ -695,6 +695,8 @@ void tileset_cache::loader::parse_native_mappings(
                         subtile.offset_retracted = sprite_offset_retracted;
                         subtile.pixelscale = sprite_pixelscale;
                         subtile.rotates = true;
+                        subtile.subtile_scale = subentry.subtile_scale.value_or(
+                                                    entry.subtile_scale.value_or( true ) );
                         subtile.height_3d = entry.height_3d;
                         subtile.animated = subentry.animated;
                         tile.available_subtiles.push_back( subtile_id );
@@ -703,6 +705,7 @@ void tileset_cache::loader::parse_native_mappings(
             }
             tile.multitile = entry.multitile;
             tile.rotates = entry.rotates.value_or( entry.multitile );
+            tile.subtile_scale = entry.subtile_scale.value_or( true );
             tile.height_3d = entry.height_3d;
             tile.animated = entry.animated;
         }
@@ -1106,6 +1109,7 @@ void tileset_cache::loader::parse_mappings( const JsonObject &config )
             curr_tile.pixelscale = sprite_pixelscale;
             bool t_multi = entry.get_bool( "multitile", false );
             bool t_rota = entry.get_bool( "rotates", t_multi );
+            bool t_subtile_scale = entry.get_bool( "subtile_scale", true );
             int t_h3d = entry.get_int( "height_3d", 0 );
             if( t_multi ) {
                 // fetch additional tiles
@@ -1120,6 +1124,7 @@ void tileset_cache::loader::parse_mappings( const JsonObject &config )
                     curr_subtile.offset_retracted = sprite_offset_retracted;
                     curr_subtile.pixelscale = sprite_pixelscale;
                     curr_subtile.rotates = true;
+                    curr_subtile.subtile_scale = subentry.get_bool( "subtile_scale", t_subtile_scale );
                     curr_subtile.height_3d = t_h3d;
                     curr_subtile.animated = subentry.get_bool( "animated", false );
                     curr_tile.available_subtiles.push_back( s_id );
@@ -1134,6 +1139,7 @@ void tileset_cache::loader::parse_mappings( const JsonObject &config )
             // write the information of the base tile to curr_tile
             curr_tile.multitile = t_multi;
             curr_tile.rotates = t_rota;
+            curr_tile.subtile_scale = t_subtile_scale;
             curr_tile.height_3d = t_h3d;
             curr_tile.animated = entry.get_bool( "animated", false );
         }

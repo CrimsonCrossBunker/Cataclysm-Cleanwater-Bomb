@@ -193,6 +193,25 @@ auto simple_point_hash = []( const point &p )
     return p.x + p.y * 65536;
 };
 
+bool has_direct_vpart_tile( const tileset &ts, const std::string &prefix_id,
+                            const std::string &variant )
+{
+    if( !variant.empty() ) {
+        std::string chunk = variant;
+        while( !chunk.empty() ) {
+            if( ts.find_tile_type( prefix_id + "_" + chunk ) != nullptr ) {
+                return true;
+            }
+            const size_t underscore = chunk.rfind( '_' );
+            if( underscore == std::string::npos ) {
+                break;
+            }
+            chunk.erase( underscore );
+        }
+    }
+    return ts.find_tile_type( prefix_id ) != nullptr;
+}
+
 } // namespace
 
 // Translate (lit_level, use_night_vision_tiles) to the variant_kind enum the
@@ -1418,8 +1437,15 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                             continue;
                                         }
                                         const vpart_info &svpi = svp.info();
-                                        if( svpi.has_flag( VPFLAG_SHELL ) ||
-                                            svpi.location->z_order < 0 ) {
+                                        if( svpi.location->z_order < 0 ) {
+                                            continue;
+                                        }
+                                        if( svpi.has_flag( VPFLAG_SHELL ) &&
+                                            ( !tileset_ptr ||
+                                              ( !has_direct_vpart_tile( *tileset_ptr,
+                                                                        "vp_subtile_" + svpi.id.str(), svp.variant ) &&
+                                                !has_direct_vpart_tile( *tileset_ptr,
+                                                                        "vp_" + svpi.id.str(), svp.variant ) ) ) ) {
                                             continue;
                                         }
                                         if( ( svpi.location == vpart_location_engine_block ||
@@ -4246,8 +4272,9 @@ bool cata_tiles::draw_sprite_at(
     bool rotate_sprite = false;
     int sprite_num = 0;
     if( !rota_fg && spritelist.size() == 1 ) {
-        // don't rotate, a background tile without manual rotations
-        rotate_sprite = false;
+        // Rotate single-sprite backgrounds alongside sub-tile vehicle parts so base pads align with the hull.
+        rotate_sprite = !is_isometric() && pending_part_exact_angle_deg_.has_value() &&
+                        rp.tint.has_value() == pending_part_tint_.has_value();
         sprite_num = 0;
     } else if( spritelist.size() == 1 ) {
         // just one tile, apply SDL sprite rotation if not in isometric mode
@@ -4381,7 +4408,8 @@ bool cata_tiles::draw_sprite_at(
             geometry_input.exact_angle_deg = residual;
         }
     }
-    if( ( pending_part_scale_x_ != 1.0f || pending_part_scale_y_ != 1.0f ) && !is_isometric() ) {
+    if( tile.subtile_scale &&
+        ( pending_part_scale_x_ != 1.0f || pending_part_scale_y_ != 1.0f ) && !is_isometric() ) {
         if( spritelist.size() >= 2 && ( sprite_num % 2 ) == 1 ) {
             geometry_input.scale_x = pending_part_scale_y_;
             geometry_input.scale_y = pending_part_scale_x_;
@@ -4982,13 +5010,21 @@ bool cata_tiles::draw_subtile_vpart_entry(
                                   static_cast<int>( std::lround( entry.offset_y * th ) ) );
     pending_part_scale_x_ = entry.scale_x;
     pending_part_scale_y_ = entry.scale_y;
+    const std::string subtile_tile_id = "vp_subtile_" + entry.id.str();
+    const std::string tile_id =
+        ( tileset_ptr && has_direct_vpart_tile( *tileset_ptr, subtile_tile_id, entry.variant ) )
+        ? subtile_tile_id
+        : "vp_" + entry.id.str();
     const bool ret = draw_from_id_string(
-                         "vp_" + entry.id.str(),
+                         tile_id,
                          TILE_CATEGORY::VEHICLE_PART, empty_string, p,
                          entry.subtile, entry.rotation, ll,
                          nv_goggles_activated, local_height, 0,
                          entry.variant );
     if( ret ) {
+        pending_part_exact_angle_deg_.reset();
+        pending_part_scale_x_ = 1.0f;
+        pending_part_scale_y_ = 1.0f;
         if( entry.has_cargo ) {
             draw_item_highlight( p, local_height );
         }
